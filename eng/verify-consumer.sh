@@ -16,6 +16,11 @@ trap 'rm -rf "$work"' EXIT
 version="$(basename "$packages"/IQOne.Zero.[0-9]*.nupkg | sed -E 's/^IQOne\.Zero\.(.+)\.nupkg$/\1/' | head -1)"
 echo "Verifying IQOne.Zero $version"
 
+# Both target frameworks the packages ship. lib/net8.0 is otherwise never exercised: the
+# test projects are all net10.0, so a net8-only compilation failure would ship unnoticed.
+tfm="${ZERO_VERIFY_TFM:-net10.0}"
+echo "Target framework: $tfm"
+
 cd "$work"
 
 cat > nuget.config <<XML
@@ -31,7 +36,7 @@ XML
 cat > Consumer.csproj <<XML
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>$tfm</TargetFramework>
     <Nullable>enable</Nullable>
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
     <CompilerGeneratedFilesOutputPath>generated</CompilerGeneratedFilesOutputPath>

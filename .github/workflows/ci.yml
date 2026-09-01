@@ -40,8 +40,15 @@ jobs:
 
       # Proves what a consumer actually gets: the packages are installed from the
       # produced .nupkg files, not from project references.
-      - name: Verify packages against a real consumer
+      # Both target frameworks the packages claim. The test projects are all net10.0, so a
+      # net8-only failure in lib/net8.0 would otherwise ship without anyone compiling it.
+      - name: Verify packages against a real consumer (net10.0)
         run: ./eng/verify-consumer.sh
+
+      - name: Verify packages against a real consumer (net8.0)
+        run: ./eng/verify-consumer.sh
+        env:
+          ZERO_VERIFY_TFM: net8.0
 
       - uses: actions/upload-artifact@v4
         if: always()
