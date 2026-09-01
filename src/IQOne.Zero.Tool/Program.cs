@@ -1,10 +1,11 @@
+using IQOne.Zero.Tool.Capabilities;
 using IQOne.Zero.Tool.Rules;
 
-// The zero tool. One job today: take the rule files that ship inside the Zero packages a
-// project references and write them where coding agents will read them.
+// The zero tool. It moves what ships inside the Zero packages — the capability catalog and
+// the rule files — into the repository, where coding agents read them.
 //
-// The rules travel in the packages so they cannot drift from the code they describe. This
-// tool is what moves them the last step, into the repository, at the version in use.
+// Both travel in the packages so they cannot drift from the code they describe. This tool
+// is the last step: into this repository, at the versions actually restored.
 
 try
 {
@@ -30,46 +31,90 @@ static int Run(string[] args)
         return 0;
     }
 
-    if (args[0] != "rules")
-    {
-        Console.Error.WriteLine($"zero: unknown command '{args[0]}'.");
-        Usage();
-        return 1;
-    }
-
-    var action = args.Length > 1 ? args[1] : "init";
     var directory = Directory.GetCurrentDirectory();
-    var rules = RuleReader.Read(FindAssets(directory));
+    var packages = InstalledPackages.Find(FindAssets(directory));
 
-    if (rules.Count == 0)
+    if (packages.Count == 0)
         throw new ZeroToolException(
-            "No Zero package in this project carries rule files. " +
-            "Check that IQOne.Zero is referenced and restored.");
+            "This project references no Zero package. Add one with 'dotnet add package IQOne.Zero'.");
 
-    switch (action)
+    var capabilities = CapabilityReader.Installed(packages);
+    var catalog = CapabilityReader.Full(packages);
+    var rules = RuleReader.Read(packages);
+
+    return (args[0], args.Length > 1 ? args[1] : null) switch
     {
-        case "list":
-            foreach (var rule in rules)
-            {
-                var enforced = rule.EnforcedBy.Count > 0 ? $"  [{string.Join(" ", rule.EnforcedBy)}]" : string.Empty;
-                Console.WriteLine($"{rule.Id,-42} {rule.Package} {rule.Version}{enforced}");
-            }
+        ("rules", null or "init") => Init(directory, capabilities, catalog, rules),
+        ("rules", "list") => ListRules(rules),
+        ("capabilities", null or "list") => ListCapabilities(capabilities, catalog),
+        var (command, action) => Unknown(command, action)
+    };
+}
 
-            return 0;
+static int Init(
+    string directory,
+    IReadOnlyList<Capability> capabilities,
+    Catalog? catalog,
+    IReadOnlyList<RuleFile> rules)
+{
+    foreach (var path in RuleWriter.Write(directory, capabilities, catalog, rules))
+        Console.WriteLine(Path.GetRelativePath(directory, path));
 
-        case "init":
-            foreach (var path in RuleWriter.Write(directory, rules))
-                Console.WriteLine(Path.GetRelativePath(directory, path));
+    Console.WriteLine();
+    Console.WriteLine($"{capabilities.Count} capability manifest(s) and {rules.Count} rule(s) written.");
+    Console.WriteLine("Re-run after upgrading Zero or adding a package.");
 
-            Console.WriteLine();
-            Console.WriteLine($"{rules.Count} rule(s) written. Re-run after upgrading Zero.");
-            return 0;
+    return 0;
+}
 
-        default:
-            Console.Error.WriteLine($"zero: unknown action 'rules {action}'.");
-            Usage();
-            return 1;
+static int ListRules(IReadOnlyList<RuleFile> rules)
+{
+    if (rules.Count == 0)
+    {
+        Console.WriteLine("No Zero package here carries rule files.");
+        return 0;
     }
+
+    foreach (var rule in rules)
+    {
+        var enforced = rule.EnforcedBy.Count > 0 ? $"  [{string.Join(" ", rule.EnforcedBy)}]" : string.Empty;
+        Console.WriteLine($"{rule.Id,-42} {rule.Package} {rule.Version}{enforced}");
+    }
+
+    return 0;
+}
+
+static int ListCapabilities(IReadOnlyList<Capability> installed, Catalog? catalog)
+{
+    Console.WriteLine("Installed:");
+
+    foreach (var capability in installed)
+        Console.WriteLine($"  {capability.Package,-34} {capability.Title}");
+
+    if (catalog is null) return 0;
+
+    var have = installed.Select(c => c.Package).ToHashSet(StringComparer.OrdinalIgnoreCase);
+    var missing = catalog.Capabilities.Where(c => !have.Contains(c.Package)).ToList();
+
+    if (missing.Count == 0) return 0;
+
+    Console.WriteLine();
+    Console.WriteLine("Available, not installed:");
+
+    foreach (var capability in missing)
+        Console.WriteLine($"  {capability.Package,-34} {capability.Title}");
+
+    return 0;
+}
+
+static int Unknown(string command, string? action)
+{
+    Console.Error.WriteLine(action is null
+        ? $"zero: unknown command '{command}'."
+        : $"zero: unknown action '{command} {action}'.");
+
+    Usage();
+    return 1;
 }
 
 // Walks up from the working directory: the tool is normally run from a project folder, but
@@ -100,10 +145,12 @@ static void Usage()
         zero — the IQOne.Zero command line tool
 
         Usage:
-          zero rules init     Write AGENTS.md, CLAUDE.md and .cursor/rules from the
-                              rule files inside the Zero packages this project uses.
-                              Existing content outside the managed block is kept.
-          zero rules list     Show the rules those packages carry, and what enforces them.
+          zero rules init        Write AGENTS.md, CLAUDE.md and .cursor/rules from the
+                                 capability manifests and rule files inside the Zero
+                                 packages this project uses. Content outside the managed
+                                 block is kept.
+          zero rules list        Show the rules those packages carry, and what enforces them.
+          zero capabilities      Show what is installed, and what Zero offers that is not.
 
           zero --version
         """);

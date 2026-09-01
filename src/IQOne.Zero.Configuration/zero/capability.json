@@ -1,0 +1,12 @@
+{
+  "id": "configuration",
+  "kind": "kernel",
+  "title": "Validated configuration",
+  "summary": "Settings are bound to a type and validated at startup, so a missing or malformed value stops the application with a message naming it instead of failing on the request that first reads it.",
+  "useWhen": "Any time the application reads a setting. Never read configuration by string at the point of use.",
+  "package": "IQOne.Zero.Configuration",
+  "entryPoint": "services.AddValidatedOptions<TOptions>()",
+  "keyTypes": ["ValidatedOptionsExtensions", "ConfigurationExtensions"],
+  "diagnostics": [],
+  "example": "public sealed class MailOptions\n{\n    [Required] public required string Host { get; init; }\n    [Range(1, 65535)] public int Port { get; init; } = 587;\n}\n\ncontext.Services.AddValidatedOptions<MailOptions>();\n\n// Read it by injecting IOptions<MailOptions>."
+}

@@ -1,0 +1,17 @@
+{
+  "id": "abstractions",
+  "kind": "kernel",
+  "title": "Fundamentals and dependency injection",
+  "summary": "Lifetime markers and role interfaces. A service's lifetime is carried by the abstraction it implements, so registration needs no attribute and no call.",
+  "useWhen": "Always. Every Zero application depends on this.",
+  "package": "IQOne.Zero.Abstractions",
+  "entryPoint": null,
+  "keyTypes": [
+    "IScoped", "ISingleton", "ITransient", "IThread",
+    "IStep", "IProvider", "IFactory", "IBuilder", "IAdapter",
+    "IModule", "IModuleServiceContext", "IModuleFeatureContributor",
+    "ServiceTypesAttribute"
+  ],
+  "diagnostics": ["RGF006", "RGF007", "RGF008", "RGF009", "RGF010"],
+  "example": "public interface IInvoiceStore : IScoped;\n\npublic sealed class InvoiceStore : IInvoiceStore;\n\n// No registration call. The generator emits AddScoped<IInvoiceStore, InvoiceStore>()."
+}

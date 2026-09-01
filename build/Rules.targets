@@ -37,6 +37,13 @@
           Pack="true"
           PackagePath="zero/rules/$(PackageId)/" />
 
+    <!-- Yetenek bildirimi ve katalog. Kural dosyalari "yanlis yapma"yi ogretir;
+         bunlar "bu zaten yazilmis"i ogretir. Bir ajanin sinir disina cikmasinin
+         en yaygin sebebi inat degil, var olani bilmemektir. -->
+    <None Include="$(MSBuildProjectDirectory)/zero/*.json"
+          Pack="true"
+          PackagePath="zero/" />
+
     <None Include="$(MSBuildProjectDirectory)/README.md"
           Condition="Exists('$(MSBuildProjectDirectory)/README.md')"
           Pack="true"
@@ -48,7 +55,7 @@
           PackagePath="/" />
 
     <None Include="$(ZeroConsumerTargetsFile)"
-          Condition="Exists('$(MSBuildProjectDirectory)/rules')"
+          Condition="Exists('$(MSBuildProjectDirectory)/rules') Or Exists('$(MSBuildProjectDirectory)/zero')"
           Pack="true"
           PackagePath="buildTransitive/$(PackageId).targets" />
   </ItemGroup>
@@ -60,7 +67,7 @@
   -->
   <Target Name="ZeroEmitConsumerTargets"
           BeforeTargets="PrepareForBuild"
-          Condition="Exists('$(MSBuildProjectDirectory)/rules')">
+          Condition="Exists('$(MSBuildProjectDirectory)/rules') Or Exists('$(MSBuildProjectDirectory)/zero')">
     <PropertyGroup>
       <_ZeroTargetsBody><![CDATA[<Project>
   <ItemGroup>

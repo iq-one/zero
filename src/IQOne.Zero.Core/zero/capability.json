@@ -1,0 +1,12 @@
+{
+  "id": "core",
+  "kind": "kernel",
+  "title": "Application lifecycle and modules",
+  "summary": "Drives startup as explicit, awaited phases, and orders modules by topological sort over their declared dependencies. There is no order number anywhere.",
+  "useWhen": "Always. Every Zero application depends on this.",
+  "package": "IQOne.Zero.Core",
+  "entryPoint": "services.AddModules(new Module(), ...)",
+  "keyTypes": ["Application", "ApplicationSteps", "ModuleHostExtensions", "ModuleGraph"],
+  "diagnostics": [],
+  "example": "// Module is generated. Write only the partial:\npublic sealed partial class Module\n{\n    partial void OnConfigureServices(IModuleServiceContext context)\n        => context.Services.AddValidatedOptions<MailOptions>();\n}"
+}

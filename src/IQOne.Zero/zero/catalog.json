@@ -1,0 +1,37 @@
+{
+  "framework": "Zero",
+  "vendor": "IQOne",
+  "site": "https://iqone.solutions/zero",
+  "purpose": "Everything a line-of-business application would otherwise build for itself, resolved at compile time. Install the package for what you need and write one Add call.",
+  "readThisFirst": "Before writing a foundational abstraction — caching, validation, a repository, a result type, a pipeline — check this catalog. If Zero has it, use it. Writing a second one is the mistake this framework exists to prevent.",
+  "capabilities": [
+    {
+      "id": "abstractions",
+      "kind": "kernel",
+      "package": "IQOne.Zero.Abstractions",
+      "title": "Fundamentals and dependency injection",
+      "useWhen": "Always."
+    },
+    {
+      "id": "core",
+      "kind": "kernel",
+      "package": "IQOne.Zero.Core",
+      "title": "Application lifecycle and modules",
+      "useWhen": "Always."
+    },
+    {
+      "id": "configuration",
+      "kind": "kernel",
+      "package": "IQOne.Zero.Configuration",
+      "title": "Validated configuration",
+      "useWhen": "Any time the application reads a setting."
+    },
+    {
+      "id": "regify",
+      "kind": "kernel",
+      "package": "IQOne.Zero.Regify",
+      "title": "Compile-time generation and analyzers",
+      "useWhen": "Always. Arrives with the metapackage."
+    }
+  ]
+}

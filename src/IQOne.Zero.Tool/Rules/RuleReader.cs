@@ -1,5 +1,3 @@
-using System.Text.Json;
-
 namespace IQOne.Zero.Tool.Rules;
 
 /// <summary>
@@ -12,58 +10,25 @@ namespace IQOne.Zero.Tool.Rules;
 /// </remarks>
 internal static class RuleReader
 {
-    private const string PackagePrefix = "IQOne.Zero";
-
-    public static IReadOnlyList<RuleFile> Read(string assetsFile)
+    public static IReadOnlyList<RuleFile> Read(IEnumerable<InstalledPackage> packages)
     {
-        using var document = JsonDocument.Parse(File.ReadAllText(assetsFile));
-        var root = document.RootElement;
-
-        var folders = root.TryGetProperty("packageFolders", out var packageFolders)
-            ? packageFolders.EnumerateObject().Select(f => f.Name).ToList()
-            : [];
-
-        if (folders.Count == 0)
-            throw new ZeroToolException(
-                $"'{assetsFile}' names no package folder. Run 'dotnet restore' and try again.");
-
         var rules = new List<RuleFile>();
 
-        foreach (var (id, version) in ZeroPackages(root))
+        foreach (var package in packages)
         {
-            var directory = folders
-                .Select(folder => Path.Combine(folder, id.ToLowerInvariant(), version, "zero", "rules"))
-                .FirstOrDefault(Directory.Exists);
+            var directory = Path.Combine(package.Directory, "zero", "rules");
 
-            if (directory is null) continue;
+            if (!Directory.Exists(directory)) continue;
 
             foreach (var file in Directory.EnumerateFiles(directory, "*.md", SearchOption.AllDirectories).Order())
-                rules.Add(Parse(id, version, File.ReadAllText(file), Path.GetFileNameWithoutExtension(file)));
+                rules.Add(Parse(package, File.ReadAllText(file), Path.GetFileNameWithoutExtension(file)));
         }
 
         return [.. rules.OrderBy(r => r.Package, StringComparer.Ordinal).ThenBy(r => r.Id, StringComparer.Ordinal)];
     }
 
-    private static IEnumerable<(string Id, string Version)> ZeroPackages(JsonElement root)
-    {
-        if (!root.TryGetProperty("libraries", out var libraries)) yield break;
-
-        foreach (var library in libraries.EnumerateObject())
-        {
-            // Keys are "Package.Id/1.2.3".
-            var separator = library.Name.LastIndexOf('/');
-            if (separator < 0) continue;
-
-            var id = library.Name[..separator];
-
-            if (!id.StartsWith(PackagePrefix, StringComparison.OrdinalIgnoreCase)) continue;
-
-            yield return (id, library.Name[(separator + 1)..]);
-        }
-    }
-
     /// <summary>Reads the YAML frontmatter a rule file opens with, then returns the body.</summary>
-    private static RuleFile Parse(string package, string version, string text, string fallbackId)
+    private static RuleFile Parse(InstalledPackage package, string text, string fallbackId)
     {
         var id = fallbackId;
         var title = fallbackId;
@@ -99,7 +64,7 @@ internal static class RuleReader
             }
         }
 
-        return new RuleFile(package, version, id, title, enforcedBy, body.TrimEnd());
+        return new RuleFile(package.Id, package.Version, id, title, enforcedBy, body.TrimEnd());
     }
 }
 
