@@ -15,10 +15,17 @@
   </Folder>
 
   <Folder Name="/src/">
+    <Project Path="src/IQOne.Zero/IQOne.Zero.csproj" />
     <Project Path="src/IQOne.Zero.Abstractions/IQOne.Zero.Abstractions.csproj" />
     <Project Path="src/IQOne.Zero.Core/IQOne.Zero.Core.csproj" />
     <Project Path="src/IQOne.Zero.Configuration/IQOne.Zero.Configuration.csproj" />
     <Project Path="src/IQOne.Zero.Regify/IQOne.Zero.Regify.csproj" />
+  </Folder>
+
+  <Folder Name="/tests/">
+    <Project Path="tests/IQOne.Zero.Core.Tests/IQOne.Zero.Core.Tests.csproj" />
+    <Project Path="tests/IQOne.Zero.Configuration.Tests/IQOne.Zero.Configuration.Tests.csproj" />
+    <Project Path="tests/IQOne.Zero.Regify.Tests/IQOne.Zero.Regify.Tests.csproj" />
   </Folder>
 
 </Solution>

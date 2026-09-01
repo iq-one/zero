@@ -3,57 +3,64 @@
   <!--
     ================= Zero kural paketleme sozlesmesi =================
 
-    Zero'nun kurallari iki alicisi olan tek bir kaynaktan gelir: derleyici ve
-    yapay zeka ajani. Analyzer'lar kurali derleme aninda uygular; buradaki
-    dosyalar ayni kurali ajanin okuyabilecegi bicimde tasir.
+    Zero'nun kurallarinin iki alicisi var: derleyici ve yapay zeka ajani.
+    Analyzer'lar kurali derleme aninda uygular; buradaki dosyalar ayni kurali
+    ajanin okuyabilecegi bicimde tasir.
 
-    Kurallar paketin ICINDE gider. Bunun sebebi versiyonlamadir: framework 1.2'ye
+    Kurallar paketin ICINDE gider. Sebebi versiyonlamadir: framework 1.2'ye
     ciktiginda ajanin okudugu kural da 1.2 olur. Ayri bir repoda duran dokuman
     bu garantiyi veremez ve sessizce eskir.
 
     Sozlesme:
       src/<Paket>/rules/*.md   ->   <nupkg>/zero/rules/<Paket>/*.md
       Her .md YAML frontmatter tasir: id, title, applies-to, enforced-by.
-      'enforced-by' bir analyzer tanisi ise kural ile derleyici arasindaki bag
-      makine tarafindan dogrulanabilir hale gelir.
+      'enforced-by' bir analyzer tanisini gosterdiginde kural ile derleyici
+      arasindaki bag makine tarafindan dogrulanabilir hale gelir.
 
-    Tuketici tarafinda:
-      buildTransitive/<Paket>.targets dosyalari kurallari @(ZeroRuleFile) olarak
-      acar. `zero rules init` komutu bunlari okuyup AGENTS.md / CLAUDE.md ve
-      editor kural dosyalarini uretir.
+    Tuketici tarafinda buildTransitive/<Paket>.targets kurallari @(ZeroRuleFile)
+    olarak acar; `zero rules init` bunlari okuyup AGENTS.md, CLAUDE.md ve editor
+    kural dosyalarini uretir.
   -->
 
   <PropertyGroup>
-    <ZeroRulesDirectory>$(MSBuildProjectDirectory)/rules</ZeroRulesDirectory>
-    <ZeroGeneratedTargetsFile>$(IntermediateOutputPath)zero/$(PackageId).targets</ZeroGeneratedTargetsFile>
+    <ZeroConsumerTargetsFile>$(BaseIntermediateOutputPath)zero/$(PackageId).targets</ZeroConsumerTargetsFile>
     <!-- Kural ve targets dosyalari lib/ disinda durur; bu yerlesim kasitlidir. -->
     <NoWarn>$(NoWarn);NU5100</NoWarn>
   </PropertyGroup>
 
+  <!--
+    Paket icerigi DEGERLENDIRME zamaninda bildirilir. Bir hedef icinden eklenen
+    None item'lari NuGet dosyalari topladiktan sonra olusur ve pakete girmez.
+  -->
   <ItemGroup>
-    <ZeroRuleSource Include="$(ZeroRulesDirectory)/**/*.md" />
-  </ItemGroup>
+    <None Include="$(MSBuildProjectDirectory)/rules/**/*.md"
+          Pack="true"
+          PackagePath="zero/rules/$(PackageId)/" />
 
-  <Target Name="ZeroPackRules"
-          BeforeTargets="GenerateNuspec"
-          DependsOnTargets="ZeroEmitConsumerTargets"
-          Condition="'@(ZeroRuleSource)' != ''">
-    <ItemGroup>
-      <None Include="@(ZeroRuleSource)"
-            Pack="true"
-            PackagePath="zero/rules/$(PackageId)/%(RecursiveDir)%(Filename)%(Extension)" />
-      <None Include="$(ZeroGeneratedTargetsFile)"
-            Pack="true"
-            PackagePath="buildTransitive/$(PackageId).targets" />
-    </ItemGroup>
-  </Target>
+    <None Include="$(MSBuildProjectDirectory)/README.md"
+          Condition="Exists('$(MSBuildProjectDirectory)/README.md')"
+          Pack="true"
+          PackagePath="/" />
+
+    <None Include="$(ZeroRepositoryRoot)README.md"
+          Condition="!Exists('$(MSBuildProjectDirectory)/README.md')"
+          Pack="true"
+          PackagePath="/" />
+
+    <None Include="$(ZeroConsumerTargetsFile)"
+          Condition="Exists('$(MSBuildProjectDirectory)/rules')"
+          Pack="true"
+          PackagePath="buildTransitive/$(PackageId).targets" />
+  </ItemGroup>
 
   <!--
     Tuketicinin derlemesinde kurallarin yerini bildiren targets dosyasi.
-    Item olarak acilir; hedef tanimlanmaz, yoksa metapaket ile birlikte gelen
-    her paket ayni hedefi yeniden tanimlar.
+    Yalnizca item tanimlar; hedef tanimlamaz, cunku metapaket ile gelen her
+    paket ayni hedefi yeniden tanimlardi.
   -->
-  <Target Name="ZeroEmitConsumerTargets">
+  <Target Name="ZeroEmitConsumerTargets"
+          BeforeTargets="PrepareForBuild"
+          Condition="Exists('$(MSBuildProjectDirectory)/rules')">
     <PropertyGroup>
       <_ZeroTargetsBody><![CDATA[<Project>
   <ItemGroup>
@@ -63,22 +70,11 @@
   </ItemGroup>
 </Project>]]></_ZeroTargetsBody>
     </PropertyGroup>
-    <MakeDir Directories="$([System.IO.Path]::GetDirectoryName('$(ZeroGeneratedTargetsFile)'))" />
-    <WriteLinesToFile File="$(ZeroGeneratedTargetsFile)"
+    <MakeDir Directories="$(BaseIntermediateOutputPath)zero" />
+    <WriteLinesToFile File="$(ZeroConsumerTargetsFile)"
                       Lines="$(_ZeroTargetsBody.Replace('PACKAGE_ID','$(PackageId)'))"
                       Overwrite="true"
                       WriteOnlyWhenDifferent="true" />
-  </Target>
-
-  <!-- Her paket kendi README'sini tasir; nuget.org sayfasi bos kalmaz. -->
-  <Target Name="ZeroPackReadme" BeforeTargets="GenerateNuspec">
-    <PropertyGroup>
-      <_ZeroPackageReadme Condition="Exists('$(MSBuildProjectDirectory)/README.md')">$(MSBuildProjectDirectory)/README.md</_ZeroPackageReadme>
-      <_ZeroPackageReadme Condition="'$(_ZeroPackageReadme)' == ''">$(ZeroRepositoryRoot)README.md</_ZeroPackageReadme>
-    </PropertyGroup>
-    <ItemGroup>
-      <None Include="$(_ZeroPackageReadme)" Pack="true" PackagePath="README.md" />
-    </ItemGroup>
   </Target>
 
 </Project>

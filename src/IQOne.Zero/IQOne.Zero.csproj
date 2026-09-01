@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Zero: an application framework for .NET 10 that resolves dependency injection, module ordering and configuration at compile time. This metapackage brings in the common set.</Description>
+    <!-- Metapaket yalnizca bagimlilik tasir; lib/ icermez. -->
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <IncludeSymbols>false</IncludeSymbols>
+    <NoPackageAnalysis>true</NoPackageAnalysis>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../IQOne.Zero.Abstractions/IQOne.Zero.Abstractions.csproj" />
+    <ProjectReference Include="../IQOne.Zero.Core/IQOne.Zero.Core.csproj" />
+    <ProjectReference Include="../IQOne.Zero.Configuration/IQOne.Zero.Configuration.csproj" />
+    <!-- PrivateAssets="none": varsayilan proje basvurusu analyzer'lari disarida birakir,
+         boylece metapaketi alan tuketiciye RGF tanilari hic ulasmaz. -->
+    <ProjectReference Include="../IQOne.Zero.Regify/IQOne.Zero.Regify.csproj" PrivateAssets="none" />
+  </ItemGroup>
+
+</Project>

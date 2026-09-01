@@ -6,6 +6,11 @@
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <DevelopmentDependency>true</DevelopmentDependency>
+    <!-- Analyzer paketinde lib/ yoktur; cerceve uyumu analyzers/ yolundan gelir. -->
+    <!-- Analyzer paketinde lib/ yoktur; icerik analyzers/ yolundan gelir. Paket analizi
+         bunu bos paket sanir. -->
+    <NoPackageAnalysis>true</NoPackageAnalysis>
+    <IncludeSymbols>false</IncludeSymbols>
     <Description>Zero's source generators and analyzers. Generates registration, dispatch and entity mappings at build time, and reports captive dependencies, leaked persistence providers and mismatched columns as compiler errors.</Description>
   </PropertyGroup>
 
