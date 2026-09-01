@@ -33,6 +33,7 @@ internal static class RuleReader
         var id = fallbackId;
         var title = fallbackId;
         var enforcedBy = new List<string>();
+        var appliesTo = new List<string>();
         var body = text;
 
         if (text.StartsWith("---", StringComparison.Ordinal))
@@ -53,6 +54,11 @@ internal static class RuleReader
                     {
                         case "id": id = value; break;
                         case "title": title = value; break;
+                        case "applies-to":
+                            appliesTo.AddRange(value.Trim('[', ']')
+                                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                                .Select(v => v.Trim('"', '\'')));
+                            break;
                         case "enforced-by":
                             enforcedBy.AddRange(value.Trim('[', ']')
                                 .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
@@ -64,7 +70,7 @@ internal static class RuleReader
             }
         }
 
-        return new RuleFile(package.Id, package.Version, id, title, enforcedBy, body.TrimEnd());
+        return new RuleFile(package.Id, package.Version, id, title, enforcedBy, appliesTo, body.TrimEnd());
     }
 }
 

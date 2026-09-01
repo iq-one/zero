@@ -6,6 +6,10 @@ namespace IQOne.Zero.Tool.Rules;
 /// <param name="Id">Stable rule identifier from the file's frontmatter.</param>
 /// <param name="Title">One-line summary from the frontmatter.</param>
 /// <param name="EnforcedBy">Analyzer diagnostics that enforce this rule, if any.</param>
+/// <param name="AppliesTo">
+/// Glob patterns the rule is relevant to. Empty means everywhere. Editors that can scope a
+/// rule are told; one that cannot simply applies it, which is the old behaviour.
+/// </param>
 /// <param name="Body">The rule text, frontmatter removed.</param>
 internal sealed record RuleFile(
     string Package,
@@ -13,6 +17,7 @@ internal sealed record RuleFile(
     string Id,
     string Title,
     IReadOnlyList<string> EnforcedBy,
+    IReadOnlyList<string> AppliesTo,
     string Body)
 {
     /// <summary>

@@ -67,8 +67,23 @@ dotnet tool install --global IQOne.Zero.Tool
 zero rules init
 ```
 
-This writes `AGENTS.md`, `CLAUDE.md` and editor rule files composed from every Zero package
-the project references. Re-run it after a version upgrade.
+This writes, from every Zero package the project references:
+
+| | |
+| --- | --- |
+| `AGENTS.md` | what the project has, what Zero also offers, and an index of the rules |
+| `.zero/rules/*.md` | the full text of each rule |
+| `.cursor/rules/*.mdc` | the same rules, scoped to the files they apply to |
+| `CLAUDE.md` | an import of `AGENTS.md` |
+
+`AGENTS.md` is loaded at the start of every agent session, so it holds the catalog and an
+index rather than every rule in full — an agent cannot look up a capability it does not know
+exists, but it can read a rule when it reaches that area. Commit all of it.
+
+Re-run after upgrading. `zero rules check` exits non-zero when the committed files no longer
+match the restored packages, which is the CI gate: an upgrade nobody re-ran leaves an agent
+reading last release's rules, and the file looks current because somebody committed it on
+purpose.
 
 ## Status
 

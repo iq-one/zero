@@ -45,6 +45,7 @@ static int Run(string[] args)
     return (args[0], args.Length > 1 ? args[1] : null) switch
     {
         ("rules", null or "init") => Init(directory, capabilities, catalog, rules),
+        ("rules", "check") => Check(directory, capabilities, catalog, rules),
         ("rules", "list") => ListRules(rules),
         ("capabilities", null or "list") => ListCapabilities(capabilities, catalog),
         var (command, action) => Unknown(command, action)
@@ -65,6 +66,31 @@ static int Init(
     Console.WriteLine("Re-run after upgrading Zero or adding a package.");
 
     return 0;
+}
+
+static int Check(
+    string directory,
+    IReadOnlyList<Capability> capabilities,
+    Catalog? catalog,
+    IReadOnlyList<RuleFile> rules)
+{
+    var stale = RuleWriter.Check(directory, capabilities, catalog, rules);
+
+    if (stale.Count == 0)
+    {
+        Console.WriteLine("Up to date with the Zero packages this project restored.");
+        return 0;
+    }
+
+    Console.Error.WriteLine("The guidance in this repository does not match the packages it restored:");
+    Console.Error.WriteLine();
+
+    foreach (var path in stale) Console.Error.WriteLine($"  {path}");
+
+    Console.Error.WriteLine();
+    Console.Error.WriteLine("Run 'zero rules init' and commit the result.");
+
+    return 1;
 }
 
 static int ListRules(IReadOnlyList<RuleFile> rules)
@@ -119,24 +145,64 @@ static int Unknown(string command, string? action)
 
 // Walks up from the working directory: the tool is normally run from a project folder, but
 // running it from the repository root should still find the project underneath.
+// Finds the restored project to read, without wandering.
+//
+// Bounded on purpose. An earlier version recursed into every directory at every level of
+// the walk up, so running it from a folder with no obj/ scanned the project, then its
+// parent, then the home directory, then the filesystem root -- and took whichever assets
+// file it happened to meet first, silently describing the wrong project.
+//
+// Now: this directory, then one level of immediate children, then up -- stopping at the
+// directory holding the solution, because that is the edge of the work. Two candidates at
+// one level is an ambiguity the user resolves, not one the tool guesses at.
 static string FindAssets(string directory)
 {
     for (var current = new DirectoryInfo(directory); current is not null; current = current.Parent)
     {
-        var assets = Path.Combine(current.FullName, "obj", "project.assets.json");
+        var here = Path.Combine(current.FullName, "obj", "project.assets.json");
 
-        if (File.Exists(assets)) return assets;
+        if (File.Exists(here)) return here;
 
-        var nested = Directory
-            .EnumerateFiles(current.FullName, "project.assets.json", SearchOption.AllDirectories)
-            .FirstOrDefault();
+        var nested = Immediate(current);
 
-        if (nested is not null) return nested;
+        if (nested.Count == 1) return nested[0];
+
+        if (nested.Count > 1)
+            throw new ZeroToolException(
+                $"'{current.FullName}' holds {nested.Count} restored projects. " +
+                "Run this from the one you mean, or pass its folder.");
+
+        // The solution is the edge of the work; above it lies somebody else's filesystem.
+        if (current.EnumerateFiles("*.slnx").Any() || current.EnumerateFiles("*.sln").Any()) break;
     }
 
     throw new ZeroToolException(
         "No restored project was found here. Run 'dotnet restore' first, " +
-        "or run this from a folder containing the project.");
+        "or run this from the project's folder.");
+}
+
+// Assets files one level down, ignoring what we cannot read.
+static List<string> Immediate(DirectoryInfo directory)
+{
+    var found = new List<string>();
+
+    try
+    {
+        foreach (var child in directory.EnumerateDirectories())
+        {
+            if (child.Name is "bin" or "node_modules" || child.Name.StartsWith('.')) continue;
+
+            var assets = Path.Combine(child.FullName, "obj", "project.assets.json");
+
+            if (File.Exists(assets)) found.Add(assets);
+        }
+    }
+    catch (UnauthorizedAccessException)
+    {
+        // A directory we may not read is not a directory the project lives in.
+    }
+
+    return found;
 }
 
 static void Usage()
@@ -149,6 +215,9 @@ static void Usage()
                                  capability manifests and rule files inside the Zero
                                  packages this project uses. Content outside the managed
                                  block is kept.
+          zero rules check       Report whether the files above match the restored packages,
+                                 and exit non-zero when they do not. For CI: an upgrade that
+                                 nobody re-ran leaves an agent reading last release's rules.
           zero rules list        Show the rules those packages carry, and what enforces them.
           zero capabilities      Show what is installed, and what Zero offers that is not.
 
