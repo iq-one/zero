@@ -20,7 +20,8 @@ public class ApiSurfaceTests
         "IQOne.Zero.Configuration",
         "IQOne.Zero.Results",
         "IQOne.Zero.Messaging",
-        "IQOne.Zero.Web"
+        "IQOne.Zero.Web",
+        "IQOne.Zero.Validation"
     ];
 
     [Theory]

@@ -329,14 +329,17 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
 
     private static List<string> Resolve(ServiceCandidate candidate, ZeroNames platform, HashSet<string> nonService)
     {
-        // A handler is registered under the closed interface the pipeline resolves, not by
-        // the naming convention. The convention would pick the open generic it declares --
-        // IQueryHandler<TQuery, TResponse> -- which is not a type anything can be registered as.
-        var handled = candidate.ClosedInterfaces.FirstOrDefault(i =>
-            i.OpenGenericName == platform.RequestHandlerInterface && i.TypeArguments.Count == 2);
+        // Framework extension points are registered under the closed generic they implement.
+        // The naming convention would pick the open definition -- IQueryHandler<TQuery,
+        // TResponse> -- which nothing can be registered as, and a class deriving from a base
+        // class rather than implementing an interface directly would match nothing at all.
+        var closed = candidate.ClosedInterfaces
+            .Where(i => platform.ClosedRegistrationInterfaces.Contains(i.OpenGenericName))
+            .Select(i => $"global::{i.OpenGenericName}<{string.Join(", ", i.TypeArguments.ToArray())}>")
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
 
-        if (handled is not null)
-            return [$"global::{platform.RequestHandlerInterface}<{handled.TypeArguments[0]}, {handled.TypeArguments[1]}>"];
+        if (closed.Count > 0) return closed;
 
         var required = candidate.AllInterfaces
             .Where(i => !nonService.Contains(i) && i.StartsWith(platform.Root, StringComparison.Ordinal) is false)

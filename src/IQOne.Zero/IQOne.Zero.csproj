@@ -19,6 +19,7 @@
     <ProjectReference Include="../IQOne.Zero.Configuration/IQOne.Zero.Configuration.csproj" />
     <ProjectReference Include="../IQOne.Zero.Results/IQOne.Zero.Results.csproj" PrivateAssets="none" />
     <ProjectReference Include="../IQOne.Zero.Messaging/IQOne.Zero.Messaging.csproj" />
+    <ProjectReference Include="../IQOne.Zero.Validation/IQOne.Zero.Validation.csproj" />
     <!-- PrivateAssets="none": varsayilan proje basvurusu analyzer'lari disarida birakir,
          boylece metapaketi alan tuketiciye ZERO tanilari hic ulasmaz. -->
     <ProjectReference Include="../IQOne.Zero.Generators/IQOne.Zero.Generators.csproj" PrivateAssets="none" />

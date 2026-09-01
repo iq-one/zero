@@ -42,6 +42,26 @@ internal sealed record ZeroNames
     public string RequestPipeline => $"{Messaging}.RequestPipeline";
     public string ModuleServiceContextExtensions => $"{Messaging}.ModuleServiceContextExtensions";
 
+    /// <summary>
+    /// Framework interfaces whose implementations are registered under the CLOSED generic
+    /// they implement, rather than by the naming convention.
+    /// </summary>
+    /// <remarks>
+    /// These are resolved by type: the pipeline asks for <c>IRequestHandler&lt;X, Y&gt;</c>,
+    /// the validation behaviour for <c>IEnumerable&lt;IValidator&lt;X&gt;&gt;</c>. The
+    /// convention would pick the open definition, which nothing can be registered as, and a
+    /// class deriving from a base rather than implementing directly would get nothing at all.
+    ///
+    /// A capability that resolves its extension point by closed generic adds its interface
+    /// here; nothing else in the generator changes.
+    /// </remarks>
+    public string[] ClosedRegistrationInterfaces =>
+    [
+        RequestHandlerInterface,
+        $"{Root}.Validation.IValidator",
+        $"{Messaging}.IPipelineBehavior"
+    ];
+
     /// <summary>Assembly whose presence turns on endpoint generation.</summary>
     public string WebAssembly => $"{Root}.Web";
 

@@ -1,0 +1,12 @@
+{
+  "id": "validation",
+  "kind": "capability",
+  "title": "Request validation",
+  "summary": "Validators are found at build time and run as a pipeline behaviour before the handler. Every failure is reported at once, so a caller correcting a form does not discover the second mistake on the next round trip.",
+  "useWhen": "A request has rules about what it may contain. Do not validate inside a handler, and do not write your own validation abstraction.",
+  "package": "IQOne.Zero.Validation",
+  "entryPoint": "services.AddZeroValidation()",
+  "keyTypes": ["IValidator<T>", "Validator<T>", "RuleSet<T>", "ValidationBehavior<TRequest,TResponse>"],
+  "diagnostics": [],
+  "example": "public sealed class CreateInvoiceValidator : Validator<CreateInvoice>\n{\n    protected override void Configure(RuleSet<CreateInvoice> rules)\n    {\n        rules.NotEmpty(x => x.Reference, \"invoice.reference\");\n        rules.Length(x => x.Reference, \"invoice.reference\", 3, 32);\n        rules.InRange(x => x.Amount, \"invoice.amount\", 0.01m, 1_000_000m);\n        rules.Must(x => x.Due > x.Issued, \"invoice.due\", \"The due date must be after the issue date.\");\n    }\n}\n\n// A rule that needs a dependency:\npublic sealed class UniqueReferenceValidator(IInvoiceStore store) : Validator<CreateInvoice>\n{\n    protected override void Configure(RuleSet<CreateInvoice> rules)\n        => rules.MustAsync(\n            (x, ct) => store.IsReferenceFreeAsync(x.Reference, ct),\n            \"invoice.reference.taken\",\n            \"That reference is already in use.\");\n}\n\n// Nothing to register. The generator finds the validator; the pipeline runs it."
+}

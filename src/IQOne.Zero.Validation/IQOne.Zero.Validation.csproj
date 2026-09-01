@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>$(ZeroTargetFrameworks)</TargetFrameworks>
+    <Description>Request validation as a pipeline behaviour. Validators are found at build time and run before the handler, so an unacceptable request never reaches it and every failure is reported at once.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../IQOne.Zero.Messaging/IQOne.Zero.Messaging.csproj" />
+  </ItemGroup>
+</Project>

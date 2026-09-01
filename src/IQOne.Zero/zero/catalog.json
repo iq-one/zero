@@ -53,6 +53,13 @@
       "package": "IQOne.Zero.Web",
       "title": "HTTP endpoints",
       "useWhen": "Commands and queries need to be reachable over HTTP. Do not write controllers or your own result-to-status-code mapping."
+    },
+    {
+      "id": "validation",
+      "kind": "capability",
+      "package": "IQOne.Zero.Validation",
+      "title": "Request validation",
+      "useWhen": "A request has rules about what it may contain. Do not validate inside a handler."
     }
   ]
 }

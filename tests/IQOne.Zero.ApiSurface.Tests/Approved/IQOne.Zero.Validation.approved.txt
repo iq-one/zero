@@ -1,0 +1,31 @@
+interface IQOne.Zero.Validation.IValidator : IQOne.Zero.DependencyInjection.Descriptors.IScoped
+
+interface IQOne.Zero.Validation.IValidator<T> : IQOne.Zero.Validation.IValidator
+    ValueTask<IReadOnlyList<IQOne.Zero.Error>> ValidateAsync(T value, CancellationToken cancellationToken)
+
+sealed class IQOne.Zero.Validation.RuleSet<T>
+    .ctor RuleSet()
+    IQOne.Zero.Validation.RuleSet<T> ForEach<TItem>(Func<T, IEnumerable<TItem>> select, IQOne.Zero.Validation.IValidator<TItem> validator)
+    IQOne.Zero.Validation.RuleSet<T> InRange<TValue>(Func<T, TValue> select, string code, TValue minimum, TValue maximum)
+    IQOne.Zero.Validation.RuleSet<T> Length(Func<T, string> select, string code, int minimum, int maximum)
+    IQOne.Zero.Validation.RuleSet<T> Matches(Func<T, string> select, string code, Regex pattern, string message = default)
+    IQOne.Zero.Validation.RuleSet<T> Must(Func<T, bool> predicate, string code, string message)
+    IQOne.Zero.Validation.RuleSet<T> MustAsync(Func<T, CancellationToken, ValueTask<bool>> predicate, string code, string message)
+    IQOne.Zero.Validation.RuleSet<T> NotEmpty(Func<T, string> select, string code, string message = default)
+    IQOne.Zero.Validation.RuleSet<T> NotEmpty<TItem>(Func<T, IEnumerable<TItem>> select, string code, string message = default)
+    IQOne.Zero.Validation.RuleSet<T> NotNull<TValue>(Func<T, TValue> select, string code, string message = default)
+    IQOne.Zero.Validation.RuleSet<T> When(Func<T, bool> condition, Action<IQOne.Zero.Validation.RuleSet<T>> rules)
+    int Count { get; }
+
+sealed class IQOne.Zero.Validation.ValidationBehavior<TRequest, TResponse> : IQOne.Zero.Messaging.IPipelineBehavior<TRequest, TResponse>
+    .ctor ValidationBehavior(IEnumerable<IQOne.Zero.Validation.IValidator<TRequest>> validators)
+    Task<IQOne.Zero.Result<TResponse>> HandleAsync(TRequest request, IQOne.Zero.Messaging.RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
+    int Order { get; }
+
+static class IQOne.Zero.Validation.ValidationRegistration
+    static Microsoft.Extensions.DependencyInjection.IServiceCollection AddZeroValidation(Microsoft.Extensions.DependencyInjection.IServiceCollection services)
+
+abstract class IQOne.Zero.Validation.Validator<T> : IQOne.Zero.Validation.IValidator<T>
+    ValueTask<IReadOnlyList<IQOne.Zero.Error>> ValidateAsync(T value, CancellationToken cancellationToken)
+    protected .ctor Validator()
+    protected void Configure(IQOne.Zero.Validation.RuleSet<T> rules)

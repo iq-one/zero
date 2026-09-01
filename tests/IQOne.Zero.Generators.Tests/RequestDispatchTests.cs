@@ -160,3 +160,34 @@ public class EndpointGenerationTests
         run.DiagnosticIds.Should().Contain("ZERO301");
     }
 }
+
+/// <summary>
+/// A validator implements its interface through a base class, so the naming convention
+/// finds nothing. It has to be registered under the closed generic the behaviour resolves.
+/// </summary>
+public class ClosedGenericRegistrationTests
+{
+    [Fact]
+    public void A_validator_is_registered_under_the_closed_interface_even_though_it_derives_from_a_base()
+    {
+        var run = GeneratorHarness.Run("""
+            using IQOne.Zero.Messaging;
+            using IQOne.Zero.Validation;
+
+            namespace Test;
+
+            public sealed record Register(string Email) : ICommand;
+
+            public sealed class RegisterValidator : Validator<Register>
+            {
+                protected override void Configure(RuleSet<Register> rules)
+                    => rules.NotEmpty(x => x.Email, "register.email");
+            }
+            """);
+
+        run.HasError.Should().BeFalse();
+
+        run.GeneratedSource.Should().Contain(
+            "AddScoped<global::IQOne.Zero.Validation.IValidator<global::Test.Register>, global::Test.RegisterValidator>");
+    }
+}

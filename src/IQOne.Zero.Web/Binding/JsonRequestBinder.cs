@@ -73,7 +73,7 @@ public sealed class JsonRequestBinder(IOptions<ZeroWebOptions> options) : IReque
 
         try
         {
-            return JsonNode.Parse(buffer) as JsonObject
+            return await JsonNode.ParseAsync(buffer, cancellationToken: cancellationToken) as JsonObject
                    ?? throw new RequestBindingException(requestType, "the body must be a JSON object");
         }
         catch (JsonException exception)
