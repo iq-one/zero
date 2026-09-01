@@ -23,7 +23,7 @@ dependency that would give it one.
 | `IQOne.Zero.Abstractions` | Fundamentals, lifetime markers, module and application contracts |
 | `IQOne.Zero.Core` | Application lifecycle, steps, module graph |
 | `IQOne.Zero.Configuration` | Options bound and validated at startup |
-| `IQOne.Zero.Regify` | Registration source generator and analyzers |
+| `IQOne.Zero.Generators` | Registration source generator and analyzers |
 | `IQOne.Zero.Tool` | The `zero` command line tool |
 
 Generators and analyzers configure themselves. Nothing is added to your project file.

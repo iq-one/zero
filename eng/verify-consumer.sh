@@ -55,6 +55,11 @@ public interface IInvoiceStore : IScoped;
 public sealed class InvoiceStore : IInvoiceStore;
 CS
 
+# Restored into a throwaway folder, never the machine's global cache: repacking the same
+# version number leaves the old extraction in place there, and the check would then verify
+# the previous build instead of this one.
+export NUGET_PACKAGES="$work/packages"
+
 echo "--- registrations are generated ---"
 dotnet build --nologo -v q
 generated="$(find generated -name Module.g.cs)"
@@ -77,8 +82,8 @@ if dotnet build --nologo -v q > build.log 2>&1; then
   exit 1
 fi
 
-grep -q RGF009 build.log \
-  || { echo "FAIL: expected RGF009, got:"; cat build.log; exit 1; }
+grep -q ZERO009 build.log \
+  || { echo "FAIL: expected ZERO009, got:"; cat build.log; exit 1; }
 
 echo "--- rule files ship inside the packages ---"
 # Listed to a file first: with pipefail, `grep -q` exiting early would SIGPIPE unzip and
@@ -89,7 +94,7 @@ grep -q "zero/rules/IQOne.Zero.Abstractions/" contents.txt \
 
 echo "--- the analyzer reaches a consumer of the metapackage ---"
 unzip -p "$packages/IQOne.Zero.$version.nupkg" IQOne.Zero.nuspec > meta.xml
-grep -q 'id="IQOne.Zero.Regify".*include="All"' meta.xml \
+grep -q 'id="IQOne.Zero.Generators".*include="All"' meta.xml \
   || { echo "FAIL: the metapackage excludes the analyzer, so no rule would be enforced"; cat meta.xml; exit 1; }
 
 echo "OK"

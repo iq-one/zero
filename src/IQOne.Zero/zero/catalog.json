@@ -3,7 +3,7 @@
   "vendor": "IQOne",
   "site": "https://iqone.solutions/zero",
   "purpose": "Everything a line-of-business application would otherwise build for itself, resolved at compile time. Install the package for what you need and write one Add call.",
-  "readThisFirst": "Before writing a foundational abstraction — caching, validation, a repository, a result type, a pipeline — check this catalog. If Zero has it, use it. Writing a second one is the mistake this framework exists to prevent.",
+  "readThisFirst": "Before writing a foundational abstraction \u2014 caching, validation, a repository, a result type, a pipeline \u2014 check this catalog. If Zero has it, use it. Writing a second one is the mistake this framework exists to prevent.",
   "capabilities": [
     {
       "id": "abstractions",
@@ -27,11 +27,18 @@
       "useWhen": "Any time the application reads a setting."
     },
     {
-      "id": "regify",
+      "id": "generators",
       "kind": "kernel",
-      "package": "IQOne.Zero.Regify",
+      "package": "IQOne.Zero.Generators",
       "title": "Compile-time generation and analyzers",
       "useWhen": "Always. Arrives with the metapackage."
+    },
+    {
+      "id": "results",
+      "kind": "capability",
+      "package": "IQOne.Zero.Results",
+      "title": "Results and errors",
+      "useWhen": "An operation can fail in a way the caller should handle. Do not write your own Result, Either or Maybe type."
     }
   ]
 }

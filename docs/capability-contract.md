@@ -21,7 +21,7 @@ Four packages that everything else assumes and nothing else may be built without
 | `IQOne.Zero.Abstractions` | Lifetime markers, role interfaces, module and application contracts |
 | `IQOne.Zero.Core` | Application lifecycle, module graph |
 | `IQOne.Zero.Configuration` | Options bound and validated at startup |
-| `IQOne.Zero.Regify` | Registration generation, analyzers |
+| `IQOne.Zero.Generators` | Registration generation, analyzers |
 
 The kernel takes no dependency on any capability. A capability that the kernel needs is not
 a capability — it belongs in the kernel.
@@ -88,7 +88,7 @@ consumer touches, and one canonical example.
   "package": "IQOne.Zero.Caching",
   "entryPoint": "services.AddZeroCaching()",
   "keyTypes": ["ICachePolicy<T>", "ICache"],
-  "diagnostics": ["RGF210", "RGF211"],
+  "diagnostics": ["ZERO210", "ZERO211"],
   "example": "..."
 }
 ```
@@ -103,11 +103,11 @@ validation on, and resolves the capability's public types. That test is what mak
 
 | Range | Owner |
 | --- | --- |
-| RGF001–RGF099 | Kernel: registration, modules, configuration |
-| RGF100–RGF199 | Results, validation |
-| RGF200–RGF299 | Persistence, caching |
-| RGF300–RGF399 | Messaging, web |
-| RGF400–RGF499 | Observability, resilience, background work |
+| ZERO001–ZERO099 | Kernel: registration, modules, configuration |
+| ZERO100–ZERO199 | Results, validation |
+| ZERO200–ZERO299 | Persistence, caching |
+| ZERO300–ZERO399 | Messaging, web |
+| ZERO400–ZERO499 | Observability, resilience, background work |
 
 Ids are never reused. A retired diagnostic keeps its number and its page.
 

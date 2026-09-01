@@ -1,0 +1,12 @@
+{
+  "id": "results",
+  "kind": "capability",
+  "title": "Results and errors",
+  "summary": "An outcome type for operations that are expected to fail. Errors are values with a stable code and a kind, so a failure appears in the signature instead of being discovered at runtime.",
+  "useWhen": "An operation can fail in a way the caller should handle. Do not write your own Result, Either, Maybe or OperationOutcome type.",
+  "package": "IQOne.Zero.Results",
+  "entryPoint": null,
+  "keyTypes": ["Result", "Result<T>", "Error", "ErrorKind", "ErrorList"],
+  "diagnostics": ["ZERO100", "ZERO101", "ZERO102"],
+  "example": "public async Task<Result<Invoice>> GetAsync(int id, CancellationToken cancellationToken)\n{\n    var invoice = await store.FindAsync(id, cancellationToken);\n\n    return invoice is null\n        ? Error.NotFound(\"invoice.missing\", $\"No invoice with id {id}.\")\n        : invoice;\n}\n\n// Compose without unpacking; every step short-circuits on failure.\nreturn await GetAsync(id, cancellationToken)\n    .Ensure(i => i.IsOpen, Error.Conflict(\"invoice.closed\", \"Already closed.\"))\n    .Map(i => i.ToModel());"
+}

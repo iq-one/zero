@@ -3,7 +3,7 @@ id: zero.di.lifetime-by-abstraction
 title: Let the abstraction carry the lifetime
 package: IQOne.Zero.Abstractions
 applies-to: ["**/*.cs"]
-enforced-by: [RGF006, RGF007, RGF008]
+enforced-by: [ZERO006, ZERO007, ZERO008]
 ---
 
 A service's lifetime is declared by the interface it implements, not at a registration call
@@ -39,7 +39,7 @@ Do not restate a lifetime the abstraction has given:
 public sealed class InvoiceStore : IInvoiceStore;
 ```
 
-Do not implement two lifetime markers on one type. That is RGF006, and there is no sensible
+Do not implement two lifetime markers on one type. That is ZERO006, and there is no sensible
 way for the generator to pick.
 
 ## When the abstraction cannot express it
@@ -51,7 +51,7 @@ it only when a type's lifetime genuinely differs from what its role implies.
 
 Registration defaults to the interface whose name matches the class: `InvoiceStore` resolves
 through `IInvoiceStore`. When that interface does not exist the service type cannot be
-inferred (RGF007) — either add it, or state the types with
+inferred (ZERO007) — either add it, or state the types with
 `[ServiceTypes(typeof(ISomething))]`.
 
 ## Registering a third-party type

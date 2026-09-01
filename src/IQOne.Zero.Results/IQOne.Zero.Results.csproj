@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>$(ZeroTargetFrameworks)</TargetFrameworks>
+    <Description>An outcome type for operations that are expected to fail. Errors are values, not exceptions, and the compiler reports a result that is discarded or read without being checked.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../IQOne.Zero.Abstractions/IQOne.Zero.Abstractions.csproj" />
+  </ItemGroup>
+</Project>

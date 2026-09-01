@@ -3,13 +3,13 @@ id: zero.di.captive-dependency
 title: Never take a shorter-lived dependency
 package: IQOne.Zero.Abstractions
 applies-to: ["**/*.cs"]
-enforced-by: [RGF009]
+enforced-by: [ZERO009]
 severity: error
 ---
 
 A singleton that takes a scoped dependency captures the first instance it is handed and
 holds it for the life of the process. Every later request then reads state belonging to
-whichever request happened to arrive first. Zero reports this as a build error (RGF009).
+whichever request happened to arrive first. Zero reports this as a build error (ZERO009).
 
 The lifetimes, longest first: `ISingleton` > `IThread` > `IScoped` > `ITransient`.
 A service may depend on its own lifetime or a longer one, never a shorter one.

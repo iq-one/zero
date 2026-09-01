@@ -48,7 +48,10 @@ public class CatalogTests
     {
         var packages = Directory
             .EnumerateFiles(Source, "*.csproj", SearchOption.AllDirectories)
-            .Select(p => Path.GetFileNameWithoutExtension(p))
+            // Not by name: an analyzer project is folded into the package it belongs to, and
+            // the criterion for "is published" is whether the project packs at all.
+            .Where(p => !File.ReadAllText(p).Contains("<IsPackable>false</IsPackable>", StringComparison.Ordinal))
+            .Select(Path.GetFileNameWithoutExtension)
             // The metapackage carries the catalog; the tool is not a capability.
             .Where(p => p is not ("IQOne.Zero" or "IQOne.Zero.Tool"))
             .Order(StringComparer.Ordinal);

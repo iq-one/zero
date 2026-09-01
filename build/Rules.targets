@@ -61,6 +61,34 @@
   </ItemGroup>
 
   <!--
+    ================= Yetenek analyzer'i sozlesmesi =================
+
+    Bir yetenek, kendi kurallarini uygulayan analyzer'i src/<Paket>.Analyzers/ altinda
+    tutar. O proje kendi basina yayinlanmaz; bu paketin icine analyzer olarak konur.
+    Boylece tuketici tek paket kurar ve kurali derleyicide gorur.
+
+    Klasor varsa gerisi kendiliginden olur: yeni bir yetenek eklemek icin burada
+    degistirilecek bir sey yoktur.
+  -->
+  <PropertyGroup>
+    <ZeroAnalyzerProject>$(MSBuildProjectDirectory)/../$(PackageId).Analyzers/$(PackageId).Analyzers.csproj</ZeroAnalyzerProject>
+    <ZeroAnalyzerAssembly>$(MSBuildProjectDirectory)/../$(PackageId).Analyzers/bin/$(Configuration)/netstandard2.0/$(PackageId).Analyzers.dll</ZeroAnalyzerAssembly>
+    <ZeroHasAnalyzer Condition="Exists('$(ZeroAnalyzerProject)')">true</ZeroHasAnalyzer>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(ZeroHasAnalyzer)' == 'true'">
+    <!-- Derleme sirasini garanti eder; kutuphane analyzer'in koduna basvurmaz. -->
+    <ProjectReference Include="$(ZeroAnalyzerProject)"
+                      ReferenceOutputAssembly="false"
+                      PrivateAssets="all" />
+
+    <None Include="$(ZeroAnalyzerAssembly)"
+          Pack="true"
+          PackagePath="analyzers/dotnet/cs"
+          Visible="false" />
+  </ItemGroup>
+
+  <!--
     Tuketicinin derlemesinde kurallarin yerini bildiren targets dosyasi.
     Yalnizca item tanimlar; hedef tanimlamaz, cunku metapaket ile gelen her
     paket ayni hedefi yeniden tanimlardi.
