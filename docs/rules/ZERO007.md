@@ -21,6 +21,21 @@ either none or several unrelated interfaces, the service type is genuinely ambig
 
 Anything else is this diagnostic.
 
+`[ServiceTypes]` overrides all of it, and it reaches a derived class: a base that states its
+service types states them for everything deriving from it. A derived class that states its
+own replaces the inherited set rather than adding to it.
+
+```csharp
+[ServiceTypes<IInitializeStep>]
+[ServiceTypes<IShutdownStep>]
+public abstract class Steps : IInitializeStep, IShutdownStep, ISingleton;
+
+public sealed class MySteps : Steps;                  // both, inherited
+
+[ServiceTypes(typeof(IShutdownStep))]
+public sealed class ShutdownOnly : Steps;             // only IShutdownStep
+```
+
 ## Fix
 
 Add the matching interface:

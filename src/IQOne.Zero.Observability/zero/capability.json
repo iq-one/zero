@@ -1,0 +1,12 @@
+{
+  "id": "observability",
+  "kind": "capability",
+  "title": "Logging, tracing and metrics",
+  "summary": "Every request is logged, traced and timed by the pipeline, at the level its outcome deserves. A handler never mentions any of the three, and a request's contents stay out of the log unless the application says otherwise.",
+  "useWhen": "You need to see what the application is doing. Do not log, trace or time inside a handler, and do not create your own ActivitySource or Meter.",
+  "package": "IQOne.Zero.Observability",
+  "entryPoint": "services.AddZeroObservability()",
+  "keyTypes": ["ObservabilityOptions", "ZeroTelemetry", "RequestOutcome", "CorrelationId"],
+  "diagnostics": ["ZERO400", "ZERO401"],
+  "example": "services.AddZeroObservability();\n\n// Nothing else. Every request through ISender is now logged, traced and timed.\n// Subscribe from the host:\n//   tracing.AddSource(ZeroTelemetry.ActivitySourceName)\n//   metrics.AddMeter(ZeroTelemetry.MeterName)\n\n// A validation failure is a normal answer, not a fault, so it does not log as one.\n// A handler stays free of all three:\npublic sealed class CloseInvoiceHandler(IInvoiceStore store) : ICommandHandler<CloseInvoice>\n{\n    public async Task<Result<Unit>> HandleAsync(CloseInvoice command, CancellationToken cancellationToken)\n    {\n        var invoice = await store.FindAsync(command.Id, cancellationToken);\n\n        return invoice is null\n            ? Error.NotFound(\"invoice.missing\", $\"No invoice {command.Id}.\")\n            : Unit.Success;\n    }\n}"
+}
