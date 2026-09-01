@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Request, handler and dispatch contracts. Carries no serializer and no response envelope: both are the consuming application's choice.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../IQOne.Zero.Abstractions/IQOne.Zero.Abstractions.csproj" />
+  </ItemGroup>
+</Project>

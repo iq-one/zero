@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Turns each service method into a real ASP.NET Core endpoint, so authorization, rate limiting, caching, OpenAPI and telemetry apply per method rather than to one catch-all route.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../IQOne.Zero.Web/IQOne.Zero.Web.csproj" />
+    <ProjectReference Include="../IQOne.Zero.Messaging.Dispatch/IQOne.Zero.Messaging.Dispatch.csproj" />
+  </ItemGroup>
+</Project>

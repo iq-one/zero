@@ -1,0 +1,31 @@
+<Solution>
+
+  <Folder Name="/Solution Items/">
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="global.json" />
+    <File Path="BannedSymbols.txt" />
+    <File Path="README.md" />
+    <File Path=".gitignore" />
+  </Folder>
+
+  <Folder Name="/Solution Items/build/">
+    <File Path="build/Packaging.props" />
+    <File Path="build/Rules.targets" />
+  </Folder>
+
+  <Folder Name="/src/">
+    <Project Path="src/IQOne.Zero.Abstractions/IQOne.Zero.Abstractions.csproj" />
+    <Project Path="src/IQOne.Zero.Core/IQOne.Zero.Core.csproj" />
+    <Project Path="src/IQOne.Zero.Configuration/IQOne.Zero.Configuration.csproj" />
+    <Project Path="src/IQOne.Zero.Messaging/IQOne.Zero.Messaging.csproj" />
+    <Project Path="src/IQOne.Zero.Messaging.Dispatch/IQOne.Zero.Messaging.Dispatch.csproj" />
+    <Project Path="src/IQOne.Zero.Data/IQOne.Zero.Data.csproj" />
+    <Project Path="src/IQOne.Zero.Data.EntityFramework/IQOne.Zero.Data.EntityFramework.csproj" />
+    <Project Path="src/IQOne.Zero.Data.EntityFramework.SqlServer/IQOne.Zero.Data.EntityFramework.SqlServer.csproj" />
+    <Project Path="src/IQOne.Zero.Web/IQOne.Zero.Web.csproj" />
+    <Project Path="src/IQOne.Zero.Web.Api/IQOne.Zero.Web.Api.csproj" />
+    <Project Path="src/IQOne.Zero.Regify/IQOne.Zero.Regify.csproj" />
+  </Folder>
+
+</Solution>

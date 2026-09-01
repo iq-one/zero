@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>SQL Server provider configuration for Zero's Entity Framework data layer.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../IQOne.Zero.Data.EntityFramework/IQOne.Zero.Data.EntityFramework.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Web application base for Zero, wrapping the ASP.NET Core host in the Zero application lifecycle.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../IQOne.Zero.Core/IQOne.Zero.Core.csproj" />
+  </ItemGroup>
+</Project>

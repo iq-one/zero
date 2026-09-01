@@ -1,0 +1,7 @@
+P:System.Threading.Tasks.Task`1.Result; Use await instead of blocking on the task.
+M:System.Threading.Tasks.Task.Wait; Use await instead of blocking on the task.
+M:System.Threading.Tasks.Task.Run``1(System.Func{``0}); Do not hide synchronous work behind a task.
+M:System.Threading.Tasks.Task.Run(System.Action); Do not hide synchronous work behind a task.
+P:System.DateTime.Now; Take a TimeProvider dependency so time stays testable.
+P:System.DateTime.UtcNow; Take a TimeProvider dependency so time stays testable.
+T:System.Data.SqlClient.SqlConnection; Use Microsoft.Data.SqlClient.
