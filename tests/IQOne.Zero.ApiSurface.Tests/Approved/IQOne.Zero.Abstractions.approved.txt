@@ -1,0 +1,222 @@
+interface IQOne.Zero.App.IApplication : IAsyncDisposable, IDisposable, IQOne.Zero.DependencyInjection.Accessors.IServiceCollectionAccessor, IQOne.Zero.DependencyInjection.Accessors.IServiceProviderAccessor
+    IQOne.Zero.App.IApplicationOptions Options { get; set; }
+    Task InitializeAsync(CancellationToken cancellationToken = default)
+    Task RunAsync(CancellationToken cancellationToken = default)
+    Task StopAsync(CancellationToken cancellationToken = default)
+
+interface IQOne.Zero.App.IApplicationOptions
+    bool ValidateOnBuild { get; set; }
+    bool ValidateScopes { get; set; }
+
+interface IQOne.Zero.App.IApplication<TOptions> : IQOne.Zero.App.IApplication
+    TOptions Options { get; set; }
+
+interface IQOne.Zero.App.Steps.IApplicationConfigureServicesStep : IQOne.Zero.App.Steps.IApplicationStep, IQOne.Zero.DependencyInjection.Descriptors.ISingletonInstance, IQOne.Zero.DependencyInjection.Services.IRequiredService
+    Task OnConfigureServicesAsync(Microsoft.Extensions.DependencyInjection.IServiceCollection services, CancellationToken cancellationToken)
+
+interface IQOne.Zero.App.Steps.IApplicationInitializeStep : IQOne.Zero.App.Steps.IApplicationStep, IQOne.Zero.DependencyInjection.Descriptors.ISingletonInstance, IQOne.Zero.DependencyInjection.Services.IRequiredService
+    Task OnInitializeAsync(IQOne.Zero.App.IApplication application, CancellationToken cancellationToken)
+
+interface IQOne.Zero.App.Steps.IApplicationPostRunStep : IQOne.Zero.App.Steps.IApplicationStep, IQOne.Zero.DependencyInjection.Descriptors.ISingletonInstance, IQOne.Zero.DependencyInjection.Services.IRequiredService
+    Task OnPostRunAsync(IQOne.Zero.App.IApplication application, CancellationToken cancellationToken)
+
+interface IQOne.Zero.App.Steps.IApplicationPreRunStep : IQOne.Zero.App.Steps.IApplicationStep, IQOne.Zero.DependencyInjection.Descriptors.ISingletonInstance, IQOne.Zero.DependencyInjection.Services.IRequiredService
+    Task OnPreRunAsync(IQOne.Zero.App.IApplication application, CancellationToken cancellationToken)
+
+interface IQOne.Zero.App.Steps.IApplicationStep : IQOne.Zero.Fundamentals.IStep
+    int Order { get; }
+
+interface IQOne.Zero.DependencyInjection.Accessors.IAccessor
+
+interface IQOne.Zero.DependencyInjection.Accessors.IObjectAccessor<T> : IQOne.Zero.DependencyInjection.Accessors.IAccessor
+    T Value { get; }
+
+interface IQOne.Zero.DependencyInjection.Accessors.IServiceCollectionAccessor : IQOne.Zero.DependencyInjection.Accessors.IAccessor
+    Microsoft.Extensions.DependencyInjection.IServiceCollection ServiceCollection { get; set; }
+
+interface IQOne.Zero.DependencyInjection.Accessors.IServiceProviderAccessor : IQOne.Zero.DependencyInjection.Accessors.IAccessor
+    IServiceProvider ServiceProvider { get; set; }
+
+sealed class IQOne.Zero.DependencyInjection.Annotations.BoundAttribute : IQOne.Zero.DependencyInjection.Annotations.LifeStyleAttribute
+    .ctor BoundAttribute()
+
+sealed class IQOne.Zero.DependencyInjection.Annotations.CustomAttribute : IQOne.Zero.DependencyInjection.Annotations.LifeStyleAttribute
+    .ctor CustomAttribute()
+
+enum IQOne.Zero.DependencyInjection.Annotations.LifeStyle
+    int value__
+    static IQOne.Zero.DependencyInjection.Annotations.LifeStyle Bound
+    static IQOne.Zero.DependencyInjection.Annotations.LifeStyle Custom
+    static IQOne.Zero.DependencyInjection.Annotations.LifeStyle Pooled
+    static IQOne.Zero.DependencyInjection.Annotations.LifeStyle Scoped
+    static IQOne.Zero.DependencyInjection.Annotations.LifeStyle Singleton
+    static IQOne.Zero.DependencyInjection.Annotations.LifeStyle Thread
+    static IQOne.Zero.DependencyInjection.Annotations.LifeStyle Transient
+    static IQOne.Zero.DependencyInjection.Annotations.LifeStyle Undefined
+
+class IQOne.Zero.DependencyInjection.Annotations.LifeStyleAttribute : Attribute
+    .ctor LifeStyleAttribute(IQOne.Zero.DependencyInjection.Annotations.LifeStyle lifeStyle)
+    IQOne.Zero.DependencyInjection.Annotations.LifeStyle LifeStyle { get; set; }
+    Microsoft.Extensions.DependencyInjection.ServiceLifetime ServiceLifetime { get; }
+    Microsoft.Extensions.DependencyInjection.ServiceLifetime ToServiceLifetime(IQOne.Zero.DependencyInjection.Annotations.LifeStyle lifeStyle)
+
+sealed class IQOne.Zero.DependencyInjection.Annotations.PooledAttribute : IQOne.Zero.DependencyInjection.Annotations.LifeStyleAttribute
+    .ctor PooledAttribute()
+
+sealed class IQOne.Zero.DependencyInjection.Annotations.ScopedAttribute : IQOne.Zero.DependencyInjection.Annotations.LifeStyleAttribute
+    .ctor ScopedAttribute()
+
+enum IQOne.Zero.DependencyInjection.Annotations.ServiceSelectorType
+    int value__
+    static IQOne.Zero.DependencyInjection.Annotations.ServiceSelectorType All
+    static IQOne.Zero.DependencyInjection.Annotations.ServiceSelectorType AllInterfaces
+    static IQOne.Zero.DependencyInjection.Annotations.ServiceSelectorType DefaultInterface
+    static IQOne.Zero.DependencyInjection.Annotations.ServiceSelectorType Interfaces
+    static IQOne.Zero.DependencyInjection.Annotations.ServiceSelectorType None
+    static IQOne.Zero.DependencyInjection.Annotations.ServiceSelectorType Self
+
+class IQOne.Zero.DependencyInjection.Annotations.ServiceTypesAttribute : Attribute
+    .ctor ServiceTypesAttribute(Type[] types)
+    .ctor ServiceTypesAttribute(object key, Type[] types)
+    IQOne.Zero.DependencyInjection.Annotations.ServiceSelectorType ServiceSelectorType { get; set; }
+    Type[] Types { get; }
+    object Key { get; set; }
+
+sealed class IQOne.Zero.DependencyInjection.Annotations.ServiceTypesAttribute<T> : IQOne.Zero.DependencyInjection.Annotations.ServiceTypesAttribute
+    .ctor ServiceTypesAttribute(Type[] types)
+
+sealed class IQOne.Zero.DependencyInjection.Annotations.SingletonAttribute : IQOne.Zero.DependencyInjection.Annotations.LifeStyleAttribute
+    .ctor SingletonAttribute()
+
+sealed class IQOne.Zero.DependencyInjection.Annotations.ThreadAttribute : IQOne.Zero.DependencyInjection.Annotations.LifeStyleAttribute
+    .ctor ThreadAttribute()
+
+sealed class IQOne.Zero.DependencyInjection.Annotations.TransientAttribute : IQOne.Zero.DependencyInjection.Annotations.LifeStyleAttribute
+    .ctor TransientAttribute()
+
+sealed class IQOne.Zero.DependencyInjection.Annotations.UndefinedAttribute : IQOne.Zero.DependencyInjection.Annotations.LifeStyleAttribute
+    .ctor UndefinedAttribute()
+
+interface IQOne.Zero.DependencyInjection.Descriptors.IScoped : IQOne.Zero.DependencyInjection.Descriptors.IServiceDescriptor
+
+interface IQOne.Zero.DependencyInjection.Descriptors.IServiceDescriptor
+
+interface IQOne.Zero.DependencyInjection.Descriptors.ISingleton : IQOne.Zero.DependencyInjection.Descriptors.IServiceDescriptor
+
+interface IQOne.Zero.DependencyInjection.Descriptors.ISingletonInstance : IQOne.Zero.DependencyInjection.Descriptors.ISingleton
+
+interface IQOne.Zero.DependencyInjection.Descriptors.IThread : IQOne.Zero.DependencyInjection.Descriptors.IServiceDescriptor
+
+interface IQOne.Zero.DependencyInjection.Descriptors.ITransient : IQOne.Zero.DependencyInjection.Descriptors.IServiceDescriptor
+
+static class IQOne.Zero.DependencyInjection.Extensions.ServiceCollectionExtensions
+    static IEnumerable<T> GetAllServices<T>(Microsoft.Extensions.DependencyInjection.IServiceCollection services)
+    static IEnumerable<T> GetServices<T>(Microsoft.Extensions.DependencyInjection.IServiceCollection services)
+    static IEnumerable<object> GetAllServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services, Type serviceType)
+    static IEnumerable<object> GetServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services, Func<Microsoft.Extensions.DependencyInjection.ServiceDescriptor, bool> predicate)
+    static IEnumerable<object> GetServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services, Type serviceType)
+    static IReadOnlyCollection<T> GetAllServiceCollection<T>(Microsoft.Extensions.DependencyInjection.IServiceCollection services)
+    static IReadOnlyCollection<T> GetServiceCollection<T>(Microsoft.Extensions.DependencyInjection.IServiceCollection services)
+    static T GetRequiredService<T>(Microsoft.Extensions.DependencyInjection.IServiceCollection services)
+    static T GetService<T>(Microsoft.Extensions.DependencyInjection.IServiceCollection services)
+    static object GetRequiredService(Microsoft.Extensions.DependencyInjection.IServiceCollection services, Type serviceType)
+    static object GetService(Microsoft.Extensions.DependencyInjection.IServiceCollection services, Type serviceType)
+
+static class IQOne.Zero.DependencyInjection.Extensions.ServiceDescriptorExtensions
+    static Type GetImplementationType(Microsoft.Extensions.DependencyInjection.ServiceDescriptor descriptor)
+    static object GetImplementationInstance(Microsoft.Extensions.DependencyInjection.ServiceDescriptor descriptor)
+    static object ProduceImplementationInstance(Microsoft.Extensions.DependencyInjection.ServiceDescriptor descriptor)
+
+interface IQOne.Zero.DependencyInjection.Services.IIgnoredService
+
+interface IQOne.Zero.DependencyInjection.Services.IRequiredService
+
+interface IQOne.Zero.Fundamentals.IAdapter : IQOne.Zero.DependencyInjection.Descriptors.ITransient
+
+interface IQOne.Zero.Fundamentals.IAdapter<TSource, TResult> : IQOne.Zero.Fundamentals.IAdapter
+    TResult Adapt(TSource value)
+
+interface IQOne.Zero.Fundamentals.IAsyncBuilder : IQOne.Zero.Fundamentals.IBuilder
+
+interface IQOne.Zero.Fundamentals.IAsyncBuilder<T> : IQOne.Zero.Fundamentals.IAsyncBuilder
+    Task<T> BuildAsync(CancellationToken cancellationToken)
+
+interface IQOne.Zero.Fundamentals.IAsyncProvider : IQOne.Zero.Fundamentals.IProvider
+
+interface IQOne.Zero.Fundamentals.IAsyncProvider<TResult> : IQOne.Zero.Fundamentals.IAsyncProvider
+    Task<TResult> ProvideAsync(CancellationToken cancellationToken)
+
+interface IQOne.Zero.Fundamentals.IAsyncProvider<TArgument, TResult> : IQOne.Zero.Fundamentals.IAsyncProvider
+    Task<TResult> ProvideAsync(TArgument argument, CancellationToken cancellationToken)
+
+interface IQOne.Zero.Fundamentals.IBuilder : IQOne.Zero.DependencyInjection.Descriptors.ITransient
+
+interface IQOne.Zero.Fundamentals.IBuilder<T> : IQOne.Zero.Fundamentals.IBuilder
+    T Build()
+
+interface IQOne.Zero.Fundamentals.IConfigurator : IQOne.Zero.DependencyInjection.Descriptors.ITransient
+
+interface IQOne.Zero.Fundamentals.IContext : IQOne.Zero.DependencyInjection.Descriptors.ITransient
+
+interface IQOne.Zero.Fundamentals.IDecorator
+
+interface IQOne.Zero.Fundamentals.IDecorator<TInstance> : IQOne.Zero.Fundamentals.IDecorator
+    void Decorate(TInstance instance)
+
+interface IQOne.Zero.Fundamentals.IDecorator<TInstance, TArguments> : IQOne.Zero.Fundamentals.IDecorator
+    void Decorate(TInstance instance, TArguments arguments)
+
+interface IQOne.Zero.Fundamentals.IFactory : IQOne.Zero.DependencyInjection.Descriptors.ISingleton
+
+interface IQOne.Zero.Fundamentals.IOption : IQOne.Zero.DependencyInjection.Descriptors.ITransient
+
+interface IQOne.Zero.Fundamentals.IProvider : IQOne.Zero.DependencyInjection.Descriptors.ITransient
+
+interface IQOne.Zero.Fundamentals.IProvider<TResult> : IQOne.Zero.Fundamentals.IProvider
+    TResult Provide()
+
+interface IQOne.Zero.Fundamentals.IProvider<TArgument, TResult> : IQOne.Zero.Fundamentals.IProvider
+    TResult Provide(TArgument argument)
+
+interface IQOne.Zero.Fundamentals.IStep : IQOne.Zero.DependencyInjection.Descriptors.ISingleton
+
+sealed class IQOne.Zero.Modules.DependsOnAttribute : Attribute
+    .ctor DependsOnAttribute(Type moduleType)
+    Type ModuleType { get; }
+
+interface IQOne.Zero.Modules.IModule
+    IReadOnlyList<Type> Dependencies { get; }
+    string Name { get; }
+
+interface IQOne.Zero.Modules.IModuleConfigureServicesStep : IQOne.Zero.Modules.IModuleStep
+    ValueTask OnConfigureServicesAsync(IQOne.Zero.Modules.IModuleServiceContext context, CancellationToken cancellationToken)
+
+interface IQOne.Zero.Modules.IModuleContext
+    IServiceProvider Services { get; }
+
+interface IQOne.Zero.Modules.IModuleFeatureCollection
+    void Set<T>(T feature)
+
+interface IQOne.Zero.Modules.IModuleFeatureContributor
+    void Complete(Microsoft.Extensions.DependencyInjection.IServiceCollection services)
+    void Contribute(IQOne.Zero.Modules.IModuleFeatureCollection features)
+
+interface IQOne.Zero.Modules.IModuleInitializeStep : IQOne.Zero.Modules.IModuleStep
+    ValueTask OnInitializeAsync(IQOne.Zero.Modules.IModuleContext context, CancellationToken cancellationToken)
+
+interface IQOne.Zero.Modules.IModulePostRunStep : IQOne.Zero.Modules.IModuleStep
+    ValueTask OnPostRunAsync(IQOne.Zero.Modules.IModuleContext context, CancellationToken cancellationToken)
+
+interface IQOne.Zero.Modules.IModulePreRunStep : IQOne.Zero.Modules.IModuleStep
+    ValueTask OnPreRunAsync(IQOne.Zero.Modules.IModuleContext context, CancellationToken cancellationToken)
+
+interface IQOne.Zero.Modules.IModuleServiceContext
+    Microsoft.Extensions.DependencyInjection.IServiceCollection Services { get; }
+    T Feature<T>()
+    bool TryGetFeature<T>(out T feature)
+
+interface IQOne.Zero.Modules.IModuleStep
+
+sealed class IQOne.Zero.Modules.ModuleDependencyCycleException : InvalidOperationException
+    .ctor ModuleDependencyCycleException(IReadOnlyList<string> cycle)
+    IReadOnlyList<string> Cycle { get; }

@@ -1,0 +1,61 @@
+class IQOne.Zero.App.Application : IQOne.Zero.Fundamentals.Disposable.AsyncDisposable, IQOne.Zero.App.IApplication
+    .ctor Application()
+    .ctor Application(Microsoft.Extensions.DependencyInjection.IServiceCollection serviceCollection)
+    IQOne.Zero.App.IApplicationOptions Options { get; set; }
+    IServiceProvider ServiceProvider { get; set; }
+    Microsoft.Extensions.DependencyInjection.IServiceCollection ServiceCollection { get; set; }
+    Task InitializeAsync(CancellationToken cancellationToken = default)
+    Task RunAsync(CancellationToken cancellationToken = default)
+    Task StopAsync(CancellationToken cancellationToken = default)
+    protected Task OnInitializedAsync(CancellationToken cancellationToken)
+    protected Task OnInitializingAsync(CancellationToken cancellationToken)
+    protected Task<IServiceProvider> CreateServiceProviderAsync(CancellationToken cancellationToken)
+    protected ValueTask ReleaseManagedResourcesAsync()
+    protected void ReleaseManagedResources()
+
+class IQOne.Zero.App.ApplicationOptions : IQOne.Zero.App.IApplicationOptions
+    .ctor ApplicationOptions()
+    bool ValidateOnBuild { get; set; }
+    bool ValidateScopes { get; set; }
+
+abstract class IQOne.Zero.App.Steps.ApplicationSteps : IQOne.Zero.App.Steps.IApplicationConfigureServicesStep, IQOne.Zero.App.Steps.IApplicationInitializeStep, IQOne.Zero.App.Steps.IApplicationPostRunStep, IQOne.Zero.App.Steps.IApplicationPreRunStep
+    Task OnConfigureServicesAsync(Microsoft.Extensions.DependencyInjection.IServiceCollection services, CancellationToken cancellationToken)
+    Task OnInitializeAsync(IQOne.Zero.App.IApplication application, CancellationToken cancellationToken)
+    Task OnPostRunAsync(IQOne.Zero.App.IApplication application, CancellationToken cancellationToken)
+    Task OnPreRunAsync(IQOne.Zero.App.IApplication application, CancellationToken cancellationToken)
+    int Order { get; }
+    protected .ctor ApplicationSteps()
+
+static class IQOne.Zero.Extensions.ApplicationExtensions
+    static IQOne.Zero.App.IApplication GetApplication(Microsoft.Extensions.DependencyInjection.IServiceCollection services)
+    static T GetRequiredService<T>(IQOne.Zero.App.IApplication application)
+    static T GetService<T>(IQOne.Zero.App.IApplication application)
+
+abstract class IQOne.Zero.Fundamentals.Disposable.AsyncDisposable : IQOne.Zero.Fundamentals.Disposable.Disposable, IAsyncDisposable
+    ValueTask DisposeAsync()
+    protected .ctor AsyncDisposable()
+    protected ValueTask ReleaseManagedResourcesAsync()
+
+abstract class IQOne.Zero.Fundamentals.Disposable.Disposable : IDisposable
+    protected .ctor Disposable()
+    protected void Dispose(bool disposing)
+    protected void Finalize()
+    protected void ReleaseManagedResources()
+    protected void ReleaseUnmanagedResources()
+    void Dispose()
+
+sealed class IQOne.Zero.Modules.ModuleConfigureServicesStep : IQOne.Zero.App.Steps.IApplicationConfigureServicesStep
+    .ctor ModuleConfigureServicesStep(IReadOnlyList<IQOne.Zero.Modules.IModule> modules)
+    Task OnConfigureServicesAsync(Microsoft.Extensions.DependencyInjection.IServiceCollection services, CancellationToken cancellationToken)
+    int Order { get; }
+
+static class IQOne.Zero.Modules.ModuleGraph
+    static string Describe(IReadOnlyList<IQOne.Zero.Modules.IModule> orderedModules)
+
+static class IQOne.Zero.Modules.ModuleHostExtensions
+    static Microsoft.Extensions.DependencyInjection.IServiceCollection AddModules(Microsoft.Extensions.DependencyInjection.IServiceCollection services, IQOne.Zero.Modules.IModule[] modules)
+    static ValueTask InitializeModulesAsync(IServiceProvider services, CancellationToken cancellationToken = default)
+    static ValueTask PostRunModulesAsync(IServiceProvider services, CancellationToken cancellationToken = default)
+    static ValueTask PreRunModulesAsync(IServiceProvider services, CancellationToken cancellationToken = default)
+    static ValueTask<Microsoft.Extensions.DependencyInjection.IServiceCollection> AddModulesAsync(Microsoft.Extensions.DependencyInjection.IServiceCollection services, IEnumerable<IQOne.Zero.Modules.IModule> modules, CancellationToken cancellationToken = default)
+    static string DescribeModuleGraph(IServiceProvider services)

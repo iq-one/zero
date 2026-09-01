@@ -1,0 +1,15 @@
+static class IQOne.Zero.Configuration.Extensions.ConfigurationExtensions
+    static Microsoft.Extensions.Configuration.IConfiguration GetConfiguration(IQOne.Zero.App.IApplication application)
+    static Microsoft.Extensions.Configuration.IConfiguration GetConfiguration(Microsoft.Extensions.DependencyInjection.IServiceCollection services)
+    static Microsoft.Extensions.DependencyInjection.IServiceCollection AddConfiguration(Microsoft.Extensions.DependencyInjection.IServiceCollection services)
+    static Microsoft.Extensions.DependencyInjection.IServiceCollection Configure<TOptions>(Microsoft.Extensions.DependencyInjection.IServiceCollection services, string key, string prefix = default)
+    static Microsoft.Extensions.DependencyInjection.IServiceCollection Configure<TOptions>(Microsoft.Extensions.DependencyInjection.IServiceCollection services, string prefix = default)
+
+static class IQOne.Zero.Configuration.Options.ValidatedOptionsExtensions
+    static Microsoft.Extensions.DependencyInjection.IServiceCollection AddValidatedOptions<TOptions>(Microsoft.Extensions.DependencyInjection.IServiceCollection services, Func<TOptions, bool> validate, string failureMessage, string sectionName = default)
+    static Microsoft.Extensions.DependencyInjection.IServiceCollection AddValidatedOptions<TOptions>(Microsoft.Extensions.DependencyInjection.IServiceCollection services, string sectionName = default)
+
+sealed class IQOne.Zero.Configuration.Steps.AddConfigurationStep : IQOne.Zero.App.Steps.IApplicationPreRunStep
+    .ctor AddConfigurationStep()
+    Task OnPreRunAsync(IQOne.Zero.App.IApplication application, CancellationToken cancellationToken)
+    int Order { get; }

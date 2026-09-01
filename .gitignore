@@ -7,3 +7,6 @@ artifacts/
 .vs/
 *.nupkg
 *.snupkg
+
+# API onay testinin uretip biraktigi dosyalar
+*.received.txt

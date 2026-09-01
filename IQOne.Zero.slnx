@@ -24,6 +24,7 @@
   </Folder>
 
   <Folder Name="/tests/">
+    <Project Path="tests/IQOne.Zero.ApiSurface.Tests/IQOne.Zero.ApiSurface.Tests.csproj" />
     <Project Path="tests/IQOne.Zero.Core.Tests/IQOne.Zero.Core.Tests.csproj" />
     <Project Path="tests/IQOne.Zero.Configuration.Tests/IQOne.Zero.Configuration.Tests.csproj" />
     <Project Path="tests/IQOne.Zero.Regify.Tests/IQOne.Zero.Regify.Tests.csproj" />
