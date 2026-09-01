@@ -1,8 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <Description>Provider-neutral data contracts: entities, segregated repositories, unit of work, query execution and the convention hooks. References no ORM.</Description>
-  </PropertyGroup>
-  <ItemGroup>
-    <ProjectReference Include="../IQOne.Zero.Abstractions/IQOne.Zero.Abstractions.csproj" />
-  </ItemGroup>
-</Project>

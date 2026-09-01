@@ -7,23 +7,23 @@ enforced-by: [RGF009]
 severity: error
 ---
 
-A singleton that takes a scoped dependency captures the first instance it is given and
-holds it forever. Every later request then reads state belonging to the request that
-happened to arrive first. Zero reports this as a build error (RGF009).
+A singleton that takes a scoped dependency captures the first instance it is handed and
+holds it for the life of the process. Every later request then reads state belonging to
+whichever request happened to arrive first. Zero reports this as a build error (RGF009).
 
 The lifetimes, longest first: `ISingleton` > `IThread` > `IScoped` > `ITransient`.
-A service may depend on its own lifetime or longer, never shorter.
+A service may depend on its own lifetime or a longer one, never a shorter one.
 
 ## Don't
 
 ```csharp
-public sealed class ReportCache(IPatientRepository repository) : ISingleton;
+public sealed class ReportCache(IInvoiceStore store) : ISingleton;
 //                              ^ IScoped — frozen on first resolution
 ```
 
 ## Do
 
-Take a factory for the shorter-lived dependency and open a scope per use:
+Take a scope factory and open a scope per use:
 
 ```csharp
 public sealed class ReportCache(IServiceScopeFactory scopes) : ISingleton
@@ -31,10 +31,10 @@ public sealed class ReportCache(IServiceScopeFactory scopes) : ISingleton
     public async Task<Report> BuildAsync(int id, CancellationToken cancellationToken)
     {
         await using var scope = scopes.CreateAsyncScope();
-        var repository = scope.ServiceProvider.GetRequiredService<IPatientRepository>();
+        var store = scope.ServiceProvider.GetRequiredService<IInvoiceStore>();
         ...
     }
 }
 ```
 
-Or reconsider the lifetime: a cache that needs per-request data is usually not a singleton.
+Or reconsider the lifetime: something that needs per-request state is usually not a singleton.

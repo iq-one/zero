@@ -18,13 +18,6 @@
     <Project Path="src/IQOne.Zero.Abstractions/IQOne.Zero.Abstractions.csproj" />
     <Project Path="src/IQOne.Zero.Core/IQOne.Zero.Core.csproj" />
     <Project Path="src/IQOne.Zero.Configuration/IQOne.Zero.Configuration.csproj" />
-    <Project Path="src/IQOne.Zero.Messaging/IQOne.Zero.Messaging.csproj" />
-    <Project Path="src/IQOne.Zero.Messaging.Dispatch/IQOne.Zero.Messaging.Dispatch.csproj" />
-    <Project Path="src/IQOne.Zero.Data/IQOne.Zero.Data.csproj" />
-    <Project Path="src/IQOne.Zero.Data.EntityFramework/IQOne.Zero.Data.EntityFramework.csproj" />
-    <Project Path="src/IQOne.Zero.Data.EntityFramework.SqlServer/IQOne.Zero.Data.EntityFramework.SqlServer.csproj" />
-    <Project Path="src/IQOne.Zero.Web/IQOne.Zero.Web.csproj" />
-    <Project Path="src/IQOne.Zero.Web.Api/IQOne.Zero.Web.Api.csproj" />
     <Project Path="src/IQOne.Zero.Regify/IQOne.Zero.Regify.csproj" />
   </Folder>
 

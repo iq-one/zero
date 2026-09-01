@@ -18,16 +18,24 @@ public class Application : AsyncDisposable, IApplication
 {
     private bool _initialized;
 
+    /// <summary>Builds on an existing service collection.</summary>
+    /// <param name="serviceCollection">Registrations to start from.</param>
     public Application(IServiceCollection serviceCollection) => ServiceCollection = serviceCollection;
 
+    /// <summary>Builds on a fresh service collection.</summary>
     public Application() : this(new ServiceCollection()) { }
 
+    /// <inheritdoc />
     public virtual IServiceCollection ServiceCollection { get; set; }
 
+    /// <inheritdoc />
+    /// <remarks>Null until <see cref="RunAsync"/> has built it.</remarks>
     public virtual IServiceProvider ServiceProvider { get; set; } = null!;
 
+    /// <inheritdoc />
     public IApplicationOptions Options { get; set; } = new ApplicationOptions();
 
+    /// <inheritdoc />
     public virtual async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
         if (_initialized) return;
@@ -45,6 +53,7 @@ public class Application : AsyncDisposable, IApplication
         _initialized = true;
     }
 
+    /// <inheritdoc />
     public virtual async Task RunAsync(CancellationToken cancellationToken = default)
     {
         await InitializeAsync(cancellationToken).ConfigureAwait(false);
@@ -61,6 +70,7 @@ public class Application : AsyncDisposable, IApplication
             await step.OnPostRunAsync(this, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
     public virtual Task StopAsync(CancellationToken cancellationToken = default)
     {
         ServiceCollection.Clear();
@@ -69,6 +79,9 @@ public class Application : AsyncDisposable, IApplication
         return Task.CompletedTask;
     }
 
+    /// <summary>Builds the container. Override to supply a different one.</summary>
+    /// <param name="cancellationToken">Cancels the build.</param>
+    /// <returns>The built provider.</returns>
     protected virtual Task<IServiceProvider> CreateServiceProviderAsync(CancellationToken cancellationToken)
         => Task.FromResult<IServiceProvider>(ServiceCollection.BuildServiceProvider(
             new ServiceProviderOptions
@@ -77,8 +90,12 @@ public class Application : AsyncDisposable, IApplication
                 ValidateOnBuild = Options.ValidateOnBuild
             }));
 
+    /// <summary>Runs before the initialize steps.</summary>
+    /// <param name="cancellationToken">Cancels the work.</param>
     protected virtual Task OnInitializingAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
+    /// <summary>Runs after the initialize steps.</summary>
+    /// <param name="cancellationToken">Cancels the work.</param>
     protected virtual Task OnInitializedAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
     /// <summary>Reads steps from the service collection before a provider exists.</summary>
@@ -86,12 +103,14 @@ public class Application : AsyncDisposable, IApplication
     private IEnumerable<TStep> Steps<TStep>() where TStep : IApplicationStep
         => ServiceCollection.GetServiceCollection<TStep>().OrderBy(s => s.Order);
 
+    /// <inheritdoc />
     protected override void ReleaseManagedResources()
     {
         StopAsync().GetAwaiter().GetResult();
         base.ReleaseManagedResources();
     }
 
+    /// <inheritdoc />
     protected override async ValueTask ReleaseManagedResourcesAsync()
     {
         await StopAsync().ConfigureAwait(false);

@@ -6,6 +6,9 @@ namespace IQOne.Zero.Modules;
 /// <summary>Renders the resolved module order and its dependency edges.</summary>
 public static class ModuleGraph
 {
+    /// <summary>Renders the resolved order and its edges, for startup logging and tests.</summary>
+    /// <param name="orderedModules">The modules in resolved order.</param>
+    /// <returns>A human-readable description.</returns>
     public static string Describe(IReadOnlyList<IModule> orderedModules)
     {
         var builder = new StringBuilder();

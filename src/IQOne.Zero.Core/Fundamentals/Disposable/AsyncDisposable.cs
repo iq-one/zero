@@ -5,6 +5,7 @@ public abstract class AsyncDisposable : Disposable, IAsyncDisposable
 {
     private bool _asyncDisposed;
 
+    /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
         if (_asyncDisposed) return;
@@ -18,5 +19,6 @@ public abstract class AsyncDisposable : Disposable, IAsyncDisposable
         GC.SuppressFinalize(this);
     }
 
+    /// <summary>Releases managed resources asynchronously.</summary>
     protected virtual ValueTask ReleaseManagedResourcesAsync() => ValueTask.CompletedTask;
 }
