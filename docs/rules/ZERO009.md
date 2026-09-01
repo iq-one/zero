@@ -41,7 +41,7 @@ if the singleton exists only to cache, cache the *data* rather than the service 
 
 ## Lifetimes, longest first
 
-`ISingleton` > `IThread` > `IScoped` > `ITransient`
+`ISingleton` > `IScoped` > `ITransient`
 
 A service may depend on its own lifetime or a longer one, never a shorter one.
 

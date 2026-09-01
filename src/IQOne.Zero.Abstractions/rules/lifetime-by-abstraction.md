@@ -20,7 +20,7 @@ public interface IInvoiceStore : IScoped;
 public sealed class InvoiceStore(IClock clock) : IInvoiceStore;
 ```
 
-`IScoped`, `ISingleton`, `ITransient` and `IThread` live in
+`IScoped`, `ISingleton` and `ITransient` live in
 `IQOne.Zero.DependencyInjection.Descriptors`. The role interfaces in `IQOne.Zero.Fundamentals`
 already carry one: `IStep` is a singleton, `IProvider` and `IBuilder` are transient.
 

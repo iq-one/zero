@@ -38,7 +38,6 @@ internal sealed record ZeroNames
     public string LifeStyleAttribute => $"{Annotations}.LifeStyleAttribute";
 
     /// <summary>Says a lifetime has not been chosen, which is not a lifetime.</summary>
-    public string UndefinedAttribute => $"{Annotations}.UndefinedAttribute";
 
     /// <summary>
     /// Lifetime annotations, mapped to the container lifetime each declares.
@@ -57,11 +56,7 @@ internal sealed record ZeroNames
     [
         ($"{Annotations}.SingletonAttribute", "Singleton"),
         ($"{Annotations}.ScopedAttribute", "Scoped"),
-        ($"{Annotations}.TransientAttribute", "Transient"),
-        ($"{Annotations}.ThreadAttribute", "Transient"),
-        ($"{Annotations}.PooledAttribute", "Transient"),
-        ($"{Annotations}.CustomAttribute", "Transient"),
-        ($"{Annotations}.BoundAttribute", "Transient")
+        ($"{Annotations}.TransientAttribute", "Transient")
     ];
 
     /// <summary>Assembly whose presence turns on request dispatch generation.</summary>

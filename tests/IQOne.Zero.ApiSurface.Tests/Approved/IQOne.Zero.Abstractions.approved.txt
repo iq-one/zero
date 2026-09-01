@@ -34,31 +34,18 @@ interface IQOne.Zero.DependencyInjection.Accessors.IServiceCollectionAccessor : 
 interface IQOne.Zero.DependencyInjection.Accessors.IServiceProviderAccessor : IQOne.Zero.DependencyInjection.Accessors.IAccessor
     IServiceProvider ServiceProvider { get; set; }
 
-sealed class IQOne.Zero.DependencyInjection.Annotations.BoundAttribute : IQOne.Zero.DependencyInjection.Annotations.LifeStyleAttribute
-    .ctor BoundAttribute()
-
-sealed class IQOne.Zero.DependencyInjection.Annotations.CustomAttribute : IQOne.Zero.DependencyInjection.Annotations.LifeStyleAttribute
-    .ctor CustomAttribute()
-
 enum IQOne.Zero.DependencyInjection.Annotations.LifeStyle
     int value__
-    static IQOne.Zero.DependencyInjection.Annotations.LifeStyle Bound
-    static IQOne.Zero.DependencyInjection.Annotations.LifeStyle Custom
-    static IQOne.Zero.DependencyInjection.Annotations.LifeStyle Pooled
     static IQOne.Zero.DependencyInjection.Annotations.LifeStyle Scoped
     static IQOne.Zero.DependencyInjection.Annotations.LifeStyle Singleton
-    static IQOne.Zero.DependencyInjection.Annotations.LifeStyle Thread
     static IQOne.Zero.DependencyInjection.Annotations.LifeStyle Transient
-    static IQOne.Zero.DependencyInjection.Annotations.LifeStyle Undefined
 
 class IQOne.Zero.DependencyInjection.Annotations.LifeStyleAttribute : Attribute
     .ctor LifeStyleAttribute(IQOne.Zero.DependencyInjection.Annotations.LifeStyle lifeStyle)
     IQOne.Zero.DependencyInjection.Annotations.LifeStyle LifeStyle { get; set; }
     Microsoft.Extensions.DependencyInjection.ServiceLifetime ServiceLifetime { get; }
     Microsoft.Extensions.DependencyInjection.ServiceLifetime ToServiceLifetime(IQOne.Zero.DependencyInjection.Annotations.LifeStyle lifeStyle)
-
-sealed class IQOne.Zero.DependencyInjection.Annotations.PooledAttribute : IQOne.Zero.DependencyInjection.Annotations.LifeStyleAttribute
-    .ctor PooledAttribute()
+    string ToString()
 
 sealed class IQOne.Zero.DependencyInjection.Annotations.ScopedAttribute : IQOne.Zero.DependencyInjection.Annotations.LifeStyleAttribute
     .ctor ScopedAttribute()
@@ -85,14 +72,8 @@ sealed class IQOne.Zero.DependencyInjection.Annotations.ServiceTypesAttribute<T>
 sealed class IQOne.Zero.DependencyInjection.Annotations.SingletonAttribute : IQOne.Zero.DependencyInjection.Annotations.LifeStyleAttribute
     .ctor SingletonAttribute()
 
-sealed class IQOne.Zero.DependencyInjection.Annotations.ThreadAttribute : IQOne.Zero.DependencyInjection.Annotations.LifeStyleAttribute
-    .ctor ThreadAttribute()
-
 sealed class IQOne.Zero.DependencyInjection.Annotations.TransientAttribute : IQOne.Zero.DependencyInjection.Annotations.LifeStyleAttribute
     .ctor TransientAttribute()
-
-sealed class IQOne.Zero.DependencyInjection.Annotations.UndefinedAttribute : IQOne.Zero.DependencyInjection.Annotations.LifeStyleAttribute
-    .ctor UndefinedAttribute()
 
 interface IQOne.Zero.DependencyInjection.Descriptors.IScoped : IQOne.Zero.DependencyInjection.Descriptors.IServiceDescriptor
 
@@ -101,8 +82,6 @@ interface IQOne.Zero.DependencyInjection.Descriptors.IServiceDescriptor
 interface IQOne.Zero.DependencyInjection.Descriptors.ISingleton : IQOne.Zero.DependencyInjection.Descriptors.IServiceDescriptor
 
 interface IQOne.Zero.DependencyInjection.Descriptors.ISingletonInstance : IQOne.Zero.DependencyInjection.Descriptors.ISingleton
-
-interface IQOne.Zero.DependencyInjection.Descriptors.IThread : IQOne.Zero.DependencyInjection.Descriptors.IServiceDescriptor
 
 interface IQOne.Zero.DependencyInjection.Descriptors.ITransient : IQOne.Zero.DependencyInjection.Descriptors.IServiceDescriptor
 
@@ -149,17 +128,7 @@ interface IQOne.Zero.Fundamentals.IConfigurator : IQOne.Zero.DependencyInjection
 
 interface IQOne.Zero.Fundamentals.IContext : IQOne.Zero.DependencyInjection.Descriptors.ITransient
 
-interface IQOne.Zero.Fundamentals.IDecorator
-
-interface IQOne.Zero.Fundamentals.IDecorator<TInstance> : IQOne.Zero.Fundamentals.IDecorator
-    void Decorate(TInstance instance)
-
-interface IQOne.Zero.Fundamentals.IDecorator<TInstance, TArguments> : IQOne.Zero.Fundamentals.IDecorator
-    void Decorate(TInstance instance, TArguments arguments)
-
 interface IQOne.Zero.Fundamentals.IFactory : IQOne.Zero.DependencyInjection.Descriptors.ISingleton
-
-interface IQOne.Zero.Fundamentals.IOption : IQOne.Zero.DependencyInjection.Descriptors.ITransient
 
 interface IQOne.Zero.Fundamentals.IProvider : IQOne.Zero.DependencyInjection.Descriptors.ITransient
 

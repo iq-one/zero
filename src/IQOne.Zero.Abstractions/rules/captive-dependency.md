@@ -11,7 +11,7 @@ A singleton that takes a scoped dependency captures the first instance it is han
 holds it for the life of the process. Every later request then reads state belonging to
 whichever request happened to arrive first. Zero reports this as a build error (ZERO009).
 
-The lifetimes, longest first: `ISingleton` > `IThread` > `IScoped` > `ITransient`.
+The lifetimes, longest first: `ISingleton` > `IScoped` > `ITransient`.
 A service may depend on its own lifetime or a longer one, never a shorter one.
 
 ## Don't

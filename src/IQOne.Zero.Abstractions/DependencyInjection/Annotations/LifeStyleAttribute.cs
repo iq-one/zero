@@ -30,6 +30,9 @@ public class LifeStyleAttribute(LifeStyle lifeStyle) : Attribute
         LifeStyle.Scoped => ServiceLifetime.Scoped,
         _ => ServiceLifetime.Transient
     };
+
+    /// <inheritdoc />
+    public override string ToString() => $"{LifeStyle}";
 }
 
 /// <summary>Registers the annotated type as a singleton.</summary>
@@ -44,22 +47,7 @@ public sealed class ScopedAttribute() : LifeStyleAttribute(LifeStyle.Scoped);
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Interface)]
 public sealed class TransientAttribute() : LifeStyleAttribute(LifeStyle.Transient);
 
-/// <summary>Declares one instance per thread.</summary>
-[AttributeUsage(AttributeTargets.Class | AttributeTargets.Interface)]
-public sealed class ThreadAttribute() : LifeStyleAttribute(LifeStyle.Thread);
 
-/// <summary>Declares that instances are taken from a pool.</summary>
-[AttributeUsage(AttributeTargets.Class | AttributeTargets.Interface)]
-public sealed class PooledAttribute() : LifeStyleAttribute(LifeStyle.Pooled);
 
-/// <summary>Declares that a host-supplied rule decides the lifetime.</summary>
-[AttributeUsage(AttributeTargets.Class | AttributeTargets.Interface)]
-public sealed class CustomAttribute() : LifeStyleAttribute(LifeStyle.Custom);
 
-/// <summary>Declares that the lifetime is bound to another object's lifetime.</summary>
-[AttributeUsage(AttributeTargets.Class | AttributeTargets.Interface)]
-public sealed class BoundAttribute() : LifeStyleAttribute(LifeStyle.Bound);
 
-/// <summary>Declares that no lifetime has been chosen yet.</summary>
-[AttributeUsage(AttributeTargets.Class | AttributeTargets.Interface)]
-public sealed class UndefinedAttribute() : LifeStyleAttribute(LifeStyle.Undefined);

@@ -90,31 +90,8 @@ public interface IAdapter<in TSource, out TResult> : IAdapter
     TResult Adapt(TSource value);
 }
 
-/// <summary>Alters an existing instance in place.</summary>
-public interface IDecorator;
-
-/// <summary>Alters an instance of <typeparamref name="TInstance"/>.</summary>
-/// <typeparam name="TInstance">The altered type.</typeparam>
-public interface IDecorator<in TInstance> : IDecorator
-{
-    /// <summary>Alters <paramref name="instance"/>.</summary>
-    void Decorate(TInstance instance);
-}
-
-/// <summary>Alters an instance using additional arguments.</summary>
-/// <typeparam name="TInstance">The altered type.</typeparam>
-/// <typeparam name="TArguments">Arguments that steer the alteration.</typeparam>
-public interface IDecorator<in TInstance, in TArguments> : IDecorator
-{
-    /// <summary>Alters <paramref name="instance"/> using <paramref name="arguments"/>.</summary>
-    void Decorate(TInstance instance, TArguments arguments);
-}
-
 /// <summary>Applies settings to another object. Registered as transient.</summary>
 public interface IConfigurator : ITransient;
 
 /// <summary>Carries ambient information for the current operation. Registered as transient.</summary>
 public interface IContext : ITransient;
-
-/// <summary>A settings object. Registered as transient.</summary>
-public interface IOption : ITransient;

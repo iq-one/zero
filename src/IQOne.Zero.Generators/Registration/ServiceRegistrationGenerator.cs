@@ -338,7 +338,6 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
     private const int SelectorInterfaces = 2 | 4 | 8;
 
     /// <summary><c>LifeStyle</c>'s values the generator has to tell apart, as written in metadata.</summary>
-    private const string LifeStyleUndefined = "0";
     private const string LifeStyleSingleton = "1";
     private const string LifeStyleScoped = "7";
 
@@ -351,8 +350,7 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
         {
             [$"{platform.Descriptors}.ISingleton"] = "Singleton",
             [$"{platform.Descriptors}.IScoped"] = "Scoped",
-            [$"{platform.Descriptors}.ITransient"] = "Transient",
-            [$"{platform.Descriptors}.IThread"] = "Transient"
+            [$"{platform.Descriptors}.ITransient"] = "Transient"
         };
 
         var nonService = new HashSet<string>(StringComparer.Ordinal)
@@ -476,11 +474,6 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
     {
         foreach (var attribute in candidate.Attributes)
         {
-            // [Undefined] declines to choose, and a decline is not an answer to override an
-            // abstraction with. The type falls back to whatever its markers say, or to nothing.
-            if (string.Equals(attribute.TypeName, platform.UndefinedAttribute, StringComparison.Ordinal))
-                return null;
-
             if (string.Equals(attribute.TypeName, platform.LifeStyleAttribute, StringComparison.Ordinal))
             {
                 var value = attribute.ConstructorArguments.Count > 0
@@ -489,7 +482,7 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
 
                 return value switch
                 {
-                    LifeStyleUndefined or null => null,
+                    null => null,
                     LifeStyleSingleton => "Singleton",
                     LifeStyleScoped => "Scoped",
                     _ => "Transient"

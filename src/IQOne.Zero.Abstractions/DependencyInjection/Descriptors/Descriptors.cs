@@ -22,8 +22,6 @@ public interface IServiceDescriptor;
 /// <summary>A new instance on every resolution.</summary>
 [Transient] public interface ITransient : IServiceDescriptor;
 
-/// <summary>One instance per thread.</summary>
-[Thread] public interface IThread : IServiceDescriptor;
 
 /// <summary>
 /// A singleton whose instance is available before the service provider is built.

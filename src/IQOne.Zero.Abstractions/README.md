@@ -2,7 +2,7 @@
 
 Zero's fundamental abstractions. Every other Zero package references this one.
 
-- **Lifetime markers** — `ISingleton`, `IScoped`, `ITransient`, `IThread`. A service's
+- **Lifetime markers** — `ISingleton`, `IScoped`, `ITransient`. A service's
   lifetime is carried by the abstraction it implements, so registration needs no attribute
   and no call.
 - **Role interfaces** — `IStep`, `IProvider`, `IFactory`, `IBuilder`, `IAdapter`, each
