@@ -38,6 +38,7 @@
     <Project Path="tests/IQOne.Zero.Caching.Tests/IQOne.Zero.Caching.Tests.csproj" />
     <Project Path="tests/IQOne.Zero.Testing.Tests/IQOne.Zero.Testing.Tests.csproj" />
     <Project Path="tests/IQOne.Zero.Core.Tests/IQOne.Zero.Core.Tests.csproj" />
+    <Project Path="tests/IQOne.Zero.Guidance.Tests/IQOne.Zero.Guidance.Tests.csproj" />
     <Project Path="tests/IQOne.Zero.Configuration.Tests/IQOne.Zero.Configuration.Tests.csproj" />
     <Project Path="tests/IQOne.Zero.Generators.Tests/IQOne.Zero.Generators.Tests.csproj" />
     <Project Path="tests/IQOne.Zero.Messaging.Tests/IQOne.Zero.Messaging.Tests.csproj" />

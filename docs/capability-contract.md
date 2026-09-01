@@ -93,7 +93,19 @@ consumer touches, and one canonical example.
 }
 ```
 
-### 7. Tests, including one that proves the entry point alone is enough
+### 7. Guidance that compiles
+
+Every snippet in a capability's `rules/*.md` and in its `capability.json` example is
+compiled against the real assemblies by `tests/IQOne.Zero.Guidance.Tests`. Guidance that
+describes an API the framework does not have is worse than no guidance: it is exactly what
+an agent copies verbatim, and it fails in the consumer's project rather than in ours.
+
+Illustrative domain types are expected not to exist — the check ignores an unresolved name
+and fails only on a mismatch with the framework's own API. A block that shows a shape
+rather than code can opt out by fencing it ```` ```csharp illustrative ````, which is
+deliberately awkward to type.
+
+### 8. Tests, including one that proves the entry point alone is enough
 
 Every capability has a test that calls only its `Add` method, builds the provider with
 validation on, and resolves the capability's public types. That test is what makes

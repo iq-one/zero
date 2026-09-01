@@ -41,7 +41,7 @@ var result = await sender.SendAsync(new GetInvoice(id), cancellationToken);
 var result = await handler.HandleAsync(new GetInvoice(id), cancellationToken);
 ```
 
-```csharp
+```csharp illustrative
 // Two handlers for one request. Startup refuses this.
 public sealed class AlsoGetInvoiceHandler : IQueryHandler<GetInvoice, InvoiceModel>;
 ```
