@@ -34,6 +34,13 @@
       "useWhen": "Always. Arrives with the metapackage."
     },
     {
+      "id": "authorization",
+      "kind": "capability",
+      "package": "IQOne.Zero.Authorization",
+      "title": "Authorization",
+      "useWhen": "A request may only be made by some callers. Do not check permissions inside a handler, and do not write your own policy or claims abstraction."
+    },
+    {
       "id": "caching",
       "kind": "capability",
       "package": "IQOne.Zero.Caching",
@@ -48,11 +55,25 @@
       "useWhen": "The application has use cases. Do not write your own mediator or dispatcher, and do not call a handler directly."
     },
     {
+      "id": "observability",
+      "kind": "capability",
+      "package": "IQOne.Zero.Observability",
+      "title": "Logging, tracing and metrics",
+      "useWhen": "You need to see what the application is doing. Do not log, trace or time inside a handler."
+    },
+    {
       "id": "persistence",
       "kind": "capability",
       "package": "IQOne.Zero.Persistence",
       "title": "Data access",
       "useWhen": "The application stores things. Do not write your own repository or specification abstraction, and do not put provider-specific query calls in a handler."
+    },
+    {
+      "id": "persistence-ef",
+      "kind": "capability",
+      "package": "IQOne.Zero.Persistence.EntityFramework",
+      "title": "Entity Framework provider",
+      "useWhen": "The application stores things in a relational database through Entity Framework."
     },
     {
       "id": "results",

@@ -1,0 +1,24 @@
+{
+  "id": "testing",
+  "kind": "capability",
+  "title": "Testing a Zero application",
+  "summary": "Assertions on Result whose failure messages name the actual errors, a harness that runs one handler through the real pipeline, a recording ISender, and a test application whose container validates scopes and registrations exactly as startup does. References no test runner, so it works with any of them.",
+  "useWhen": "Writing any test for code built on Zero. Do not hand-build a RequestRegistry, a RequestEntry, a pipeline lambda or a service provider in a test, and do not write your own Result assertion helper or fake sender.",
+  "package": "IQOne.Zero.Testing",
+  "entryPoint": "ZeroTestApplication.Create()",
+  "notes": "The only capability with no AddZero... method: it is referenced by test projects and never takes part in the application's own container.",
+  "keyTypes": [
+    "ZeroTestApplication",
+    "ZeroTestApplicationBuilder",
+    "HandlerHarness",
+    "FakeSender",
+    "StubHandler<TRequest,TResponse>",
+    "RecordingBehavior<TRequest,TResponse>",
+    "ShortCircuitBehavior<TRequest,TResponse>",
+    "ResultAssertions",
+    "ValidatorAssertions",
+    "ZeroAssertionException"
+  ],
+  "diagnostics": [],
+  "example": "// The whole application, wired the way startup wires it:\nawait using var app = await ZeroTestApplication.Create()\n    .AddServices(services => services.AddScoped<IInvoiceStore, FakeInvoiceStore>())\n    .AddHandler<CreateInvoice, int, CreateInvoiceHandler>()\n    .AddConfiguration((\"Mail:Host\", \"smtp.example.com\"))\n    .AddValidator(new CreateInvoiceValidator())\n    .AddModule(new MyApp.Module())\n    .BuildAsync();\n\nvar result = await app.SendAsync(new CreateInvoice(\"\", 0m));\n\nresult.ShouldFailWithCodes(\"invoice.reference\", \"invoice.amount\");\n\n// One handler, through the real pipeline. HandleAsync would skip the behaviours:\nvar created = await HandlerHarness\n    .For<CreateInvoice, int>(new CreateInvoiceHandler(store))\n    .WithBehavior(new AuditBehavior<CreateInvoice, int>(log))\n    .SendAsync(new CreateInvoice(\"INV-001\", 250m));\n\nvar id = created.ShouldSucceed();\n\n// Code that sends, with no container at all:\nvar sender = new FakeSender()\n    .Returns<GetInvoice, InvoiceModel>(new InvoiceModel(1, 250m))\n    .Succeeds<CloseInvoice>();\n\nawait new NightlyRun(sender).ExecuteAsync(CancellationToken.None);\n\nsender.ShouldHaveSent<CloseInvoice>(request => request.Id == 1);\nsender.ShouldNotHaveSent<ArchiveInvoice>();\n\n// A validator on its own, one test per rule:\nawait validator.ShouldRejectAsync(new CreateInvoice(\"\", 250m), \"invoice.reference\");"
+}

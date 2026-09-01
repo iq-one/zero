@@ -1,0 +1,27 @@
+{
+  "id": "authorization",
+  "kind": "capability",
+  "title": "Authorization",
+  "summary": "Authorization runs as a pipeline behaviour outside validation, so a request the caller may not make is refused before anything reads data. Rules are requirement classes with their own handlers rather than conditionals in a handler, a request that declares nothing is refused, and every unclear case \u2014 unknown policy, missing handler, handler that threw \u2014 fails closed.",
+  "useWhen": "Some requests are not for everyone. Do not check permissions inside a handler, do not write your own current-user abstraction, and do not depend on ASP.NET's authorization for anything a worker or a test also has to enforce.",
+  "package": "IQOne.Zero.Authorization",
+  "entryPoint": "services.AddZeroAuthorization()",
+  "keyTypes": [
+    "AuthorizeAttribute",
+    "AllowAnonymousAttribute",
+    "ICurrentUser",
+    "IAuthorizationRequirement",
+    "IRequirementHandler<TRequirement>",
+    "IRequirementHandler<TRequirement,TResource>",
+    "IResourceAuthorizer",
+    "AuthorizationDecision",
+    "AuthorizationOptions",
+    "AuthorizationBehavior<TRequest,TResponse>"
+  ],
+  "diagnostics": [
+    "ZERO450",
+    "ZERO451",
+    "ZERO452"
+  ],
+  "example": "[Authorize(\"invoices.close\")]\npublic sealed record CloseInvoice(int Id) : ICommand;\n\n[Authorize(Roles = \"admin, auditor\")]\npublic sealed record ReadLedger : IQuery<Ledger>;\n\n[AllowAnonymous]\npublic sealed record GetPublicPriceList : IQuery<PriceList>;\n\n// A rule is a requirement plus a handler, so it can be tested without a pipeline:\npublic sealed record WithinLimit(decimal Amount) : IAuthorizationRequirement;\n\npublic sealed class WithinLimitHandler(ILimitStore limits) : IRequirementHandler<WithinLimit>\n{\n    public async ValueTask<AuthorizationDecision> CheckAsync(\n        WithinLimit requirement, ICurrentUser user, CancellationToken ct)\n        => await limits.ForAsync(user.Id!, ct) >= requirement.Amount\n            ? AuthorizationDecision.Allowed\n            : AuthorizationDecision.Deny(\"invoice.over-limit\", \"This is above your approval limit.\");\n}\n\n// Startup. Requirement handlers are found by the generator; policies are declared here:\nservices.AddZeroAuthorization(options =>\n    options.AddPolicy(\"invoices.close\", new RolesRequirement(\"finance\"), new WithinLimit(10_000m)));\n\nservices.AddScoped<ICurrentUser>(sp => new ClaimsPrincipalCurrentUser(\n    sp.GetRequiredService<IHttpContextAccessor>().HttpContext?.User ?? new ClaimsPrincipal()));\n\n// \"May this caller act on THIS invoice\" is asked from the handler, where the invoice exists.\n// The rule is still a class:\nvar allowed = await authorizer.AuthorizeAsync(new MustBeOwner(), invoice, ct);\n\nif (allowed.IsFailure) return allowed.Errors;"
+}

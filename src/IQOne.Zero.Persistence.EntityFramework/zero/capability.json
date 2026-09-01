@@ -1,0 +1,12 @@
+{
+  "id": "persistence-ef",
+  "kind": "capability",
+  "title": "Entity Framework provider",
+  "summary": "Implements the Zero data contracts over Entity Framework Core: specifications become queries, conventions are applied to every entity, and write ownership is enforced before a row is touched. Names no database engine.",
+  "useWhen": "The application stores things in a relational database through Entity Framework. Add the engine's own EF package alongside this one.",
+  "package": "IQOne.Zero.Persistence.EntityFramework",
+  "entryPoint": "services.AddZeroEntityFramework<TContext>(...)",
+  "keyTypes": ["ConventionDbContext", "SpecificationEvaluator", "EfRepository<T>", "EfUnitOfWork"],
+  "diagnostics": [],
+  "example": "public sealed class ShopContext(\n    DbContextOptions<ShopContext> options,\n    IEnumerable<IEntityFilterConvention> filters,\n    IEnumerable<IModelConvention<ModelBuilder>> model)\n    : ConventionDbContext(options, filters, model)\n{\n    public DbSet<Invoice> Invoices => Set<Invoice>();\n}\n\n// One call: the context, the unit of work, the repositories, the interceptors.\nservices.AddZeroEntityFramework<ShopContext>(options => options.UseSqlServer(connectionString));\nservices.AddZeroTransactions();"
+}

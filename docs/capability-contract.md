@@ -117,9 +117,11 @@ validation on, and resolves the capability's public types. That test is what mak
 | --- | --- |
 | ZERO001–ZERO099 | Kernel: registration, modules, configuration |
 | ZERO100–ZERO199 | Results, validation |
-| ZERO200–ZERO299 | Persistence, caching |
+| ZERO200–ZERO249 | Caching |
+| ZERO250–ZERO299 | Persistence |
 | ZERO300–ZERO399 | Messaging, web |
-| ZERO400–ZERO499 | Observability, resilience, background work |
+| ZERO400–ZERO449 | Observability, resilience, background work |
+| ZERO450–ZERO499 | Authorization |
 
 Ids are never reused. A retired diagnostic keeps its number and its page.
 

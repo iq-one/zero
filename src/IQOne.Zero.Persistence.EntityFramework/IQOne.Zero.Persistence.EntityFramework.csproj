@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!--
+      $(ZeroTargetFrameworks) is net8.0;net10.0, but EF Core 10 ships lib/net10.0 only and
+      named query filters — the feature that lets a specification switch off one filter
+      without the rest — arrived in EF Core 10. A net8.0 leg would have to bind an older EF
+      and implement filters differently, which is a second implementation, not a second
+      target. When EF Core ships a net8.0-compatible build carrying named filters, restore
+      $(ZeroTargetFrameworks) here.
+    -->
+    <TargetFrameworks>net10.0</TargetFrameworks>
+    <Description>Entity Framework Core implementation of Zero's data access: a specification evaluator, repositories, a unit of work that joins rather than nests, conventions applied in the model, and a write-ownership guard.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../IQOne.Zero.Persistence/IQOne.Zero.Persistence.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      The engine is the consumer's decision. This package knows relational metadata — a
+      table has a name and a schema — and nothing about which server holds it.
+
+      VersionOverride is temporary: Directory.Packages.props carries no central version for
+      these yet, and this package may not edit that file.
+    -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore" VersionOverride="10.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" VersionOverride="10.0.0" />
+  </ItemGroup>
+
+</Project>

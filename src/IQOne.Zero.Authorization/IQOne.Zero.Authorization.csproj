@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>$(ZeroTargetFrameworks)</TargetFrameworks>
+    <Description>Authorization as a pipeline behaviour. A caller who may not make a request is refused before anything reads data, the rule that refuses them is a class that can be tested on its own, and a request that declares nothing is refused rather than allowed.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../IQOne.Zero.Messaging/IQOne.Zero.Messaging.csproj" />
+  </ItemGroup>
+</Project>

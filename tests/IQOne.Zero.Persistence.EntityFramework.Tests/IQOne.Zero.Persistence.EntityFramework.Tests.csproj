@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/IQOne.Zero.Persistence.EntityFramework/IQOne.Zero.Persistence.EntityFramework.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <!--
+      Sqlite, and only here. It runs the real relational pipeline, so a specification that
+      does not translate fails the test instead of quietly running in memory — which is what
+      the InMemory provider would let it do.
+    -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" VersionOverride="10.0.0" />
+    <!--
+      Pinned past an advisory in the version EF Core 10 asks for. Directory.Packages.props
+      says a security pin is made one reference at a time rather than by turning transitive
+      pinning on, and this is that case.
+    -->
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" VersionOverride="2.1.13" />
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <Using Include="FluentAssertions" />
+  </ItemGroup>
+</Project>

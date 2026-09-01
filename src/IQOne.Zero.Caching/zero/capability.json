@@ -1,0 +1,12 @@
+{
+  "id": "caching",
+  "kind": "capability",
+  "title": "Read-through caching for queries",
+  "summary": "A query implements ICacheable and states its own key and lifetime; a pipeline behaviour answers it from the store and puts the answer back. Only successes are stored, only queries are cached, and a command drops what it made wrong by the same key the query wrote.",
+  "useWhen": "A read is expensive and a slightly stale answer is acceptable. Do not cache inside a handler, do not write your own cache abstraction or key builder, and do not derive a cache key by serialising the request.",
+  "package": "IQOne.Zero.Caching",
+  "entryPoint": "services.AddZeroCaching()",
+  "keyTypes": ["ICacheable", "ICache", "ICacheInvalidator", "CachingOptions", "CachingBehavior<TRequest,TResponse>", "Cached<TValue>"],
+  "diagnostics": ["ZERO210", "ZERO211"],
+  "example": "public sealed record GetInvoice(int Id) : IQuery<InvoiceModel>, ICacheable\n{\n    public string CacheKey => $\"invoice:{Id}\";\n}\n\n// A query that says how stale its answer may be:\npublic sealed record GetCurrencies : IQuery<IReadOnlyList<Currency>>, ICacheable\n{\n    public string CacheKey => \"currency:all\";\n    public TimeSpan? Lifetime => TimeSpan.FromHours(1);\n}\n\n// What a command does after it changes the data behind those queries:\npublic sealed class CloseInvoiceHandler(IInvoiceStore store, ICacheInvalidator cache)\n    : ICommandHandler<CloseInvoice>\n{\n    public async Task<Result<Unit>> HandleAsync(CloseInvoice command, CancellationToken cancellationToken)\n    {\n        var closed = await store.CloseAsync(command.Id, cancellationToken);\n\n        if (closed.IsFailure) return closed;\n\n        await cache.InvalidateByPrefixAsync($\"invoice:{command.Id}\", cancellationToken);\n\n        return Unit.Success;\n    }\n}\n\n// services.AddZeroCaching();\n// Nothing else. The handler does not know it is being cached, and nothing is cached\n// until a query says it may be."
+}

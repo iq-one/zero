@@ -18,6 +18,10 @@
     <Project Path="src/IQOne.Zero/IQOne.Zero.csproj" />
     <Project Path="src/IQOne.Zero.Abstractions/IQOne.Zero.Abstractions.csproj" />
     <Project Path="src/IQOne.Zero.Core/IQOne.Zero.Core.csproj" />
+    <Project Path="src/IQOne.Zero.Authorization/IQOne.Zero.Authorization.csproj" />
+    <Project Path="src/IQOne.Zero.Authorization.Analyzers/IQOne.Zero.Authorization.Analyzers.csproj" />
+    <Project Path="src/IQOne.Zero.Observability/IQOne.Zero.Observability.csproj" />
+    <Project Path="src/IQOne.Zero.Persistence.EntityFramework/IQOne.Zero.Persistence.EntityFramework.csproj" />
     <Project Path="src/IQOne.Zero.Caching/IQOne.Zero.Caching.csproj" />
     <Project Path="src/IQOne.Zero.Caching.Analyzers/IQOne.Zero.Caching.Analyzers.csproj" />
     <Project Path="src/IQOne.Zero.Testing/IQOne.Zero.Testing.csproj" />
@@ -35,6 +39,8 @@
   <Folder Name="/tests/">
     <Project Path="tests/IQOne.Zero.ApiSurface.Tests/IQOne.Zero.ApiSurface.Tests.csproj" />
     <Project Path="tests/IQOne.Zero.Catalog.Tests/IQOne.Zero.Catalog.Tests.csproj" />
+    <Project Path="tests/IQOne.Zero.Authorization.Tests/IQOne.Zero.Authorization.Tests.csproj" />
+    <Project Path="tests/IQOne.Zero.Persistence.EntityFramework.Tests/IQOne.Zero.Persistence.EntityFramework.Tests.csproj" />
     <Project Path="tests/IQOne.Zero.Caching.Tests/IQOne.Zero.Caching.Tests.csproj" />
     <Project Path="tests/IQOne.Zero.Testing.Tests/IQOne.Zero.Testing.Tests.csproj" />
     <Project Path="tests/IQOne.Zero.Core.Tests/IQOne.Zero.Core.Tests.csproj" />
