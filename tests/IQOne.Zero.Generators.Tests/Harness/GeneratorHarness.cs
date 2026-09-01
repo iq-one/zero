@@ -58,7 +58,9 @@ internal static class GeneratorHarness
                  {
                      typeof(Modules.IModule),
                      typeof(DependencyInjection.Descriptors.IScoped),
-                     typeof(App.Application)
+                     typeof(App.Application),
+                     typeof(Zero.Messaging.ISender),
+                     typeof(Zero.Results.Result)
                  })
             locations.Add(type.Assembly.Location);
 

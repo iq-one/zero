@@ -34,6 +34,12 @@ internal static class SymbolCollector
             .FirstOrDefault()
             ?.Parameters.Select(p => p.Type.OriginalDefinition.ToDisplayString(Full)).ToList() ?? [];
 
+        var closed = type.AllInterfaces
+            .Where(i => i.IsGenericType)
+            .Select(i => new InterfaceUsage(
+                Open(i),
+                new EquatableArray<string>([.. i.TypeArguments.Select(a => a.ToDisplayString(Full))])));
+
         return new ServiceCandidate(
             type.ToDisplayString(Full),
             !type.IsAbstract && !type.IsGenericType,
@@ -42,6 +48,7 @@ internal static class SymbolCollector
             type.Name,
             new EquatableArray<AttributeUsage>(attributes.ToImmutable()),
             new EquatableArray<string>([.. dependencies]),
+            new EquatableArray<InterfaceUsage>([.. closed]),
             LocationInfo.From(node));
     }
 

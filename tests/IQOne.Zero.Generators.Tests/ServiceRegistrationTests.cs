@@ -66,7 +66,7 @@ public class ServiceRegistrationTests
             public sealed class ThingRepository : IThingRepository, IScoped, IIgnoredService;
             """);
 
-        run.GeneratedSource.Should().Contain("yasam suresi isareti tasiyan tip yok");
+        run.GeneratedSource.Should().Contain("No type in this assembly carries a lifetime marker.");
     }
 
     [Fact]

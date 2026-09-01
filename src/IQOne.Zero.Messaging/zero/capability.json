@@ -1,0 +1,12 @@
+{
+  "id": "messaging",
+  "kind": "capability",
+  "title": "Commands, queries and the pipeline",
+  "summary": "One handler per request, reached through ISender, wrapped by behaviours that carry validation, authorization, logging, caching and transactions. Dispatch is a generated table, so sending costs a dictionary read rather than reflection.",
+  "useWhen": "The application has use cases. Do not write your own mediator, dispatcher or service layer, and do not call a handler directly — that skips the pipeline.",
+  "package": "IQOne.Zero.Messaging",
+  "entryPoint": "services.AddZeroMessaging()",
+  "keyTypes": ["ICommand", "ICommand<T>", "IQuery<T>", "IRequestHandler<TRequest,TResponse>", "IPipelineBehavior<TRequest,TResponse>", "ISender", "Unit", "BehaviorOrder"],
+  "diagnostics": [],
+  "example": "public sealed record CloseInvoice(int Id) : ICommand;\n\npublic sealed class CloseInvoiceHandler(IInvoiceStore store) : ICommandHandler<CloseInvoice>\n{\n    public async Task<Result<Unit>> HandleAsync(CloseInvoice command, CancellationToken cancellationToken)\n    {\n        var invoice = await store.FindAsync(command.Id, cancellationToken);\n\n        if (invoice is null) return Error.NotFound(\"invoice.missing\", $\"No invoice {command.Id}.\");\n        if (invoice.IsClosed) return Error.Conflict(\"invoice.closed\", \"Already closed.\");\n\n        invoice.Close();\n\n        return Unit.Success;\n    }\n}\n\n// Cross-cutting work is a behaviour, never repeated in a handler:\npublic sealed class LoggingBehavior<TRequest, TResponse>(ILogger<TRequest> logger)\n    : IPipelineBehavior<TRequest, TResponse> where TRequest : IRequest<TResponse>\n{\n    public int Order => BehaviorOrder.Logging;\n\n    public async Task<Result<TResponse>> HandleAsync(\n        TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)\n    {\n        var result = await next();\n\n        if (result.IsFailure) logger.LogWarning(\"{Request} failed: {Errors}\", typeof(TRequest).Name, result.Errors);\n\n        return result;\n    }\n}"
+}

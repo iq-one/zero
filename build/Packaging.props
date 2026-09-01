@@ -40,6 +40,14 @@
     <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="all" />
   </ItemGroup>
 
+  <!--
+    Her paketin testleri kendi ic tiplerini gorur. Bir tipi yalnizca test edilebilsin diye
+    public yapmak, yayinlanan yuzeyi surdurmek zorunda oldugumuz seylerle sisirir.
+  -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="$(MSBuildProjectName).Tests" />
+  </ItemGroup>
+
   <Import Project="$(ZeroRepositoryRoot)build/Rules.targets" />
 
 </Project>

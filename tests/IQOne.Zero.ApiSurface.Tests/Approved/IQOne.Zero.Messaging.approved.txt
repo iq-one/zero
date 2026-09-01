@@ -1,0 +1,89 @@
+static class IQOne.Zero.Messaging.BehaviorOrder
+    static int Authorization
+    static int Caching
+    static int Logging
+    static int Transaction
+    static int Validation
+
+interface IQOne.Zero.Messaging.ICommand : IQOne.Zero.Messaging.IRequest<IQOne.Zero.Messaging.Unit>
+
+interface IQOne.Zero.Messaging.ICommandHandler<TCommand> : IQOne.Zero.Messaging.IRequestHandler<TCommand, IQOne.Zero.Messaging.Unit>
+
+interface IQOne.Zero.Messaging.ICommandHandler<TCommand, TResponse> : IQOne.Zero.Messaging.IRequestHandler<TCommand, TResponse>
+
+interface IQOne.Zero.Messaging.ICommand<TResponse> : IQOne.Zero.Messaging.IRequest<TResponse>
+
+interface IQOne.Zero.Messaging.IPipelineBehavior<TRequest, TResponse> : IQOne.Zero.DependencyInjection.Descriptors.IScoped
+    Task<IQOne.Zero.Results.Result<TResponse>> HandleAsync(TRequest request, IQOne.Zero.Messaging.RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
+    int Order { get; }
+
+interface IQOne.Zero.Messaging.IQueryHandler<TQuery, TResponse> : IQOne.Zero.Messaging.IRequestHandler<TQuery, TResponse>
+
+interface IQOne.Zero.Messaging.IQuery<TResponse> : IQOne.Zero.Messaging.IRequest<TResponse>
+
+interface IQOne.Zero.Messaging.IRequestHandler : IQOne.Zero.DependencyInjection.Descriptors.IScoped
+
+interface IQOne.Zero.Messaging.IRequestHandler<TRequest, TResponse> : IQOne.Zero.Messaging.IRequestHandler
+    Task<IQOne.Zero.Results.Result<TResponse>> HandleAsync(TRequest request, CancellationToken cancellationToken)
+
+interface IQOne.Zero.Messaging.IRequestRegistryBuilder
+    void Add(IQOne.Zero.Messaging.RequestEntry entry)
+    void Declare(Type requestType)
+
+interface IQOne.Zero.Messaging.IRequest<TResponse>
+
+interface IQOne.Zero.Messaging.ISender : IQOne.Zero.DependencyInjection.Descriptors.IScoped
+    Task<IQOne.Zero.Results.Result<TResponse>> SendAsync<TResponse>(IQOne.Zero.Messaging.IRequest<TResponse> request, CancellationToken cancellationToken = default)
+
+sealed class IQOne.Zero.Messaging.MessagingOptions
+    .ctor MessagingOptions()
+    bool RequireHandlerForEveryRequest { get; set; }
+
+static class IQOne.Zero.Messaging.MessagingRegistration
+    static Microsoft.Extensions.DependencyInjection.IServiceCollection AddZeroMessaging(Microsoft.Extensions.DependencyInjection.IServiceCollection services, Action<IQOne.Zero.Messaging.MessagingOptions> configure = default)
+
+sealed class IQOne.Zero.Messaging.MissingRequestHandlerException : InvalidOperationException
+    .ctor MissingRequestHandlerException(Type requestType)
+    Type RequestType { get; }
+
+static class IQOne.Zero.Messaging.ModuleServiceContextExtensions
+    static IQOne.Zero.Messaging.IRequestRegistryBuilder Requests(IQOne.Zero.Modules.IModuleServiceContext context)
+
+sealed class IQOne.Zero.Messaging.RequestEntry : IEquatable<IQOne.Zero.Messaging.RequestEntry>
+    .ctor RequestEntry(Type RequestType, Type ResponseType, Type HandlerType, Func<IServiceProvider, object, CancellationToken, object> Invoke)
+    Func<IServiceProvider, object, CancellationToken, object> Invoke { get; init; }
+    IQOne.Zero.Messaging.RequestEntry <Clone>$()
+    Type HandlerType { get; init; }
+    Type RequestType { get; init; }
+    Type ResponseType { get; init; }
+    bool Equals(IQOne.Zero.Messaging.RequestEntry other)
+    bool Equals(object obj)
+    int GetHashCode()
+    string ToString()
+    void Deconstruct(out Type RequestType, out Type ResponseType, out Type HandlerType, out Func<IServiceProvider, object, CancellationToken, object> Invoke)
+
+sealed class IQOne.Zero.Messaging.RequestHandlerDelegate<TResponse> : MulticastDelegate
+    .ctor RequestHandlerDelegate(object object, IntPtr method)
+    IAsyncResult BeginInvoke(AsyncCallback callback, object object)
+    Task<IQOne.Zero.Results.Result<TResponse>> EndInvoke(IAsyncResult result)
+    Task<IQOne.Zero.Results.Result<TResponse>> Invoke()
+
+static class IQOne.Zero.Messaging.RequestPipeline
+    static Task<IQOne.Zero.Results.Result<TResponse>> RunAsync<TRequest, TResponse>(TRequest request, IServiceProvider services, CancellationToken cancellationToken)
+
+sealed class IQOne.Zero.Messaging.RequestRegistry : IQOne.Zero.Messaging.IRequestRegistryBuilder
+    .ctor RequestRegistry()
+    IQOne.Zero.Messaging.RequestRegistry Freeze()
+    IReadOnlyCollection<IQOne.Zero.Messaging.RequestEntry> Entries { get; }
+    IReadOnlyCollection<Type> Unhandled { get; }
+    bool TryGet(Type requestType, out IQOne.Zero.Messaging.RequestEntry entry)
+    void Add(IQOne.Zero.Messaging.RequestEntry entry)
+    void Declare(Type requestType)
+
+struct IQOne.Zero.Messaging.Unit : IEquatable<IQOne.Zero.Messaging.Unit>
+    bool Equals(IQOne.Zero.Messaging.Unit other)
+    bool Equals(object obj)
+    int GetHashCode()
+    static IQOne.Zero.Messaging.Unit Value
+    static IQOne.Zero.Results.Result<IQOne.Zero.Messaging.Unit> Success { get; }
+    string ToString()

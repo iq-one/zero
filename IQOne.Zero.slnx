@@ -20,6 +20,7 @@
     <Project Path="src/IQOne.Zero.Core/IQOne.Zero.Core.csproj" />
     <Project Path="src/IQOne.Zero.Configuration/IQOne.Zero.Configuration.csproj" />
     <Project Path="src/IQOne.Zero.Generators/IQOne.Zero.Generators.csproj" />
+    <Project Path="src/IQOne.Zero.Messaging/IQOne.Zero.Messaging.csproj" />
     <Project Path="src/IQOne.Zero.Results/IQOne.Zero.Results.csproj" />
     <Project Path="src/IQOne.Zero.Results.Analyzers/IQOne.Zero.Results.Analyzers.csproj" />
     <Project Path="src/IQOne.Zero.Tool/IQOne.Zero.Tool.csproj" />
@@ -31,6 +32,7 @@
     <Project Path="tests/IQOne.Zero.Core.Tests/IQOne.Zero.Core.Tests.csproj" />
     <Project Path="tests/IQOne.Zero.Configuration.Tests/IQOne.Zero.Configuration.Tests.csproj" />
     <Project Path="tests/IQOne.Zero.Generators.Tests/IQOne.Zero.Generators.Tests.csproj" />
+    <Project Path="tests/IQOne.Zero.Messaging.Tests/IQOne.Zero.Messaging.Tests.csproj" />
     <Project Path="tests/IQOne.Zero.Results.Tests/IQOne.Zero.Results.Tests.csproj" />
   </Folder>
 

@@ -39,6 +39,13 @@
       "package": "IQOne.Zero.Results",
       "title": "Results and errors",
       "useWhen": "An operation can fail in a way the caller should handle. Do not write your own Result, Either or Maybe type."
+    },
+    {
+      "id": "messaging",
+      "kind": "capability",
+      "package": "IQOne.Zero.Messaging",
+      "title": "Commands, queries and the pipeline",
+      "useWhen": "The application has use cases. Do not write your own mediator or dispatcher, and do not call a handler directly."
     }
   ]
 }

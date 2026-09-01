@@ -24,7 +24,11 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
 
         var services = context.SyntaxProvider
             .CreateSyntaxProvider(
-                predicate: static (node, _) => node is ClassDeclarationSyntax { BaseList.Types.Count: > 0 },
+                // Records too: a request is almost always a record, and missing them would
+                // silently leave every request undeclared.
+                predicate: static (node, _) =>
+                    node is ClassDeclarationSyntax { BaseList.Types.Count: > 0 }
+                         or RecordDeclarationSyntax { BaseList.Types.Count: > 0 },
                 transform: static (ctx, _) =>
                     ctx.SemanticModel.GetDeclaredSymbol(ctx.Node) is INamedTypeSymbol symbol
                         ? SymbolCollector.DescribeService(symbol, ctx.Node)
@@ -81,6 +85,14 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
 
         hasError |= DetectCaptiveDependencies(services, Report);
 
+        // Dispatch is generated only for an assembly that references messaging; an
+        // application that does not use commands and queries pays nothing for them.
+        var messaging = moduleInfo.ReferencedAssemblies.Any(a => a == platform.MessagingAssembly);
+
+        var requests = messaging
+            ? ResolveRequests(serviceCandidates, platform)
+            : new RequestSet([], []);
+
         if (hasError) return;
 
         var dependencies = moduleInfo.ModuleTypes
@@ -90,7 +102,46 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
             .ToList();
 
         context.AddSource("Module.g.cs", SourceText.From(
-            Render(moduleInfo.AssemblyName, dependencies, services, platform), Encoding.UTF8));
+            Render(moduleInfo.AssemblyName, dependencies, services, requests, messaging, platform), Encoding.UTF8));
+    }
+
+    /// <summary>Requests declared in this assembly, and the handlers that serve them.</summary>
+    private sealed record RequestSet(List<string> Declared, List<RequestDescriptor> Handlers);
+
+    private static RequestSet ResolveRequests(
+        ImmutableArray<ServiceCandidate> candidates, ZeroNames platform)
+    {
+        var declared = new List<string>();
+        var handlers = new List<RequestDescriptor>();
+
+        foreach (var candidate in candidates)
+        {
+            var handled = candidate.ClosedInterfaces.FirstOrDefault(i =>
+                i.OpenGenericName == platform.RequestHandlerInterface && i.TypeArguments.Count == 2);
+
+            if (handled is not null && candidate.IsConcrete)
+            {
+                handlers.Add(new RequestDescriptor(
+                    handled.TypeArguments[0],
+                    handled.TypeArguments[1],
+                    candidate.ImplementationTypeName,
+                    candidate.Location));
+
+                continue;
+            }
+
+            // A request declares itself so that startup can report one nobody handles.
+            // Abstract requests are excluded: only a concrete type is ever dispatched.
+            var request = candidate.ClosedInterfaces.FirstOrDefault(i =>
+                i.OpenGenericName == platform.RequestInterface && i.TypeArguments.Count == 1);
+
+            if (request is not null && candidate.IsConcrete) declared.Add(candidate.ImplementationTypeName);
+        }
+
+        declared.Sort(StringComparer.Ordinal);
+        handlers.Sort((a, b) => string.CompareOrdinal(a.RequestTypeName, b.RequestTypeName));
+
+        return new RequestSet(declared, handlers);
     }
 
     private static List<ServiceRegistrationDescriptor> ResolveServices(
@@ -174,6 +225,15 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
 
     private static List<string> Resolve(ServiceCandidate candidate, ZeroNames platform, HashSet<string> nonService)
     {
+        // A handler is registered under the closed interface the pipeline resolves, not by
+        // the naming convention. The convention would pick the open generic it declares --
+        // IQueryHandler<TQuery, TResponse> -- which is not a type anything can be registered as.
+        var handled = candidate.ClosedInterfaces.FirstOrDefault(i =>
+            i.OpenGenericName == platform.RequestHandlerInterface && i.TypeArguments.Count == 2);
+
+        if (handled is not null)
+            return [$"global::{platform.RequestHandlerInterface}<{handled.TypeArguments[0]}, {handled.TypeArguments[1]}>"];
+
         var required = candidate.AllInterfaces
             .Where(i => !nonService.Contains(i) && i.StartsWith(platform.Root, StringComparison.Ordinal) is false)
             .ToList();
@@ -225,6 +285,8 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
         string assemblyName,
         List<string> dependencies,
         List<ServiceRegistrationDescriptor> services,
+        RequestSet requests,
+        bool messaging,
         ZeroNames platform)
     {
         var ns = Sanitize(assemblyName);
@@ -259,6 +321,10 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
         b.AppendLine("        global::System.Threading.CancellationToken cancellationToken)");
         b.AppendLine("    {");
         b.AppendLine("        RegisterServices(context.Services);");
+
+        if (messaging)
+            b.AppendLine($"        RegisterRequests(global::{platform.ModuleServiceContextExtensions}.Requests(context));");
+
         b.AppendLine("        OnConfigureServices(context);");
         b.AppendLine();
         b.AppendLine("        return default;");
@@ -270,7 +336,7 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
         b.AppendLine($"    private static void RegisterServices({di}.IServiceCollection services)");
         b.AppendLine("    {");
 
-        if (services.Count == 0) b.AppendLine("        // yasam suresi isareti tasiyan tip yok");
+        if (services.Count == 0) b.AppendLine("        // No type in this assembly carries a lifetime marker.");
 
         foreach (var service in services)
         {
@@ -291,9 +357,51 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
         b.AppendLine("    }");
         b.AppendLine();
 
+        if (messaging) RenderRequests(b, requests, platform);
+
         b.AppendLine("}");
 
         return b.ToString();
+    }
+
+    /// <summary>
+    /// Emits the dispatch rows for this assembly.
+    /// </summary>
+    /// <remarks>
+    /// Both type arguments are known here, so the emitted lambda calls a closed generic and
+    /// dispatching costs a dictionary read and a cast. Nothing is resolved by reflection,
+    /// and the pair is checked by the compiler rather than at the first send.
+    /// </remarks>
+    private static void RenderRequests(StringBuilder b, RequestSet requests, ZeroNames platform)
+    {
+        var messaging = $"global::{platform.Messaging}";
+
+        b.AppendLine($"    private static void RegisterRequests({messaging}.IRequestRegistryBuilder builder)");
+        b.AppendLine("    {");
+
+        if (requests.Declared.Count == 0 && requests.Handlers.Count == 0)
+            b.AppendLine("        // This assembly declares no request and handles none.");
+
+        foreach (var request in requests.Declared)
+            b.AppendLine($"        builder.Declare(typeof({request}));");
+
+        if (requests.Declared.Count > 0 && requests.Handlers.Count > 0) b.AppendLine();
+
+        foreach (var handler in requests.Handlers)
+        {
+            b.AppendLine($"        // {handler.RequestTypeName} -> {handler.HandlerTypeName}");
+            b.AppendLine($"        builder.Add(new {messaging}.RequestEntry(");
+            b.AppendLine($"            typeof({handler.RequestTypeName}),");
+            b.AppendLine($"            typeof({handler.ResponseTypeName}),");
+            b.AppendLine($"            typeof({handler.HandlerTypeName}),");
+            b.AppendLine("            static (services, request, cancellationToken) =>");
+            b.AppendLine($"                {messaging}.RequestPipeline.RunAsync<{handler.RequestTypeName}, {handler.ResponseTypeName}>(");
+            b.AppendLine($"                    ({handler.RequestTypeName})request, services, cancellationToken)));");
+            b.AppendLine();
+        }
+
+        b.AppendLine("    }");
+        b.AppendLine();
     }
 
     private static string Sanitize(string name)

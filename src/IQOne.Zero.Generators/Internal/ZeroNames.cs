@@ -30,4 +30,15 @@ internal sealed record ZeroNames
     public string Ignored => $"{Services}.IIgnoredService";
     public string Required => $"{Services}.IRequiredService";
     public string ServiceTypesAttribute => $"{Annotations}.ServiceTypesAttribute";
+
+    /// <summary>Assembly whose presence turns on request dispatch generation.</summary>
+    public string MessagingAssembly => $"{Root}.Messaging";
+
+    public string Messaging => $"{Root}.Messaging";
+    public string RequestInterface => $"{Messaging}.IRequest";
+    public string RequestHandlerInterface => $"{Messaging}.IRequestHandler";
+    public string RequestRegistryBuilder => $"{Messaging}.IRequestRegistryBuilder";
+    public string RequestEntry => $"{Messaging}.RequestEntry";
+    public string RequestPipeline => $"{Messaging}.RequestPipeline";
+    public string ModuleServiceContextExtensions => $"{Messaging}.ModuleServiceContextExtensions";
 }

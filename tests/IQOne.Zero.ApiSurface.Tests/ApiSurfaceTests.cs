@@ -17,7 +17,9 @@ public class ApiSurfaceTests
     [
         "IQOne.Zero.Abstractions",
         "IQOne.Zero.Core",
-        "IQOne.Zero.Configuration"
+        "IQOne.Zero.Configuration",
+        "IQOne.Zero.Results",
+        "IQOne.Zero.Messaging"
     ];
 
     [Theory]

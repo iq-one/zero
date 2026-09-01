@@ -6,6 +6,7 @@
   <ItemGroup>
     <ProjectReference Include="../../src/IQOne.Zero.Generators/IQOne.Zero.Generators.csproj" />
     <ProjectReference Include="../../src/IQOne.Zero.Core/IQOne.Zero.Core.csproj" />
+    <ProjectReference Include="../../src/IQOne.Zero.Messaging/IQOne.Zero.Messaging.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />

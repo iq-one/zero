@@ -22,6 +22,8 @@ internal readonly struct EquatableArray<T> : IEquatable<EquatableArray<T>>, IEnu
 
     public T[] ToArray() => [.. Safe];
 
+    public T this[int index] => Safe[index];
+
     public bool Equals(EquatableArray<T> other)
     {
         var a = Safe;

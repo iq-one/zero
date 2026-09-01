@@ -1,0 +1,7 @@
+<Project>
+  <ItemGroup>
+    <ZeroRuleFile Include="/Users/keremcanaktas/Pusula Projects/Source/IQOne.Zero/build/../zero/rules/**/*.md">
+      <Package>IQOne.Zero.Messaging</Package>
+    </ZeroRuleFile>
+  </ItemGroup>
+</Project>

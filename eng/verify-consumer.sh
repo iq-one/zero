@@ -85,6 +85,39 @@ fi
 grep -q ZERO009 build.log \
   || { echo "FAIL: expected ZERO009, got:"; cat build.log; exit 1; }
 
+echo "--- commands and queries dispatch through a generated table ---"
+cat > Messaging.cs <<'CS'
+using System.Threading;
+using System.Threading.Tasks;
+using IQOne.Zero.Messaging;
+using IQOne.Zero.Results;
+
+namespace Consumer;
+
+public sealed record GetInvoice(int Id) : IQuery<string>;
+
+public sealed class GetInvoiceHandler : IQueryHandler<GetInvoice, string>
+{
+    public Task<Result<string>> HandleAsync(GetInvoice query, CancellationToken cancellationToken)
+        => Task.FromResult(Result<string>.Success($"invoice {query.Id}"));
+}
+
+public sealed record Orphan : ICommand;
+CS
+
+# Services.cs still holds the captive dependency from the previous step.
+git init -q . 2>/dev/null || true
+sed -i.bak '/IReportCache/,$d' Services.cs && rm -f Services.cs.bak
+
+dotnet build --nologo -v q
+generated="$(find generated -name Module.g.cs)"
+
+grep -q "RequestPipeline.RunAsync<global::Consumer.GetInvoice, string>" "$generated" \
+  || { echo "FAIL: the dispatch row was not generated"; cat "$generated"; exit 1; }
+
+grep -q "builder.Declare(typeof(global::Consumer.Orphan));" "$generated" \
+  || { echo "FAIL: an unhandled request was not declared, so startup could not report it"; exit 1; }
+
 echo "--- rule files ship inside the packages ---"
 # Listed to a file first: with pipefail, `grep -q` exiting early would SIGPIPE unzip and
 # fail the pipeline even on a match.
