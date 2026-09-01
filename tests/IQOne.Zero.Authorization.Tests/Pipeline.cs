@@ -62,7 +62,7 @@ internal sealed class Pipeline
         services.AddZeroAuthorization(configure);
         register?.Invoke(services);
 
-        services.AddZeroMessaging(requests => requests.Add(new RequestEntry(
+        services.AddZeroMessagingWithRequests(requests => requests.Add(new RequestEntry(
             typeof(TRequest), typeof(string), typeof(Echo<TRequest>),
             static (sp, r, ct) => RequestPipeline.RunAsync<TRequest, string>((TRequest)r, sp, ct))));
 

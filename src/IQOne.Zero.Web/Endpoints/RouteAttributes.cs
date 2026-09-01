@@ -33,7 +33,16 @@ public abstract class RouteAttribute(string method, string pattern) : Attribute
     /// <summary>Groups the endpoint in OpenAPI.</summary>
     public string? Tag { get; set; }
 
-    /// <summary>Authorization policy applied to the endpoint. Null leaves it open.</summary>
+    /// <summary>
+    /// Authorization policy applied to the endpoint.
+    /// </summary>
+    /// <remarks>
+    /// Null does not leave the endpoint open: it falls back to
+    /// <see cref="ZeroWebOptions.RequireAuthorizationByDefault"/>, which requires an
+    /// authenticated caller unless the application turned it off. Say
+    /// <see cref="AllowAnonymous"/> to publish an endpoint, so that the decision is in the
+    /// code rather than in what nobody wrote.
+    /// </remarks>
     public string? Policy { get; set; }
 
     /// <summary>Whether the endpoint may be reached without authentication.</summary>

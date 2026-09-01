@@ -2,12 +2,20 @@ interface IQOne.Zero.Web.Binding.IRequestBinder
     ValueTask<object> BindAsync(Microsoft.AspNetCore.Http.HttpContext context, Type requestType, CancellationToken cancellationToken)
 
 sealed class IQOne.Zero.Web.Binding.JsonRequestBinder : IQOne.Zero.Web.Binding.IRequestBinder
-    .ctor JsonRequestBinder(Microsoft.Extensions.Options.IOptions<IQOne.Zero.Web.ZeroWebOptions> options)
+    .ctor JsonRequestBinder(Microsoft.Extensions.Options.IOptions<IQOne.Zero.Web.ZeroWebOptions> options, Microsoft.Extensions.Options.IOptions<Microsoft.AspNetCore.Http.Json.JsonOptions> json)
     ValueTask<object> BindAsync(Microsoft.AspNetCore.Http.HttpContext context, Type requestType, CancellationToken cancellationToken)
 
-sealed class IQOne.Zero.Web.Binding.RequestBindingException : Exception
+class IQOne.Zero.Web.Binding.RequestBindingException : Exception
     .ctor RequestBindingException(Type requestType, string reason)
     Type RequestType { get; }
+
+sealed class IQOne.Zero.Web.Binding.RequestBodyTooLargeException : IQOne.Zero.Web.Binding.RequestBindingException
+    .ctor RequestBodyTooLargeException(Type requestType, Int64 limit)
+    Int64 Limit { get; }
+
+sealed class IQOne.Zero.Web.Binding.UnsupportedMediaTypeException : IQOne.Zero.Web.Binding.RequestBindingException
+    .ctor UnsupportedMediaTypeException(Type requestType, string contentType)
+    string ContentType { get; }
 
 sealed class IQOne.Zero.Web.DeleteAttribute : IQOne.Zero.Web.RouteAttribute
     .ctor DeleteAttribute(string pattern)
@@ -49,6 +57,17 @@ static class IQOne.Zero.Web.WebRegistration
     static Microsoft.AspNetCore.Routing.IEndpointRouteBuilder MapZeroEndpoints(Microsoft.AspNetCore.Routing.IEndpointRouteBuilder endpoints)
     static Microsoft.Extensions.DependencyInjection.IServiceCollection AddZeroWeb(Microsoft.Extensions.DependencyInjection.IServiceCollection services, Action<IQOne.Zero.Web.ZeroWebOptions> configure = default)
 
+interface IQOne.Zero.Web.Writing.IResponseWriter
+    Microsoft.AspNetCore.Http.IResult Empty(Microsoft.AspNetCore.Http.HttpContext context)
+    Microsoft.AspNetCore.Http.IResult Failure(Microsoft.AspNetCore.Http.HttpContext context, IReadOnlyList<IQOne.Zero.Error> errors, int? status)
+    Microsoft.AspNetCore.Http.IResult Success<TResponse>(Microsoft.AspNetCore.Http.HttpContext context, TResponse value)
+
+sealed class IQOne.Zero.Web.Writing.JsonResponseWriter : IQOne.Zero.Web.Writing.IResponseWriter
+    .ctor JsonResponseWriter(Microsoft.Extensions.Options.IOptions<IQOne.Zero.Web.ZeroWebOptions> options, Microsoft.Extensions.Options.IOptions<Microsoft.AspNetCore.Http.Json.JsonOptions> json)
+    Microsoft.AspNetCore.Http.IResult Empty(Microsoft.AspNetCore.Http.HttpContext context)
+    Microsoft.AspNetCore.Http.IResult Failure(Microsoft.AspNetCore.Http.HttpContext context, IReadOnlyList<IQOne.Zero.Error> errors, int? status)
+    Microsoft.AspNetCore.Http.IResult Success<TResponse>(Microsoft.AspNetCore.Http.HttpContext context, TResponse value)
+
 static class IQOne.Zero.Web.ZeroEndpoint
     static Task<Microsoft.AspNetCore.Http.IResult> RunAsync<TRequest, TResponse>(Microsoft.AspNetCore.Http.HttpContext context)
 
@@ -73,7 +92,9 @@ sealed class IQOne.Zero.Web.ZeroEndpointDescriptor : IEquatable<IQOne.Zero.Web.Z
 sealed class IQOne.Zero.Web.ZeroWebOptions
     .ctor ZeroWebOptions()
     IDictionary<IQOne.Zero.ErrorKind, int> StatusCodeByKind { get; }
-    JsonSerializerOptions SerializerOptions { get; set; }
+    Int64 MaxBodyBytes { get; set; }
     bool IncludeErrorMessages { get; set; }
+    bool RequireAuthorizationByDefault { get; set; }
     int EmptySuccessStatusCode { get; set; }
+    string DefaultPolicy { get; set; }
     string RoutePrefix { get; set; }

@@ -1,13 +1,8 @@
 using IQOne.Zero.Messaging;
-using IQOne.Zero;
 using IQOne.Zero.Web.Binding;
-// Aliased because Zero's own Results namespace would otherwise shadow this type. The
-// framework's Result and Error live in IQOne.Zero for exactly that reason; this file is
-// the one place that still needs both.
-using HttpResults = Microsoft.AspNetCore.Http.Results;
+using IQOne.Zero.Web.Writing;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 
 namespace IQOne.Zero.Web;
 
@@ -29,7 +24,7 @@ public static class ZeroEndpoint
         where TRequest : IRequest<TResponse>
     {
         var services = context.RequestServices;
-        var options = services.GetRequiredService<IOptions<ZeroWebOptions>>().Value;
+        var writer = services.GetRequiredService<IResponseWriter>();
         var cancellationToken = context.RequestAborted;
 
         object request;
@@ -41,15 +36,30 @@ public static class ZeroEndpoint
                 .BindAsync(context, typeof(TRequest), cancellationToken)
                 .ConfigureAwait(false);
         }
+        catch (UnsupportedMediaTypeException exception)
+        {
+            // 415 rather than 400, and the distinction is not cosmetic: it is the answer that
+            // keeps a cross-origin form post from being executed as a command.
+            return writer.Failure(
+                context,
+                [Error.Validation("request.media-type", exception.Message)],
+                StatusCodes.Status415UnsupportedMediaType);
+        }
+        catch (RequestBodyTooLargeException exception)
+        {
+            return writer.Failure(
+                context,
+                [Error.Validation("request.too-large", exception.Message)],
+                StatusCodes.Status413PayloadTooLarge);
+        }
         catch (RequestBindingException exception)
         {
             // A body the caller cannot fix by retrying is theirs to correct, so it is a 400
             // rather than the 500 an unhandled deserialization failure would produce.
-            return Problem(
-                options,
-                StatusCodes.Status400BadRequest,
+            return writer.Failure(
+                context,
                 [Error.Validation("request.unreadable", exception.Message)],
-                context);
+                StatusCodes.Status400BadRequest);
         }
 
         var result = await services
@@ -57,57 +67,13 @@ public static class ZeroEndpoint
             .SendAsync((IRequest<TResponse>)request, cancellationToken)
             .ConfigureAwait(false);
 
-        if (result.IsFailure) return Problem(options, StatusFor(options, result.Errors), result.Errors, context);
+        // The status is the writer's to choose here: these failures are the application's,
+        // and how they are reported is the contract it keeps with its callers.
+        if (result.IsFailure) return writer.Failure(context, result.Errors, null);
 
-        // A command that produces nothing has nothing to serialise; 204 says so precisely.
+        // A command that produces nothing has nothing to serialise.
         return typeof(TResponse) == typeof(Unit)
-            ? HttpResults.StatusCode(options.EmptySuccessStatusCode)
-            : HttpResults.Json(result.Value, options.SerializerOptions);
+            ? writer.Empty(context)
+            : writer.Success(context, result.Value);
     }
-
-    /// <summary>
-    /// The status for a set of failures: the most specific one wins.
-    /// </summary>
-    /// <remarks>
-    /// Several errors of different kinds usually means validation collected them, so
-    /// validation is reported. A single error reports its own kind.
-    /// </remarks>
-    private static int StatusFor(ZeroWebOptions options, ErrorList errors)
-    {
-        var kinds = errors.Select(e => e.Kind).Distinct().ToArray();
-
-        var kind = kinds.Length == 1
-            ? kinds[0]
-            : kinds.Contains(ErrorKind.Validation) ? ErrorKind.Validation : kinds[0];
-
-        return options.StatusCodeByKind.TryGetValue(kind, out var status)
-            ? status
-            : StatusCodes.Status500InternalServerError;
-    }
-
-    private static IResult Problem(ZeroWebOptions options, int status, IEnumerable<Error> errors, HttpContext context)
-        => HttpResults.Problem(
-            statusCode: status,
-            title: TitleFor(status),
-            extensions: new Dictionary<string, object?>
-            {
-                ["traceId"] = context.TraceIdentifier,
-                ["errors"] = errors.Select(e => new
-                {
-                    code = e.Code,
-                    message = options.IncludeErrorMessages ? e.Message : null,
-                    kind = e.Kind.ToString()
-                })
-            });
-
-    private static string TitleFor(int status) => status switch
-    {
-        StatusCodes.Status400BadRequest => "The request was not acceptable.",
-        StatusCodes.Status401Unauthorized => "The caller could not be identified.",
-        StatusCodes.Status403Forbidden => "The caller is not permitted to do this.",
-        StatusCodes.Status404NotFound => "What was asked for does not exist.",
-        StatusCodes.Status409Conflict => "The current state does not allow this.",
-        StatusCodes.Status503ServiceUnavailable => "A dependency is unavailable.",
-        _ => "The request failed."
-    };
 }

@@ -6,7 +6,7 @@ namespace Zero.Sample.Invoices;
 
 /// <summary>Settles an invoice.</summary>
 /// <param name="Id">Which invoice.</param>
-[Post("/invoices/{id:int}/pay", Tag = "Invoices")]
+[Post("/invoices/{id:int}/pay", Tag = "Invoices", AllowAnonymous = true)]
 public sealed record PayInvoice(int Id) : ICommand;
 
 /// <summary>Serves <see cref="PayInvoice"/>.</summary>

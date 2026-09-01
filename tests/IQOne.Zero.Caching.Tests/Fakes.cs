@@ -173,7 +173,7 @@ internal sealed class TestApplication
 
     public RunningApplication Build()
     {
-        _services.AddZeroMessaging(requests =>
+        _services.AddZeroMessagingWithRequests(requests =>
         {
             foreach (var entry in _entries) requests.Add(entry);
         });

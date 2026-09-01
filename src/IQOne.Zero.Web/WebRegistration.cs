@@ -1,10 +1,13 @@
 using IQOne.Zero.Modules;
 using IQOne.Zero.Web.Binding;
+using IQOne.Zero.Web.Writing;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 
 namespace IQOne.Zero.Web;
 
@@ -15,9 +18,14 @@ public static class WebRegistration
     /// Lets modules contribute their endpoints, and registers what reads requests and writes
     /// responses.
     /// </summary>
-    /// <remarks>Call this before <c>AddModules</c>, then <c>MapZeroEndpoints</c> on the app.</remarks>
+    /// <remarks>
+    /// Call this before <c>AddModules</c>, then <c>MapZeroEndpoints</c> on the app. The
+    /// binder and the writer are registered only if nothing has claimed them, so an
+    /// application that publishes its own wire contract registers an
+    /// <see cref="IResponseWriter"/> first and keeps it.
+    /// </remarks>
     /// <param name="services">The registrations to add to.</param>
-    /// <param name="configure">Adjusts routing, serialization and status codes.</param>
+    /// <param name="configure">Adjusts routing, authorization, limits and status codes.</param>
     /// <returns>The same collection, for chaining.</returns>
     public static IServiceCollection AddZeroWeb(
         this IServiceCollection services, Action<ZeroWebOptions>? configure = null)
@@ -26,6 +34,7 @@ public static class WebRegistration
 
         services.AddOptions<ZeroWebOptions>();
         services.TryAddSingleton<IRequestBinder, JsonRequestBinder>();
+        services.TryAddSingleton<IResponseWriter, JsonResponseWriter>();
         services.AddSingleton<IModuleFeatureContributor>(new WebFeatureContributor());
 
         return services;
@@ -41,11 +50,15 @@ public static class WebRegistration
     /// </remarks>
     /// <param name="endpoints">The application's route builder.</param>
     /// <returns>The same builder, for chaining.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// An endpoint needs authorization and the application registered none.
+    /// </exception>
     public static IEndpointRouteBuilder MapZeroEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var registry = endpoints.ServiceProvider.GetRequiredService<EndpointRegistry>();
-        var options = endpoints.ServiceProvider
-            .GetRequiredService<Microsoft.Extensions.Options.IOptions<ZeroWebOptions>>().Value;
+        var options = endpoints.ServiceProvider.GetRequiredService<IOptions<ZeroWebOptions>>().Value;
+
+        EnsureAuthorizationIsAvailable(endpoints, registry, options);
 
         foreach (var endpoint in registry.Endpoints)
         {
@@ -59,11 +72,84 @@ public static class WebRegistration
 
             if (endpoint.Tag is not null) builder.WithTags(endpoint.Tag);
 
-            if (endpoint.AllowAnonymous) builder.AllowAnonymous();
-            else if (endpoint.Policy is not null) builder.RequireAuthorization(endpoint.Policy);
+            Authorize(builder, endpoint, options);
         }
 
         return endpoints;
+    }
+
+    /// <summary>
+    /// Refuses to map endpoints that need authorization into an application that has none.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Without this, attaching the metadata succeeds and ASP.NET refuses at request time with
+    /// its own message — every route answering 500, and nothing to say that Zero closed them
+    /// or which switch opens them again. Wiring mistakes belong at startup, next to the
+    /// wiring.
+    /// </para>
+    /// <para>
+    /// The probe is <see cref="IAuthorizationHandlerProvider"/> because that is the same
+    /// service <c>WebApplication</c> looks for when deciding whether to insert the
+    /// authorization middleware for itself: on that host, registering the services really
+    /// does give you the middleware. On a host that composes its own pipeline the services
+    /// are only half the answer, so the message names both halves.
+    /// </para>
+    /// </remarks>
+    private static void EnsureAuthorizationIsAvailable(
+        IEndpointRouteBuilder endpoints, EndpointRegistry registry, ZeroWebOptions options)
+    {
+        var byDefault = options.RequireAuthorizationByDefault
+            ? registry.Endpoints.FirstOrDefault(e => !e.AllowAnonymous && e.Policy is null)
+            : null;
+
+        var byPolicy = registry.Endpoints.FirstOrDefault(e => !e.AllowAnonymous && e.Policy is not null);
+
+        if (byDefault is null && byPolicy is null) return;
+        if (endpoints.ServiceProvider.GetService<IAuthorizationHandlerProvider>() is not null) return;
+
+        // The endpoint that says nothing is the one worth reporting: it is closed by a
+        // decision the application never wrote down, so it is the one whose author is
+        // surprised.
+        throw new InvalidOperationException(byDefault is not null
+            ? $"'{byDefault.Method} {byDefault.Pattern}' names neither a policy nor AllowAnonymous, so Zero " +
+              "requires an authenticated caller for it — and this application has registered no " +
+              "authorization services, which would make that endpoint and every other silent one fail on " +
+              "its first request. Call services.AddAuthorization() and app.UseAuthorization(); or, for an " +
+              "application with no authentication at all, opt out deliberately with " +
+              "services.AddZeroWeb(options => options.RequireAuthorizationByDefault = false)."
+            : $"'{byPolicy!.Method} {byPolicy.Pattern}' requires the authorization policy " +
+              $"'{byPolicy.Policy}', and this application has registered no authorization services. " +
+              "Call services.AddAuthorization() and app.UseAuthorization().");
+    }
+
+    /// <summary>
+    /// Attaches the endpoint's authorization, or the application's default when it names none.
+    /// </summary>
+    /// <remarks>
+    /// An endpoint that says nothing gets the default rather than nothing at all. Silence is
+    /// the one case where the answer must not be "open": in a codebase where most endpoints
+    /// carry a policy, the one where someone forgot looks exactly like the rest.
+    /// </remarks>
+    private static void Authorize(
+        IEndpointConventionBuilder builder, ZeroEndpointDescriptor endpoint, ZeroWebOptions options)
+    {
+        if (endpoint.AllowAnonymous)
+        {
+            builder.AllowAnonymous();
+            return;
+        }
+
+        if (endpoint.Policy is not null)
+        {
+            builder.RequireAuthorization(endpoint.Policy);
+            return;
+        }
+
+        if (!options.RequireAuthorizationByDefault) return;
+
+        if (options.DefaultPolicy is null) builder.RequireAuthorization();
+        else builder.RequireAuthorization(options.DefaultPolicy);
     }
 }
 

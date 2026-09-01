@@ -21,6 +21,9 @@ internal sealed class LaboratoryModule() : FakeModule(typeof(SharedModule));
 internal sealed class CycleA() : FakeModule(typeof(CycleB));
 internal sealed class CycleB() : FakeModule(typeof(CycleA));
 
+// Not in the cycle, but stuck behind it: reporting it hides the two modules that matter.
+internal sealed class DownstreamOfCycle() : FakeModule(typeof(CycleA));
+
 /// <summary>Records the order the lifecycle phases ran in.</summary>
 internal class RecordingModule(List<string> log, params Type[] dependencies)
     : FakeModule(dependencies),

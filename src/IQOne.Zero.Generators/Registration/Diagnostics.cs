@@ -59,6 +59,14 @@ internal static class Diagnostics
         "A route is served by sending its request through the pipeline. A type that is not a " +
         "request has nothing to send, so the attribute would silently do nothing.");
 
+    public static readonly DiagnosticDescriptor UndeclaredEndpointPolicy = Warning(
+        "ZERO302", Web, "A routed request does not say who may make it",
+        "'{0}' declares a route but neither a Policy nor AllowAnonymous. It will be served to any " +
+        "authenticated caller. Name the policy it needs, or say AllowAnonymous when that is intended.",
+        "Zero refuses an unauthenticated caller by default, so a forgotten endpoint fails loudly rather " +
+        "than opening. What stays silent is the endpoint that should have named a policy and instead " +
+        "serves every logged-in caller: correct-looking, and wrong with no symptom.");
+
     public static readonly DiagnosticDescriptor EmptyRoutePattern = Error(
         "ZERO301", Web, "Route pattern is empty",
         "The route on '{0}' has no pattern. Give it one, for example \"/invoices/{{id:int}}\".",

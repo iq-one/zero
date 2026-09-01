@@ -6,11 +6,11 @@ namespace Zero.Sample.Invoices;
 
 /// <summary>Reads one invoice.</summary>
 /// <param name="Id">Which invoice.</param>
-[Get("/invoices/{id:int}", Tag = "Invoices")]
+[Get("/invoices/{id:int}", Tag = "Invoices", AllowAnonymous = true)]
 public sealed record GetInvoice(int Id) : IQuery<InvoiceModel>;
 
 /// <summary>Reads every invoice, soonest due first.</summary>
-[Get("/invoices", Tag = "Invoices")]
+[Get("/invoices", Tag = "Invoices", AllowAnonymous = true)]
 public sealed record ListInvoices : IQuery<IReadOnlyList<InvoiceModel>>;
 
 /// <summary>Serves <see cref="GetInvoice"/>.</summary>

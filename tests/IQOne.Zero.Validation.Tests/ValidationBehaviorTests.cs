@@ -46,7 +46,7 @@ public class ValidationBehaviorTests
 
         foreach (var validator in validators) services.AddScoped(_ => validator);
 
-        services.AddZeroMessaging(requests => requests.Add(new RequestEntry(
+        services.AddZeroMessagingWithRequests(requests => requests.Add(new RequestEntry(
             typeof(Register), typeof(string), typeof(RegisterHandler),
             static (sp, r, ct) => RequestPipeline.RunAsync<Register, string>((Register)r, sp, ct))));
 

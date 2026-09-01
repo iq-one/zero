@@ -1,4 +1,6 @@
 using IQOne.Zero.App;
+using IQOne.Zero.App.Steps;
+using IQOne.Zero.Configuration.Steps;
 using IQOne.Zero.DependencyInjection.Extensions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -6,19 +8,50 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace IQOne.Zero.Configuration.Extensions;
 
-/// <summary>Reaches configuration from a service collection or a running application.</summary>
+/// <summary>Puts a configuration into the application, and reaches it once it is there.</summary>
 public static class ConfigurationExtensions
 {
     /// <summary>
-    /// Builds the configuration from any registered builder and registers the result, unless
-    /// a configuration is already registered.
+    /// Registers the application's <see cref="IConfiguration"/> and makes options validation
+    /// actually run at startup.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <c>ValidateOnStart</c> only registers an <c>IStartupValidator</c>; something has to
+    /// resolve it and call it. Microsoft's generic host does, which is why the promise holds
+    /// in an ASP.NET application and quietly did not in a Zero-hosted one. This adds the
+    /// startup step that closes that gap.
+    /// </para>
+    /// <para>
+    /// A configuration the host already registered is kept and chained onto rather than
+    /// replaced, so what the host arranged — <c>appsettings.json</c>, the environment
+    /// overlay, the command line — survives, and whatever <paramref name="configure"/> adds
+    /// overrides it.
+    /// </para>
+    /// </remarks>
     /// <param name="services">The registrations to add to.</param>
+    /// <param name="configure">Adds configuration sources, in increasing order of precedence.</param>
     /// <returns>The same collection, for chaining.</returns>
-    public static IServiceCollection AddConfiguration(this IServiceCollection services)
+    public static IServiceCollection AddZeroConfiguration(
+        this IServiceCollection services, Action<IConfigurationBuilder>? configure = null)
     {
-        var builder = services.GetService<IConfigurationBuilder>() ?? new ConfigurationBuilder();
-        services.TryAddSingleton<IConfiguration>(builder.Build());
+        ArgumentNullException.ThrowIfNull(services);
+
+        var existing = services.GetConfiguration();
+
+        if (existing is null || configure is not null)
+        {
+            var builder = services.GetRegisteredInstance<IConfigurationBuilder>() ?? new ConfigurationBuilder();
+
+            if (existing is not null) builder.AddConfiguration(existing);
+
+            configure?.Invoke(builder);
+
+            services.Replace(ServiceDescriptor.Singleton<IConfiguration>(builder.Build()));
+        }
+
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IApplicationInitializeStep, ValidateOptionsOnStartStep>());
 
         return services;
     }
@@ -27,7 +60,7 @@ public static class ConfigurationExtensions
     /// <param name="services">The registrations to search.</param>
     /// <returns>The configuration, or <see langword="null"/>.</returns>
     public static IConfiguration? GetConfiguration(this IServiceCollection services)
-        => services.GetService<IConfiguration>();
+        => services.GetRegisteredInstance<IConfiguration>();
 
     /// <summary>
     /// The application's configuration, taken from the provider once it exists and from the
@@ -36,42 +69,10 @@ public static class ConfigurationExtensions
     /// <param name="application">The application.</param>
     /// <returns>The configuration, or <see langword="null"/>.</returns>
     public static IConfiguration? GetConfiguration(this IApplication application)
-        => application.ServiceProvider?.GetService<IConfiguration>()
-           ?? application.ServiceCollection.GetConfiguration();
-
-    /// <summary>
-    /// Binds <typeparamref name="TOptions"/> to the section named after the type.
-    /// </summary>
-    /// <remarks>
-    /// The convention removes the string that would otherwise be repeated at every call
-    /// site and drift from the type when it is renamed.
-    /// </remarks>
-    /// <typeparam name="TOptions">The options type.</typeparam>
-    /// <param name="services">The registrations to add to.</param>
-    /// <param name="prefix">Parent section, when the options live under one.</param>
-    /// <returns>The same collection, for chaining.</returns>
-    public static IServiceCollection Configure<TOptions>(
-        this IServiceCollection services, string? prefix = null) where TOptions : class
-        => services.Configure<TOptions>(typeof(TOptions).Name, prefix);
-
-    /// <summary>Binds <typeparamref name="TOptions"/> to a named section.</summary>
-    /// <typeparam name="TOptions">The options type.</typeparam>
-    /// <param name="services">The registrations to add to.</param>
-    /// <param name="key">The section name.</param>
-    /// <param name="prefix">Parent section, when the options live under one.</param>
-    /// <returns>The same collection, for chaining.</returns>
-    public static IServiceCollection Configure<TOptions>(
-        this IServiceCollection services, string key, string? prefix = null) where TOptions : class
     {
-        var configuration = services.GetConfiguration();
+        ArgumentNullException.ThrowIfNull(application);
 
-        if (configuration is null) return services;
-
-        var path = string.IsNullOrEmpty(prefix) ? key : $"{prefix}:{key}";
-
-        OptionsConfigurationServiceCollectionExtensions
-            .Configure<TOptions>(services, configuration.GetSection(path));
-
-        return services;
+        return application.ServiceProvider?.GetService<IConfiguration>()
+               ?? application.ServiceCollection.GetConfiguration();
     }
 }

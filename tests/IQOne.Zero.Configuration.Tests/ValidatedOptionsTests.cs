@@ -52,7 +52,7 @@ public class ValidatedOptionsTests
 
         read.Should().Throw<OptionsValidationException>()
             .Which.Message.Should().Contain(nameof(MailOptions.Host),
-                "mesaj hangi ayarin eksik oldugunu soylemeli");
+                "the message must say which setting is missing");
     }
 
     [Fact]

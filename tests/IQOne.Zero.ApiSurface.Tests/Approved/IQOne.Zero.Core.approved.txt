@@ -44,11 +44,6 @@ abstract class IQOne.Zero.Fundamentals.Disposable.Disposable : IDisposable
     protected void ReleaseUnmanagedResources()
     void Dispose()
 
-sealed class IQOne.Zero.Modules.ModuleConfigureServicesStep : IQOne.Zero.App.Steps.IApplicationConfigureServicesStep
-    .ctor ModuleConfigureServicesStep(IReadOnlyList<IQOne.Zero.Modules.IModule> modules)
-    Task OnConfigureServicesAsync(Microsoft.Extensions.DependencyInjection.IServiceCollection services, CancellationToken cancellationToken)
-    int Order { get; }
-
 static class IQOne.Zero.Modules.ModuleGraph
     static string Describe(IReadOnlyList<IQOne.Zero.Modules.IModule> orderedModules)
 

@@ -16,19 +16,37 @@ public abstract class Disposable : IDisposable
     /// <param name="disposing">True when called from <see cref="Dispose()"/>, false from the finalizer.</param>
     protected void Dispose(bool disposing)
     {
-        if (_disposed) return;
+        if (!TryBeginDispose()) return;
 
         if (disposing) ReleaseManagedResources();
 
         ReleaseUnmanagedResources();
+    }
+
+    /// <summary>
+    /// Claims the single release this object gets, whichever path asked for it.
+    /// </summary>
+    /// <remarks>
+    /// One flag for both the synchronous and the asynchronous path. Two flags let
+    /// <c>DisposeAsync</c> followed by a defensive <c>Dispose</c> release everything twice,
+    /// and a derived type that frees a handle in
+    /// <see cref="ReleaseUnmanagedResources"/> — documented as running on both paths — frees
+    /// it twice.
+    /// </remarks>
+    /// <returns><see langword="true"/> for the first caller, <see langword="false"/> after that.</returns>
+    private protected bool TryBeginDispose()
+    {
+        if (_disposed) return false;
 
         _disposed = true;
+
+        return true;
     }
 
     /// <summary>Releases managed resources. Not called from the finalizer.</summary>
     protected virtual void ReleaseManagedResources() { }
 
-    /// <summary>Releases unmanaged resources. Called from both paths.</summary>
+    /// <summary>Releases unmanaged resources. Called from both paths, exactly once.</summary>
     protected virtual void ReleaseUnmanagedResources() { }
 
     /// <summary>Releases unmanaged resources if <see cref="Dispose()"/> was never called.</summary>

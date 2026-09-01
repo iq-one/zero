@@ -5,3 +5,5 @@ M:System.Threading.Tasks.Task.Run(System.Action); Do not hide synchronous work b
 P:System.DateTime.Now; Take a TimeProvider dependency so time stays testable.
 P:System.DateTime.UtcNow; Take a TimeProvider dependency so time stays testable.
 T:System.Data.SqlClient.SqlConnection; Use Microsoft.Data.SqlClient.
+M:System.Runtime.CompilerServices.TaskAwaiter.GetResult; Use await instead of blocking on the task.
+M:System.Runtime.CompilerServices.TaskAwaiter`1.GetResult; Use await instead of blocking on the task.

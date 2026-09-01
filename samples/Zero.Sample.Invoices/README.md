@@ -30,6 +30,13 @@ moment, so `CreateInvoiceHandler` still checks. In a real application the databa
 constraint is what actually enforces it; the validator exists to give a good message in the
 common case.
 
+**Every route says `AllowAnonymous = true`, and the secure default stays on.** Zero refuses
+an unauthenticated caller by default and warns (ZERO302) when a routed request declares
+neither a policy nor anonymous access — an endpoint that should have required
+`invoices:write` and instead accepts any authenticated caller looks correct and has no
+symptom. There is an opt-out switch on `ZeroWebOptions`; this sample does not use it,
+because answering the question on each endpoint is better than switching the question off.
+
 **The store is in memory** so the sample runs with nothing installed. A real application
 would take `IRepository<Invoice>` from `IQOne.Zero.Persistence`; the handlers would not
 change.

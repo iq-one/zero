@@ -37,14 +37,21 @@ internal sealed record ZeroNames
     /// <summary>Base of the lifetime annotations; the derived ones each fix a value.</summary>
     public string LifeStyleAttribute => $"{Annotations}.LifeStyleAttribute";
 
+    /// <summary>Says a lifetime has not been chosen, which is not a lifetime.</summary>
+    public string UndefinedAttribute => $"{Annotations}.UndefinedAttribute";
+
     /// <summary>
     /// Lifetime annotations, mapped to the container lifetime each declares.
     /// </summary>
     /// <remarks>
     /// These are the documented escape hatch for a type whose lifetime the abstraction cannot
-    /// express. The values mirror <c>LifeStyleAttribute.ToServiceLifetime</c>: the container
-    /// has three lifetimes and Zero's vocabulary is wider, so everything without an
-    /// equivalent registers as transient.
+    /// express. The values follow <c>LifeStyleAttribute.ToServiceLifetime</c>: the container
+    /// has three lifetimes and Zero's vocabulary is wider, so a value without an equivalent
+    /// registers as transient.
+    ///
+    /// <c>Undefined</c> is the exception and is absent here on purpose. It says a lifetime
+    /// has not been chosen yet, and putting a service in the container on the strength of an
+    /// attribute that declined to name one is the surprise this whole design exists to avoid.
     /// </remarks>
     public (string Attribute, string Lifetime)[] LifetimeAttributes =>
     [
@@ -54,8 +61,7 @@ internal sealed record ZeroNames
         ($"{Annotations}.ThreadAttribute", "Transient"),
         ($"{Annotations}.PooledAttribute", "Transient"),
         ($"{Annotations}.CustomAttribute", "Transient"),
-        ($"{Annotations}.BoundAttribute", "Transient"),
-        ($"{Annotations}.UndefinedAttribute", "Transient")
+        ($"{Annotations}.BoundAttribute", "Transient")
     ];
 
     /// <summary>Assembly whose presence turns on request dispatch generation.</summary>

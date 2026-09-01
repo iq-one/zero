@@ -272,13 +272,23 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
                 continue;
             }
 
+            var policy = Named(route.Attribute, "Policy");
+            var anonymous = string.Equals(
+                Named(route.Attribute, "AllowAnonymous"), "True", StringComparison.OrdinalIgnoreCase);
+
+            // Zero refuses an unauthenticated caller by default, so a forgotten endpoint
+            // fails loudly. What stays silent is one that should have named a policy and
+            // instead serves every logged-in caller.
+            if (policy is null && !anonymous)
+                report(Diagnostics.UndeclaredEndpointPolicy, candidate.Location, [candidate.TypeName]);
+
             endpoints.Add(new EndpointDescriptor(
                 route.Method,
                 pattern,
                 Named(route.Attribute, "Name") ?? EndpointName(candidate.ImplementationTypeName),
                 Named(route.Attribute, "Tag"),
-                Named(route.Attribute, "Policy"),
-                string.Equals(Named(route.Attribute, "AllowAnonymous"), "True", StringComparison.OrdinalIgnoreCase),
+                policy,
+                anonymous,
                 candidate.ImplementationTypeName,
                 request.TypeArguments[0],
                 candidate.Location));
@@ -327,7 +337,8 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
     private const int SelectorSelf = 1;
     private const int SelectorInterfaces = 2 | 4 | 8;
 
-    /// <summary><c>LifeStyle</c>'s values that the container has a name for.</summary>
+    /// <summary><c>LifeStyle</c>'s values the generator has to tell apart, as written in metadata.</summary>
+    private const string LifeStyleUndefined = "0";
     private const string LifeStyleSingleton = "1";
     private const string LifeStyleScoped = "7";
 
@@ -465,15 +476,25 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
     {
         foreach (var attribute in candidate.Attributes)
         {
+            // [Undefined] declines to choose, and a decline is not an answer to override an
+            // abstraction with. The type falls back to whatever its markers say, or to nothing.
+            if (string.Equals(attribute.TypeName, platform.UndefinedAttribute, StringComparison.Ordinal))
+                return null;
+
             if (string.Equals(attribute.TypeName, platform.LifeStyleAttribute, StringComparison.Ordinal))
-                return (attribute.ConstructorArguments.Count > 0
+            {
+                var value = attribute.ConstructorArguments.Count > 0
                     ? attribute.ConstructorArguments[0].Value
-                    : null) switch
+                    : null;
+
+                return value switch
                 {
+                    LifeStyleUndefined or null => null,
                     LifeStyleSingleton => "Singleton",
                     LifeStyleScoped => "Scoped",
                     _ => "Transient"
                 };
+            }
 
             foreach (var (name, lifetime) in platform.LifetimeAttributes)
                 if (string.Equals(attribute.TypeName, name, StringComparison.Ordinal))

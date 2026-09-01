@@ -40,8 +40,8 @@ sealed class IQOne.Zero.Messaging.MessagingOptions
     bool RequireHandlerForEveryRequest { get; set; }
 
 static class IQOne.Zero.Messaging.MessagingRegistration
-    static Microsoft.Extensions.DependencyInjection.IServiceCollection AddZeroMessaging(Microsoft.Extensions.DependencyInjection.IServiceCollection services, Action<IQOne.Zero.Messaging.IRequestRegistryBuilder> configure)
     static Microsoft.Extensions.DependencyInjection.IServiceCollection AddZeroMessaging(Microsoft.Extensions.DependencyInjection.IServiceCollection services, Action<IQOne.Zero.Messaging.MessagingOptions> configure = default)
+    static Microsoft.Extensions.DependencyInjection.IServiceCollection AddZeroMessagingWithRequests(Microsoft.Extensions.DependencyInjection.IServiceCollection services, Action<IQOne.Zero.Messaging.IRequestRegistryBuilder> configure)
 
 sealed class IQOne.Zero.Messaging.MissingRequestHandlerException : InvalidOperationException
     .ctor MissingRequestHandlerException(Type requestType)

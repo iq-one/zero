@@ -3,8 +3,14 @@
     <TargetFramework>net10.0</TargetFramework>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
+  <!--
+    Core is referenced so the promise "configuration is validated before traffic arrives" can
+    be tested where it was broken: under Zero's own Application, which is the host that used
+    to run no validation at all.
+  -->
   <ItemGroup>
     <ProjectReference Include="../../src/IQOne.Zero.Configuration/IQOne.Zero.Configuration.csproj" />
+    <ProjectReference Include="../../src/IQOne.Zero.Core/IQOne.Zero.Core.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />

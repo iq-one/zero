@@ -11,25 +11,22 @@ interface IQOne.Zero.App.IApplicationOptions
 interface IQOne.Zero.App.IApplication<TOptions> : IQOne.Zero.App.IApplication
     TOptions Options { get; set; }
 
-interface IQOne.Zero.App.Steps.IApplicationConfigureServicesStep : IQOne.Zero.App.Steps.IApplicationStep, IQOne.Zero.DependencyInjection.Descriptors.ISingletonInstance, IQOne.Zero.DependencyInjection.Services.IRequiredService
+interface IQOne.Zero.App.Steps.IApplicationConfigureServicesStep : IQOne.Zero.App.Steps.IApplicationStep, IQOne.Zero.DependencyInjection.Descriptors.ISingletonInstance
     Task OnConfigureServicesAsync(Microsoft.Extensions.DependencyInjection.IServiceCollection services, CancellationToken cancellationToken)
 
-interface IQOne.Zero.App.Steps.IApplicationInitializeStep : IQOne.Zero.App.Steps.IApplicationStep, IQOne.Zero.DependencyInjection.Descriptors.ISingletonInstance, IQOne.Zero.DependencyInjection.Services.IRequiredService
+interface IQOne.Zero.App.Steps.IApplicationInitializeStep : IQOne.Zero.App.Steps.IApplicationStep, IQOne.Zero.DependencyInjection.Descriptors.ISingletonInstance
     Task OnInitializeAsync(IQOne.Zero.App.IApplication application, CancellationToken cancellationToken)
 
-interface IQOne.Zero.App.Steps.IApplicationPostRunStep : IQOne.Zero.App.Steps.IApplicationStep, IQOne.Zero.DependencyInjection.Descriptors.ISingletonInstance, IQOne.Zero.DependencyInjection.Services.IRequiredService
+interface IQOne.Zero.App.Steps.IApplicationPostRunStep : IQOne.Zero.App.Steps.IApplicationStep, IQOne.Zero.DependencyInjection.Descriptors.ISingletonInstance
     Task OnPostRunAsync(IQOne.Zero.App.IApplication application, CancellationToken cancellationToken)
 
-interface IQOne.Zero.App.Steps.IApplicationPreRunStep : IQOne.Zero.App.Steps.IApplicationStep, IQOne.Zero.DependencyInjection.Descriptors.ISingletonInstance, IQOne.Zero.DependencyInjection.Services.IRequiredService
+interface IQOne.Zero.App.Steps.IApplicationPreRunStep : IQOne.Zero.App.Steps.IApplicationStep, IQOne.Zero.DependencyInjection.Descriptors.ISingletonInstance
     Task OnPreRunAsync(IQOne.Zero.App.IApplication application, CancellationToken cancellationToken)
 
 interface IQOne.Zero.App.Steps.IApplicationStep : IQOne.Zero.Fundamentals.IStep
     int Order { get; }
 
 interface IQOne.Zero.DependencyInjection.Accessors.IAccessor
-
-interface IQOne.Zero.DependencyInjection.Accessors.IObjectAccessor<T> : IQOne.Zero.DependencyInjection.Accessors.IAccessor
-    T Value { get; }
 
 interface IQOne.Zero.DependencyInjection.Accessors.IServiceCollectionAccessor : IQOne.Zero.DependencyInjection.Accessors.IAccessor
     Microsoft.Extensions.DependencyInjection.IServiceCollection ServiceCollection { get; set; }
@@ -110,17 +107,13 @@ interface IQOne.Zero.DependencyInjection.Descriptors.IThread : IQOne.Zero.Depend
 interface IQOne.Zero.DependencyInjection.Descriptors.ITransient : IQOne.Zero.DependencyInjection.Descriptors.IServiceDescriptor
 
 static class IQOne.Zero.DependencyInjection.Extensions.ServiceCollectionExtensions
-    static IEnumerable<T> GetAllServices<T>(Microsoft.Extensions.DependencyInjection.IServiceCollection services)
-    static IEnumerable<T> GetServices<T>(Microsoft.Extensions.DependencyInjection.IServiceCollection services)
-    static IEnumerable<object> GetAllServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services, Type serviceType)
-    static IEnumerable<object> GetServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services, Func<Microsoft.Extensions.DependencyInjection.ServiceDescriptor, bool> predicate)
-    static IEnumerable<object> GetServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services, Type serviceType)
-    static IReadOnlyCollection<T> GetAllServiceCollection<T>(Microsoft.Extensions.DependencyInjection.IServiceCollection services)
-    static IReadOnlyCollection<T> GetServiceCollection<T>(Microsoft.Extensions.DependencyInjection.IServiceCollection services)
-    static T GetRequiredService<T>(Microsoft.Extensions.DependencyInjection.IServiceCollection services)
-    static T GetService<T>(Microsoft.Extensions.DependencyInjection.IServiceCollection services)
-    static object GetRequiredService(Microsoft.Extensions.DependencyInjection.IServiceCollection services, Type serviceType)
-    static object GetService(Microsoft.Extensions.DependencyInjection.IServiceCollection services, Type serviceType)
+    static IReadOnlyList<T> GetRegisteredInstances<T>(Microsoft.Extensions.DependencyInjection.IServiceCollection services)
+    static IReadOnlyList<object> GetRegisteredInstances(Microsoft.Extensions.DependencyInjection.IServiceCollection services, Func<Microsoft.Extensions.DependencyInjection.ServiceDescriptor, bool> predicate)
+    static IReadOnlyList<object> GetRegisteredInstances(Microsoft.Extensions.DependencyInjection.IServiceCollection services, Type serviceType)
+    static T GetRegisteredInstance<T>(Microsoft.Extensions.DependencyInjection.IServiceCollection services)
+    static T GetRequiredRegisteredInstance<T>(Microsoft.Extensions.DependencyInjection.IServiceCollection services)
+    static object GetRegisteredInstance(Microsoft.Extensions.DependencyInjection.IServiceCollection services, Type serviceType)
+    static object GetRequiredRegisteredInstance(Microsoft.Extensions.DependencyInjection.IServiceCollection services, Type serviceType)
 
 static class IQOne.Zero.DependencyInjection.Extensions.ServiceDescriptorExtensions
     static Type GetImplementationType(Microsoft.Extensions.DependencyInjection.ServiceDescriptor descriptor)
@@ -128,8 +121,6 @@ static class IQOne.Zero.DependencyInjection.Extensions.ServiceDescriptorExtensio
     static object ProduceImplementationInstance(Microsoft.Extensions.DependencyInjection.ServiceDescriptor descriptor)
 
 interface IQOne.Zero.DependencyInjection.Services.IIgnoredService
-
-interface IQOne.Zero.DependencyInjection.Services.IRequiredService
 
 interface IQOne.Zero.Fundamentals.IAdapter : IQOne.Zero.DependencyInjection.Descriptors.ITransient
 

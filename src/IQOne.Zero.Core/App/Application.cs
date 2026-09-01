@@ -1,14 +1,14 @@
-using IQOne.Zero.App;
 using IQOne.Zero.App.Steps;
 using IQOne.Zero.DependencyInjection.Extensions;
 using IQOne.Zero.Fundamentals.Disposable;
+using IQOne.Zero.Modules;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace IQOne.Zero.App;
 
 /// <summary>
-/// Drives the application lifecycle: initialize, pre-run, configure services,
-/// build the provider, post-run.
+/// Drives the application lifecycle: configure services, build the provider, initialize,
+/// pre-run — and, on the way down, post-run.
 /// </summary>
 /// <remarks>
 /// Steps execute sequentially in <c>Order</c>. Running them concurrently would race on
@@ -17,6 +17,11 @@ namespace IQOne.Zero.App;
 public class Application : AsyncDisposable, IApplication
 {
     private bool _initialized;
+    private bool _stopped;
+
+    private IReadOnlyList<IApplicationInitializeStep> _initializeSteps = [];
+    private IReadOnlyList<IApplicationPreRunStep> _preRunSteps = [];
+    private IReadOnlyList<IApplicationPostRunStep> _postRunSteps = [];
 
     /// <summary>Builds on an existing service collection.</summary>
     /// <param name="serviceCollection">Registrations to start from.</param>
@@ -29,7 +34,7 @@ public class Application : AsyncDisposable, IApplication
     public virtual IServiceCollection ServiceCollection { get; set; }
 
     /// <inheritdoc />
-    /// <remarks>Null until <see cref="RunAsync"/> has built it.</remarks>
+    /// <remarks>Null until <see cref="InitializeAsync"/> has built it.</remarks>
     public virtual IServiceProvider ServiceProvider { get; set; } = null!;
 
     /// <inheritdoc />
@@ -45,12 +50,35 @@ public class Application : AsyncDisposable, IApplication
 
         await OnInitializingAsync(cancellationToken).ConfigureAwait(false);
 
-        foreach (var step in Steps<IApplicationInitializeStep>())
+        foreach (var step in Steps<IApplicationConfigureServicesStep>())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            await step.OnConfigureServicesAsync(ServiceCollection, cancellationToken).ConfigureAwait(false);
+        }
+
+        // Discovered before the provider is built, and only then, because reading a step out
+        // of the collection also pins it there: after the build, the container has already
+        // taken its copy of the registrations and would construct a second object.
+        _initializeSteps = Steps<IApplicationInitializeStep>();
+        _preRunSteps = Steps<IApplicationPreRunStep>();
+        _postRunSteps = [.. Steps<IApplicationPostRunStep>().Reverse()];
+
+        ServiceProvider = await CreateServiceProviderAsync(cancellationToken).ConfigureAwait(false);
+
+        foreach (var step in _initializeSteps)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
             await step.OnInitializeAsync(this, cancellationToken).ConfigureAwait(false);
+        }
+
+        await ModuleLifecycleOf(ServiceProvider).InitializeAsync(ServiceProvider, cancellationToken).ConfigureAwait(false);
 
         await OnInitializedAsync(cancellationToken).ConfigureAwait(false);
 
         _initialized = true;
+        _stopped = false;
     }
 
     /// <inheritdoc />
@@ -58,25 +86,57 @@ public class Application : AsyncDisposable, IApplication
     {
         await InitializeAsync(cancellationToken).ConfigureAwait(false);
 
-        foreach (var step in Steps<IApplicationPreRunStep>())
+        foreach (var step in _preRunSteps)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
             await step.OnPreRunAsync(this, cancellationToken).ConfigureAwait(false);
+        }
 
-        foreach (var step in Steps<IApplicationConfigureServicesStep>())
-            await step.OnConfigureServicesAsync(ServiceCollection, cancellationToken).ConfigureAwait(false);
-
-        ServiceProvider = await CreateServiceProviderAsync(cancellationToken).ConfigureAwait(false);
-
-        foreach (var step in Steps<IApplicationPostRunStep>())
-            await step.OnPostRunAsync(this, cancellationToken).ConfigureAwait(false);
+        await ModuleLifecycleOf(ServiceProvider).PreRunAsync(ServiceProvider, cancellationToken).ConfigureAwait(false);
     }
 
-    /// <inheritdoc />
-    public virtual Task StopAsync(CancellationToken cancellationToken = default)
-    {
-        ServiceCollection.Clear();
-        ServiceProvider = null!;
+    /// <summary>
+    /// The guard that keeps each module phase to a single run.
+    /// </summary>
+    /// <remarks>
+    /// A generic host runs the same phases through a hosted service, so an application
+    /// hosted inside one would otherwise initialise every module twice. Absent when the
+    /// application registered no modules, in which case there is nothing to run.
+    /// </remarks>
+    private static Modules.ModuleLifecycle ModuleLifecycleOf(IServiceProvider services)
+        => services.GetService(typeof(Modules.ModuleLifecycle)) as Modules.ModuleLifecycle
+           ?? new Modules.ModuleLifecycle();
 
-        return Task.CompletedTask;
+    /// <inheritdoc />
+    public virtual async Task StopAsync(CancellationToken cancellationToken = default)
+    {
+        if (_stopped) return;
+
+        _stopped = true;
+
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (ServiceProvider is not null)
+            {
+                foreach (var step in _postRunSteps)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    await step.OnPostRunAsync(this, cancellationToken).ConfigureAwait(false);
+                }
+
+                await ModuleLifecycleOf(ServiceProvider).PostRunAsync(ServiceProvider, cancellationToken).ConfigureAwait(false);
+            }
+        }
+        finally
+        {
+            // In a finally: a shutdown step that throws, or a token that cancels mid-way,
+            // must not leave the container and every singleton it built behind.
+            await ReleaseProviderAsync().ConfigureAwait(false);
+        }
     }
 
     /// <summary>Builds the container. Override to supply a different one.</summary>
@@ -90,23 +150,63 @@ public class Application : AsyncDisposable, IApplication
                 ValidateOnBuild = Options.ValidateOnBuild
             }));
 
-    /// <summary>Runs before the initialize steps.</summary>
+    /// <summary>Runs before the configure-services steps.</summary>
     /// <param name="cancellationToken">Cancels the work.</param>
     protected virtual Task OnInitializingAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
-    /// <summary>Runs after the initialize steps.</summary>
+    /// <summary>Runs after the initialize steps, with the provider already built.</summary>
     /// <param name="cancellationToken">Cancels the work.</param>
     protected virtual Task OnInitializedAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
     /// <summary>Reads steps from the service collection before a provider exists.</summary>
     /// <remarks>Only instances marked <c>ISingletonInstance</c> can be materialized this early.</remarks>
-    private IEnumerable<TStep> Steps<TStep>() where TStep : IApplicationStep
-        => ServiceCollection.GetServiceCollection<TStep>().OrderBy(s => s.Order);
+    private IReadOnlyList<TStep> Steps<TStep>() where TStep : IApplicationStep
+        => [.. ServiceCollection.GetRegisteredInstances<TStep>().OrderBy(s => s.Order)];
+
+    private async ValueTask ReleaseProviderAsync()
+    {
+        switch (ServiceProvider)
+        {
+            case IAsyncDisposable asyncDisposable:
+                await asyncDisposable.DisposeAsync().ConfigureAwait(false);
+                break;
+
+            case IDisposable disposable:
+                disposable.Dispose();
+                break;
+        }
+
+        Reset();
+    }
+
+    private void Reset()
+    {
+        ServiceProvider = null!;
+        ServiceCollection.Clear();
+
+        _initializeSteps = [];
+        _preRunSteps = [];
+        _postRunSteps = [];
+        _initialized = false;
+    }
 
     /// <inheritdoc />
+    /// <remarks>
+    /// The shutdown steps are asynchronous and this path cannot await them, so it releases
+    /// the container without running them — blocking here is the deadlock the framework bans.
+    /// Call <see cref="StopAsync"/> or <c>DisposeAsync</c> to run them.
+    /// </remarks>
     protected override void ReleaseManagedResources()
     {
-        StopAsync().GetAwaiter().GetResult();
+        if (!_stopped)
+        {
+            _stopped = true;
+
+            (ServiceProvider as IDisposable)?.Dispose();
+
+            Reset();
+        }
+
         base.ReleaseManagedResources();
     }
 

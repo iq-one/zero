@@ -117,4 +117,92 @@ public class ModuleLifecycleTests
             return ValueTask.CompletedTask;
         }
     }
+
+    [Fact]
+    public void The_synchronous_entry_point_configures_the_modules_during_the_call()
+    {
+        // Nothing else runs them. An ASP.NET application never builds Zero's Application, so
+        // a phase deferred to it is a phase that never happens.
+        var log = new List<string>();
+        var services = new ServiceCollection();
+
+        services.AddModules(new SecondModule(log), new FirstModule(log));
+
+        log.Should().Equal("FirstModule:configure", "SecondModule:configure");
+    }
+
+    [Fact]
+    public void The_synchronous_entry_point_seals_the_contributed_capabilities()
+    {
+        var services = new ServiceCollection();
+        var contributor = new SealingContributor();
+
+        services.AddSingleton<IModuleFeatureContributor>(contributor);
+        services.AddModules(new FirstModule([]));
+
+        contributor.Completed.Should().BeTrue();
+
+        services.BuildServiceProvider().GetService<SealingContributor.Sealed>().Should().NotBeNull(
+            "what a contributor registers on completion is what makes the capability usable");
+    }
+
+    private sealed class SealingContributor : IModuleFeatureContributor
+    {
+        internal sealed record Sealed;
+
+        public bool Completed { get; private set; }
+
+        public void Contribute(IModuleFeatureCollection features) => features.Set(new Sealed());
+
+        public void Complete(IServiceCollection services)
+        {
+            Completed = true;
+
+            services.AddSingleton(new Sealed());
+        }
+    }
+
+    [Fact]
+    public void A_module_that_really_awaits_is_told_to_use_the_asynchronous_entry_point()
+    {
+        var services = new ServiceCollection();
+
+        var add = () => services.AddModules(new PendingModule());
+
+        add.Should().Throw<InvalidOperationException>().WithMessage("*AddModulesAsync*");
+    }
+
+    /// <summary>Never completes, so the synchronous entry point cannot be in any doubt.</summary>
+    private sealed class PendingModule : FakeModule, IModuleConfigureServicesStep
+    {
+        private readonly TaskCompletionSource _never = new();
+
+        public ValueTask OnConfigureServicesAsync(
+            IModuleServiceContext context, CancellationToken cancellationToken)
+            => new(_never.Task);
+    }
+
+    [Fact]
+    public async Task A_module_that_really_awaits_works_through_the_asynchronous_entry_point()
+    {
+        var services = new ServiceCollection();
+        var module = new AwaitingModule();
+
+        await services.AddModulesAsync([module]);
+
+        module.Ran.Should().BeTrue();
+    }
+
+    private sealed class AwaitingModule : FakeModule, IModuleConfigureServicesStep
+    {
+        public bool Ran { get; private set; }
+
+        public async ValueTask OnConfigureServicesAsync(
+            IModuleServiceContext context, CancellationToken cancellationToken)
+        {
+            await Task.Yield();
+
+            Ran = true;
+        }
+    }
 }

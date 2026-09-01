@@ -229,6 +229,24 @@ public class EndpointGenerationTests
     }
 
     [Fact]
+    public void A_route_is_not_inherited_by_a_request_deriving_from_a_routed_one()
+    {
+        var run = GeneratorHarness.Run($$"""
+            {{Preamble}}
+
+            [Get("/things")]
+            public record ListThings : IQuery<string>;
+
+            public sealed record ListThingsV2 : ListThings;
+            """);
+
+        // Attributes reach derived types now, and a route says Inherited = false for exactly
+        // this reason: a second endpoint on the same method and pattern throws when the
+        // endpoint table is built, naming two requests that both claim the route.
+        run.Occurrences("new global::IQOne.Zero.Web.ZeroEndpointDescriptor(").Should().Be(1);
+    }
+
+    [Fact]
     public void The_web_diagnostics_carry_the_category_their_rule_pages_document()
     {
         var run = GeneratorHarness.Run($$"""

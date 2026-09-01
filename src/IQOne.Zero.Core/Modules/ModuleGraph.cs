@@ -13,7 +13,7 @@ public static class ModuleGraph
     {
         var builder = new StringBuilder();
 
-        builder.AppendLine("Modul sirasi (bagimliliklardan turetildi):");
+        builder.AppendLine("Module order (derived from dependencies):");
 
         for (var index = 0; index < orderedModules.Count; index++)
         {

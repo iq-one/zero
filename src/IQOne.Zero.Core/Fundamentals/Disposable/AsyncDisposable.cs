@@ -1,20 +1,20 @@
 namespace IQOne.Zero.Fundamentals.Disposable;
 
 /// <summary>Supports both synchronous and asynchronous release. Prefer the async path.</summary>
+/// <remarks>
+/// Both paths share the base class's single disposed flag, so whichever runs first is the
+/// only one that releases anything.
+/// </remarks>
 public abstract class AsyncDisposable : Disposable, IAsyncDisposable
 {
-    private bool _asyncDisposed;
-
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
-        if (_asyncDisposed) return;
+        if (!TryBeginDispose()) return;
 
         await ReleaseManagedResourcesAsync().ConfigureAwait(false);
 
         ReleaseUnmanagedResources();
-
-        _asyncDisposed = true;
 
         GC.SuppressFinalize(this);
     }

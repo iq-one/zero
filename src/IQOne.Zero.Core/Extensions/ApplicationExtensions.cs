@@ -1,4 +1,5 @@
 using IQOne.Zero.App;
+using IQOne.Zero.DependencyInjection.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace IQOne.Zero.Extensions;
@@ -10,7 +11,7 @@ public static class ApplicationExtensions
     /// <param name="services">The registrations to search.</param>
     /// <returns>The application, or <see langword="null"/>.</returns>
     public static IApplication? GetApplication(this IServiceCollection services)
-        => DependencyInjection.Extensions.ServiceCollectionExtensions.GetService<IApplication>(services);
+        => services.GetRegisteredInstance<IApplication>();
 
     /// <summary>Resolves a service from the application's provider.</summary>
     /// <typeparam name="T">The service type.</typeparam>

@@ -9,7 +9,7 @@ namespace Zero.Sample.Invoices;
 /// <param name="Reference">The customer-visible reference.</param>
 /// <param name="Amount">What is owed.</param>
 /// <param name="Due">When it is owed by.</param>
-[Post("/invoices", Tag = "Invoices")]
+[Post("/invoices", Tag = "Invoices", AllowAnonymous = true)]
 public sealed record CreateInvoice(string Reference, decimal Amount, DateOnly Due) : ICommand<int>;
 
 /// <summary>What a new invoice must look like before anything reads it.</summary>

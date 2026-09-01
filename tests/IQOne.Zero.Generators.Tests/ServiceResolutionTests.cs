@@ -258,6 +258,82 @@ public class ServiceAnnotationTests
     }
 
     [Fact]
+    public void A_service_type_stated_on_a_base_class_reaches_the_class_deriving_from_it()
+    {
+        var run = GeneratorHarness.Run("""
+            using IQOne.Zero.DependencyInjection.Annotations;
+            using IQOne.Zero.DependencyInjection.Descriptors;
+
+            namespace Test;
+
+            public interface IInitializeStep;
+            public interface IShutdownStep;
+
+            [ServiceTypes<IInitializeStep>]
+            [ServiceTypes<IShutdownStep>]
+            public abstract class Steps : IInitializeStep, IShutdownStep, ISingleton;
+
+            public sealed class MySteps : Steps;
+            """);
+
+        // This is ApplicationSteps' shape, and the framework will ship more bases like it.
+        // Roslyn returns only what a declaration wrote itself, so the derived class matched
+        // two unrelated inherited interfaces, resolved to neither, and got ZERO007.
+        run.DiagnosticIds.Should().NotContain("ZERO007");
+
+        run.GeneratedSource.Should()
+            .Contain("AddSingleton<global::Test.IInitializeStep, global::Test.MySteps>")
+            .And.Contain("AddSingleton<global::Test.IShutdownStep, global::Test.MySteps>");
+    }
+
+    [Fact]
+    public void An_attribute_on_the_derived_class_replaces_the_one_it_would_inherit()
+    {
+        var run = GeneratorHarness.Run("""
+            using IQOne.Zero.DependencyInjection.Annotations;
+            using IQOne.Zero.DependencyInjection.Descriptors;
+
+            namespace Test;
+
+            public interface IInitializeStep;
+            public interface IShutdownStep;
+
+            [ServiceTypes<IInitializeStep>]
+            [ServiceTypes<IShutdownStep>]
+            public abstract class Steps : IInitializeStep, IShutdownStep, ISingleton;
+
+            [ServiceTypes(typeof(IShutdownStep))]
+            public sealed class ShutdownOnly : Steps;
+            """);
+
+        // These annotations are overrides. Naming one's own service types means those, not
+        // those and also whichever the base happened to state.
+        run.GeneratedSource.Should()
+            .Contain("AddSingleton<global::Test.IShutdownStep, global::Test.ShutdownOnly>")
+            .And.NotContain("global::Test.IInitializeStep, global::Test.ShutdownOnly");
+    }
+
+    [Fact]
+    public void A_lifetime_attribute_on_a_base_class_reaches_the_class_deriving_from_it()
+    {
+        var run = GeneratorHarness.Run("""
+            using IQOne.Zero.DependencyInjection.Annotations;
+
+            namespace Test;
+
+            public interface IProbe;
+
+            [Singleton]
+            public abstract class Probe : IProbe;
+
+            public sealed class LivenessProbe : Probe;
+            """);
+
+        run.HasError.Should().BeFalse();
+        run.GeneratedSource.Should().Contain("AddSingleton<global::Test.IProbe, global::Test.LivenessProbe>");
+    }
+
+    [Fact]
     public void The_generic_ServiceTypes_attribute_states_a_service_type()
     {
         var run = GeneratorHarness.Run("""
@@ -278,6 +354,29 @@ public class ServiceAnnotationTests
         run.GeneratedSource.Should()
             .Contain("global::Test.IReportSource, global::Test.ThingRepository")
             .And.NotContain("global::Test.IThingRepository, global::Test.ThingRepository");
+    }
+
+    [Fact]
+    public void Undefined_declines_to_choose_a_lifetime_rather_than_picking_one()
+    {
+        var run = GeneratorHarness.Run("""
+            using IQOne.Zero.DependencyInjection.Annotations;
+
+            namespace Test;
+
+            public interface IDraft;
+
+            [Undefined]
+            public sealed class Draft : IDraft;
+            """);
+
+        // "No lifetime has been chosen yet" is not a lifetime. Mapping it onto the container's
+        // fallback would put a service in the container on the strength of an attribute that
+        // said the opposite.
+        run.HasError.Should().BeFalse();
+        run.GeneratedSource.Should()
+            .Contain("No type in this assembly carries a lifetime marker.")
+            .And.NotContain("global::Test.Draft");
     }
 
     [Fact]

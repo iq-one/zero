@@ -8,17 +8,7 @@ using IQOne.Zero.Web;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddZeroWeb(options =>
-{
-    options.RoutePrefix = "/api";
-
-    // Zero requires authorization on every endpoint unless the request says otherwise,
-    // because forgetting to protect a request and deciding it is public produce identical
-    // source. This sample has no authentication at all, so it opts out deliberately —
-    // which is the point of the switch. A real application leaves it on and adds
-    // AddAuthorization() and UseAuthorization().
-    options.RequireAuthorizationByDefault = false;
-});
+builder.Services.AddZeroWeb(options => options.RoutePrefix = "/api");
 builder.Services.AddZeroMessaging();
 builder.Services.AddZeroValidation();
 

@@ -14,6 +14,7 @@ struct IQOne.Zero.Error : IEquatable<IQOne.Zero.Error>
     static IQOne.Zero.Error NotFound(string code, string message)
     static IQOne.Zero.Error Unauthorized(string code, string message)
     static IQOne.Zero.Error Unavailable(string code, string message)
+    static IQOne.Zero.Error Uninitialised
     static IQOne.Zero.Error Validation(string code, string message)
     string Code { get; init; }
     string Message { get; init; }
@@ -34,45 +35,74 @@ struct IQOne.Zero.ErrorList : IReadOnlyList<IQOne.Zero.Error>
     IEnumerator<IQOne.Zero.Error> GetEnumerator()
     IQOne.Zero.Error Item { get; }
     int Count { get; }
+    string ToString()
 
 struct IQOne.Zero.Result : IEquatable<IQOne.Zero.Result>
     IQOne.Zero.Error Error { get; }
     IQOne.Zero.ErrorList Errors { get; }
+    IQOne.Zero.Result<TValue> Cast<TValue>()
     TOut Match<TOut>(Func<TOut> onSuccess, Func<IQOne.Zero.ErrorList, TOut> onFailure)
     bool Equals(IQOne.Zero.Result other)
     bool Equals(object obj)
     bool IsFailure { get; }
     bool IsSuccess { get; }
+    bool TryGetError(out IQOne.Zero.Error error)
     int GetHashCode()
+    static IQOne.Zero.Result Combine(IEnumerable<IQOne.Zero.Result> results)
     static IQOne.Zero.Result Combine(IQOne.Zero.Result[] results)
     static IQOne.Zero.Result Failure(IEnumerable<IQOne.Zero.Error> errors)
     static IQOne.Zero.Result Failure(IQOne.Zero.Error error)
     static IQOne.Zero.Result Success()
+    static IQOne.Zero.Result<TValue[]> Combine<TValue>(IEnumerable<IQOne.Zero.Result<TValue>> results)
+    static IQOne.Zero.Result<TValue[]> Combine<TValue>(IQOne.Zero.Result<TValue>[] results)
     string ToString()
 
 static class IQOne.Zero.ResultExtensions
+    static IQOne.Zero.Result Bind(IQOne.Zero.Result result, Func<IQOne.Zero.Result> bind)
     static IQOne.Zero.Result Bind<TIn>(IQOne.Zero.Result<TIn> result, Func<TIn, IQOne.Zero.Result> bind)
+    static IQOne.Zero.Result MapError(IQOne.Zero.Result result, Func<IQOne.Zero.Error, IQOne.Zero.Error> map)
+    static IQOne.Zero.Result Tap(IQOne.Zero.Result result, Action action)
+    static IQOne.Zero.Result TapError(IQOne.Zero.Result result, Action<IQOne.Zero.ErrorList> action)
+    static IQOne.Zero.Result WithError(IQOne.Zero.Result result, IQOne.Zero.Error error)
     static IQOne.Zero.Result<TOut> Bind<TIn, TOut>(IQOne.Zero.Result<TIn> result, Func<TIn, IQOne.Zero.Result<TOut>> bind)
+    static IQOne.Zero.Result<TOut> Bind<TOut>(IQOne.Zero.Result result, Func<IQOne.Zero.Result<TOut>> bind)
     static IQOne.Zero.Result<TOut> Map<TIn, TOut>(IQOne.Zero.Result<TIn> result, Func<TIn, TOut> map)
     static IQOne.Zero.Result<TValue> Ensure<TValue>(IQOne.Zero.Result<TValue> result, Func<TValue, bool> predicate, IQOne.Zero.Error error)
+    static IQOne.Zero.Result<TValue> MapError<TValue>(IQOne.Zero.Result<TValue> result, Func<IQOne.Zero.Error, IQOne.Zero.Error> map)
     static IQOne.Zero.Result<TValue> Tap<TValue>(IQOne.Zero.Result<TValue> result, Action<TValue> action)
     static IQOne.Zero.Result<TValue> TapError<TValue>(IQOne.Zero.Result<TValue> result, Action<IQOne.Zero.ErrorList> action)
+    static IQOne.Zero.Result<TValue> WithError<TValue>(IQOne.Zero.Result<TValue> result, IQOne.Zero.Error error)
     static TValue GetValueOr<TValue>(IQOne.Zero.Result<TValue> result, Func<IQOne.Zero.ErrorList, TValue> fallback)
     static TValue GetValueOr<TValue>(IQOne.Zero.Result<TValue> result, TValue fallback)
     static Task<IQOne.Zero.Result<TOut>> Bind<TIn, TOut>(IQOne.Zero.Result<TIn> result, Func<TIn, Task<IQOne.Zero.Result<TOut>>> bind)
+    static Task<IQOne.Zero.Result<TOut>> Bind<TIn, TOut>(Task<IQOne.Zero.Result<TIn>> result, Func<TIn, IQOne.Zero.Result<TOut>> bind)
     static Task<IQOne.Zero.Result<TOut>> Bind<TIn, TOut>(Task<IQOne.Zero.Result<TIn>> result, Func<TIn, Task<IQOne.Zero.Result<TOut>>> bind)
+    static Task<IQOne.Zero.Result<TOut>> Map<TIn, TOut>(IQOne.Zero.Result<TIn> result, Func<TIn, Task<TOut>> map)
     static Task<IQOne.Zero.Result<TOut>> Map<TIn, TOut>(Task<IQOne.Zero.Result<TIn>> result, Func<TIn, TOut> map)
+    static Task<IQOne.Zero.Result<TValue>> Ensure<TValue>(Task<IQOne.Zero.Result<TValue>> result, Func<TValue, bool> predicate, IQOne.Zero.Error error)
+    static Task<IQOne.Zero.Result<TValue>> MapError<TValue>(Task<IQOne.Zero.Result<TValue>> result, Func<IQOne.Zero.Error, IQOne.Zero.Error> map)
+    static Task<IQOne.Zero.Result<TValue>> Tap<TValue>(Task<IQOne.Zero.Result<TValue>> result, Action<TValue> action)
+    static Task<IQOne.Zero.Result<TValue>> TapError<TValue>(Task<IQOne.Zero.Result<TValue>> result, Action<IQOne.Zero.ErrorList> action)
+    static Task<IQOne.Zero.Result<TValue>> WithError<TValue>(Task<IQOne.Zero.Result<TValue>> result, IQOne.Zero.Error error)
+    static Task<IQOne.Zero.Result> Bind<TIn>(IQOne.Zero.Result<TIn> result, Func<TIn, Task<IQOne.Zero.Result>> bind)
+    static Task<IQOne.Zero.Result> Bind<TIn>(Task<IQOne.Zero.Result<TIn>> result, Func<TIn, IQOne.Zero.Result> bind)
+    static Task<IQOne.Zero.Result> Bind<TIn>(Task<IQOne.Zero.Result<TIn>> result, Func<TIn, Task<IQOne.Zero.Result>> bind)
+    static Task<TOut> Match<TOut>(Task<IQOne.Zero.Result> result, Func<TOut> onSuccess, Func<IQOne.Zero.ErrorList, TOut> onFailure)
     static Task<TOut> Match<TValue, TOut>(Task<IQOne.Zero.Result<TValue>> result, Func<TValue, TOut> onSuccess, Func<IQOne.Zero.ErrorList, TOut> onFailure)
+    static Task<TValue> GetValueOr<TValue>(Task<IQOne.Zero.Result<TValue>> result, Func<IQOne.Zero.ErrorList, TValue> fallback)
+    static Task<TValue> GetValueOr<TValue>(Task<IQOne.Zero.Result<TValue>> result, TValue fallback)
 
 struct IQOne.Zero.Result<TValue> : IEquatable<IQOne.Zero.Result<TValue>>
     IQOne.Zero.Error Error { get; }
     IQOne.Zero.ErrorList Errors { get; }
+    IQOne.Zero.Result<TOther> Cast<TOther>()
     TOut Match<TOut>(Func<TValue, TOut> onSuccess, Func<IQOne.Zero.ErrorList, TOut> onFailure)
     TValue Value { get; }
     bool Equals(IQOne.Zero.Result<TValue> other)
     bool Equals(object obj)
     bool IsFailure { get; }
     bool IsSuccess { get; }
+    bool TryGetError(out IQOne.Zero.Error error)
     bool TryGetValue(out TValue value)
     int GetHashCode()
     static IQOne.Zero.Result<TValue> Failure(IEnumerable<IQOne.Zero.Error> errors)

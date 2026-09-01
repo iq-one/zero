@@ -16,7 +16,14 @@ public class EndpointTests : IDisposable
     private readonly IHost _host = Fixture.Build();
     private readonly HttpClient _client;
 
-    public EndpointTests() => _client = _host.GetTestClient();
+    public EndpointTests()
+    {
+        _client = _host.GetTestClient();
+
+        // Endpoints require an authenticated caller unless they say otherwise, so every test
+        // that is not about authorization arrives as somebody.
+        _client.DefaultRequestHeaders.Add(TestAuthenticationHandler.UserHeader, "tester");
+    }
 
     public void Dispose()
     {
@@ -115,5 +122,19 @@ public class EndpointTests : IDisposable
 
         problem.TryGetProperty("traceId", out var traceId).Should().BeTrue();
         traceId.GetString().Should().NotBeNullOrWhiteSpace();
+    }
+
+    /// <summary>W8: a transport must not crash on an input it can be handed.</summary>
+    [Fact]
+    public async Task A_failure_with_no_reasons_is_reported_rather_than_thrown()
+    {
+        var response = await _client.GetAsync("/things/no-reason");
+
+        response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
+        response.Content.Headers.ContentType!.MediaType.Should().Be("application/problem+json");
+
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+
+        problem.GetProperty("errors").GetArrayLength().Should().Be(0);
     }
 }
