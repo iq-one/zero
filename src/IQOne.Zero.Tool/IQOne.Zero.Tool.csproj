@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>zero</ToolCommandName>
+    <RollForward>latestMajor</RollForward>
+    <Description>The zero command line tool. Materializes the rule files that ship inside the Zero packages into AGENTS.md, CLAUDE.md and editor rule files, so coding agents work from the same rules the compiler enforces.</Description>
+    <!-- Arac paketinde lib/ yoktur; icerik tools/ yolundan gelir. -->
+    <NoPackageAnalysis>true</NoPackageAnalysis>
+  </PropertyGroup>
+
+</Project>

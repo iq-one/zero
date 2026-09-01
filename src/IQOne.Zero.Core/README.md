@@ -9,4 +9,4 @@ and can be awaited.
 Modules declare what they depend on; the host sorts them topologically. There is no order
 number to maintain, and a cycle is reported by name.
 
-Part of [Zero](https://github.com/keremcanaktas/zero) by IQOne.
+Part of [Zero](https://iqone.solutions/zero) by IQOne.

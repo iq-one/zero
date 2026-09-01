@@ -1,7 +1,9 @@
 <Project>
 
   <PropertyGroup Label="Dil ve derleme disiplini">
-    <TargetFramework Condition="'$(TargetFramework)' == ''">net10.0</TargetFramework>
+    <!-- LTS'ten LTS'e. Cerceve net10'a ozgu hicbir API kullanmaz, bu yuzden net8
+         hedeflemek erisilebilir kitleyi genisletirken hicbir sey feda ettirmez. -->
+    <ZeroTargetFrameworks>net8.0;net10.0</ZeroTargetFrameworks>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>

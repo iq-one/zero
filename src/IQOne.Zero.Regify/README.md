@@ -11,4 +11,4 @@ Generates, per module assembly:
 Reports as compiler diagnostics: duplicate registrations, ambiguous service types,
 lifetime markers on non-registrable types, and captive dependencies.
 
-Part of [Zero](https://github.com/keremcanaktas/zero) by IQOne.
+Part of [Zero](https://iqone.solutions/zero) by IQOne.

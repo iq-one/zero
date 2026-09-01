@@ -2,14 +2,17 @@ using IQOne.Zero.Regify.Tests.Harness;
 
 namespace IQOne.Zero.Regify.Tests;
 
-/// IQ'nun tasarim tercihi: yasam suresi ARAYUZDEN gelir, oznitelik yazilmaz.
+/// <summary>
+/// Lifetime comes from the abstraction, never from an attribute at the registration site,
+/// and the registration itself is generated. These tests pin both halves of that.
+/// </summary>
 public class ServiceRegistrationTests
 {
     [Theory]
     [InlineData("IScoped", "AddScoped")]
     [InlineData("ISingleton", "AddSingleton")]
     [InlineData("ITransient", "AddTransient")]
-    public void Yasam_suresi_isaret_arayuzunden_turetilir(string marker, string expected)
+    public void Lifetime_is_taken_from_the_marker_interface(string marker, string expected)
     {
         var run = GeneratorHarness.Run($$"""
             using IQOne.Zero.DependencyInjection.Descriptors;
@@ -27,7 +30,7 @@ public class ServiceRegistrationTests
     }
 
     [Fact]
-    public void Varsayilan_arayuz_konvansiyonu_uygulanir()
+    public void The_matching_interface_is_chosen_over_any_other()
     {
         // ThingRepository -> IThingRepository, IDisposable degil
         var run = GeneratorHarness.Run("""
@@ -50,7 +53,7 @@ public class ServiceRegistrationTests
     }
 
     [Fact]
-    public void IIgnoredService_kaydedilmez()
+    public void A_type_marked_IIgnoredService_is_not_registered()
     {
         var run = GeneratorHarness.Run("""
             using IQOne.Zero.DependencyInjection.Descriptors;
@@ -67,7 +70,7 @@ public class ServiceRegistrationTests
     }
 
     [Fact]
-    public void ServiceTypes_ozniteligi_konvansiyonu_ezer()
+    public void ServiceTypes_overrides_the_naming_convention()
     {
         var run = GeneratorHarness.Run("""
             using IQOne.Zero.DependencyInjection.Annotations;
@@ -88,7 +91,7 @@ public class ServiceRegistrationTests
     }
 
     [Fact]
-    public void RGF006_birden_fazla_yasam_suresi_isareti()
+    public void RGF006_is_reported_for_two_lifetime_markers()
     {
         var run = GeneratorHarness.Run("""
             using IQOne.Zero.DependencyInjection.Descriptors;
@@ -104,7 +107,7 @@ public class ServiceRegistrationTests
     }
 
     [Fact]
-    public void RGF007_servis_tipi_belirlenemezse()
+    public void RGF007_is_reported_when_no_service_type_can_be_determined()
     {
         var run = GeneratorHarness.Run("""
             using IQOne.Zero.DependencyInjection.Descriptors;
@@ -122,7 +125,7 @@ public class ServiceRegistrationTests
     }
 
     [Fact]
-    public void RGF009_singleton_scoped_bagimliligi_alirsa()
+    public void RGF009_is_reported_for_a_singleton_taking_a_scoped_dependency()
     {
         var run = GeneratorHarness.Run("""
             using IQOne.Zero.DependencyInjection.Descriptors;
@@ -145,7 +148,7 @@ public class ServiceRegistrationTests
     }
 
     [Fact]
-    public void Singleton_singleton_bagimliligi_alabilir()
+    public void A_singleton_may_take_another_singleton()
     {
         var run = GeneratorHarness.Run("""
             using IQOne.Zero.DependencyInjection.Descriptors;

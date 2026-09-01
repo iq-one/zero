@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <TargetFrameworks>$(ZeroTargetFrameworks)</TargetFrameworks>
     <Description>Zero's fundamental abstractions: lifetime-carrying building blocks, module contracts and dependency injection annotations. Referenced by every other Zero package.</Description>
   </PropertyGroup>
 

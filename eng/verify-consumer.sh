@@ -81,7 +81,15 @@ grep -q RGF009 build.log \
   || { echo "FAIL: expected RGF009, got:"; cat build.log; exit 1; }
 
 echo "--- rule files ship inside the packages ---"
-unzip -l "$packages/IQOne.Zero.Abstractions.$version.nupkg" | grep -q "zero/rules/IQOne.Zero.Abstractions/" \
-  || { echo "FAIL: the package carries no rule files"; exit 1; }
+# Listed to a file first: with pipefail, `grep -q` exiting early would SIGPIPE unzip and
+# fail the pipeline even on a match.
+unzip -l "$packages/IQOne.Zero.Abstractions.$version.nupkg" > contents.txt
+grep -q "zero/rules/IQOne.Zero.Abstractions/" contents.txt \
+  || { echo "FAIL: the package carries no rule files"; cat contents.txt; exit 1; }
+
+echo "--- the analyzer reaches a consumer of the metapackage ---"
+unzip -p "$packages/IQOne.Zero.$version.nupkg" IQOne.Zero.nuspec > meta.xml
+grep -q 'id="IQOne.Zero.Regify".*include="All"' meta.xml \
+  || { echo "FAIL: the metapackage excludes the analyzer, so no rule would be enforced"; cat meta.xml; exit 1; }
 
 echo "OK"

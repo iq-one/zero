@@ -6,7 +6,7 @@ namespace IQOne.Zero.Tests;
 public class ModuleLifecycleTests
 {
     [Fact]
-    public async Task Fazlar_sirayla_ve_bagimlilik_sirasinda_calisir()
+    public async Task Phases_run_in_order_and_modules_run_in_dependency_order()
     {
         var log = new List<string>();
         var services = new ServiceCollection();
@@ -25,7 +25,7 @@ public class ModuleLifecycleTests
     }
 
     [Fact]
-    public async Task Kapanis_fazi_ters_sirada_calisir()
+    public async Task Shutdown_runs_in_reverse_dependency_order()
     {
         var log = new List<string>();
         var services = new ServiceCollection();
@@ -41,10 +41,10 @@ public class ModuleLifecycleTests
     }
 
     [Fact]
-    public async Task Katkici_yetenegi_modullere_sunar_ve_sonra_muhurler()
+    public async Task Contributor_offers_a_capability_to_modules_then_seals_it()
     {
-        // Cerceve, dispatch gibi ust katman kavramlarini adlandirmaz. Bir katman
-        // kendini bu mekanizmayla takar; cekirdek yalnizca buldugu katkicilari calistirir.
+        // The core names no higher-layer concept. A layer attaches itself through this
+        // mechanism, and the core only runs whichever contributors it finds.
         var services = new ServiceCollection();
         var contributor = new RecordingContributor();
 
@@ -54,8 +54,8 @@ public class ModuleLifecycleTests
         await services.AddModulesAsync([module]);
 
         contributor.Contributed.Should().BeTrue();
-        module.SawFeature.Should().Be(contributor.Feature, "modul yetenege configure sirasinda ulasabilmeli");
-        contributor.CompletedAfterModules.Should().BeTrue("muhurleme her modul yapilandirildiktan sonra olmali");
+        module.SawFeature.Should().Be(contributor.Feature, "a module must be able to reach the capability while it configures");
+        contributor.CompletedAfterModules.Should().BeTrue("sealing must happen after every module has been configured");
     }
 
     private sealed record Capability(string Name);
@@ -93,7 +93,7 @@ public class ModuleLifecycleTests
     }
 
     [Fact]
-    public async Task Iptal_token_i_modullere_gecirilir()
+    public async Task Cancellation_token_reaches_the_modules()
     {
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();

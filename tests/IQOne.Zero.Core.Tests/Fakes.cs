@@ -17,11 +17,11 @@ internal sealed class RadiologyModule() : FakeModule(typeof(CoreModule), typeof(
 
 internal sealed class LaboratoryModule() : FakeModule(typeof(SharedModule));
 
-// dongu: A -> B -> A
+// A cycle: A -> B -> A
 internal sealed class CycleA() : FakeModule(typeof(CycleB));
 internal sealed class CycleB() : FakeModule(typeof(CycleA));
 
-/// Fazlarin hangi sirada calistigini kaydeder.
+/// <summary>Records the order the lifecycle phases ran in.</summary>
 internal class RecordingModule(List<string> log, params Type[] dependencies)
     : FakeModule(dependencies),
       IModuleConfigureServicesStep, IModuleInitializeStep, IModulePreRunStep, IModulePostRunStep

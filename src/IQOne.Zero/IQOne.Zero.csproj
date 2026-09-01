@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <TargetFrameworks>$(ZeroTargetFrameworks)</TargetFrameworks>
     <Description>Zero: an application framework for .NET 10 that resolves dependency injection, module ordering and configuration at compile time. This metapackage brings in the common set.</Description>
     <!-- Metapaket yalnizca bagimlilik tasir; lib/ icermez. -->
     <IncludeBuildOutput>false</IncludeBuildOutput>

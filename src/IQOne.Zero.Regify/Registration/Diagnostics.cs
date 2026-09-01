@@ -13,13 +13,13 @@ namespace IQOne.Zero.Regify.Registration;
 internal static class Diagnostics
 {
     private const string Category = "Zero.Registration";
-    private const string HelpRoot = "https://github.com/keremcanaktas/zero/blob/main/docs/rules/";
+    private const string HelpRoot = "https://iqone.solutions/zero/rules/";
 
     private static DiagnosticDescriptor Error(string id, string title, string message, string description)
-        => new(id, title, message, Category, DiagnosticSeverity.Error, true, description, HelpRoot + id + ".md");
+        => new(id, title, message, Category, DiagnosticSeverity.Error, true, description, HelpRoot + id);
 
     private static DiagnosticDescriptor Warning(string id, string title, string message, string description)
-        => new(id, title, message, Category, DiagnosticSeverity.Warning, true, description, HelpRoot + id + ".md");
+        => new(id, title, message, Category, DiagnosticSeverity.Warning, true, description, HelpRoot + id);
 
     public static readonly DiagnosticDescriptor MultipleLifetimes = Error(
         "RGF006", "More than one lifetime declared",

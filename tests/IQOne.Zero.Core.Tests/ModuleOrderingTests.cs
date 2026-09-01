@@ -16,7 +16,7 @@ public class ModuleOrderingTests
     }
 
     [Fact]
-    public void Bagimlilik_once_gelir()
+    public void A_dependency_is_configured_before_its_dependent()
     {
         var ordered = Resolve(new RadiologyModule(), new SharedModule(), new CoreModule());
 
@@ -24,7 +24,7 @@ public class ModuleOrderingTests
     }
 
     [Fact]
-    public void Giris_sirasi_sonucu_degistirmez()
+    public void Input_order_does_not_change_the_result()
     {
         var a = Resolve(new CoreModule(), new SharedModule(), new RadiologyModule());
         var b = Resolve(new RadiologyModule(), new CoreModule(), new SharedModule());
@@ -33,7 +33,7 @@ public class ModuleOrderingTests
     }
 
     [Fact]
-    public void Kardes_moduller_ada_gore_deterministik_siralanir()
+    public void Independent_modules_are_ordered_by_name_so_the_result_is_deterministic()
     {
         var ordered = Resolve(new RadiologyModule(), new LaboratoryModule(), new SharedModule(), new CoreModule());
 
@@ -43,7 +43,7 @@ public class ModuleOrderingTests
     }
 
     [Fact]
-    public void Dongu_anlasilir_hata_verir()
+    public void A_cycle_throws_and_names_the_modules_involved()
     {
         var act = () => Resolve(new CycleA(), new CycleB());
 
@@ -52,7 +52,7 @@ public class ModuleOrderingTests
     }
 
     [Fact]
-    public void Cozulmus_sira_okunabilir_sekilde_yazdirilir()
+    public void The_resolved_order_is_rendered_readably()
     {
         var services = new ServiceCollection();
         services.AddModules(new RadiologyModule(), new SharedModule(), new CoreModule());

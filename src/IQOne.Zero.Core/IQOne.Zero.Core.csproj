@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <TargetFrameworks>$(ZeroTargetFrameworks)</TargetFrameworks>
     <Description>Zero's application lifecycle and module system. Modules declare dependencies; execution order is derived by topological sort.</Description>
   </PropertyGroup>
   <ItemGroup>

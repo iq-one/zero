@@ -14,4 +14,4 @@ Zero's fundamental abstractions. Every other Zero package references this one.
 Rules for AI agents ship inside this package under `zero/rules/`. Run `zero rules init`
 to materialize them into your repository.
 
-Part of [Zero](https://github.com/keremcanaktas/zero) by IQOne.
+Part of [Zero](https://iqone.solutions/zero) by IQOne.

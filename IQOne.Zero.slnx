@@ -20,6 +20,7 @@
     <Project Path="src/IQOne.Zero.Core/IQOne.Zero.Core.csproj" />
     <Project Path="src/IQOne.Zero.Configuration/IQOne.Zero.Configuration.csproj" />
     <Project Path="src/IQOne.Zero.Regify/IQOne.Zero.Regify.csproj" />
+    <Project Path="src/IQOne.Zero.Tool/IQOne.Zero.Tool.csproj" />
   </Folder>
 
   <Folder Name="/tests/">

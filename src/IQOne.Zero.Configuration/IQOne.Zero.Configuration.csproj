@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <TargetFrameworks>$(ZeroTargetFrameworks)</TargetFrameworks>
     <Description>Options binding and validation for Zero applications. A missing or malformed setting stops startup instead of surfacing on first use.</Description>
   </PropertyGroup>
   <ItemGroup>

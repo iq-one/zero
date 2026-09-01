@@ -15,7 +15,7 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageTags>zero;iqone;framework;aspnetcore;source-generator;analyzer;ai-agents</PackageTags>
-    <PackageProjectUrl>https://github.com/keremcanaktas/zero</PackageProjectUrl>
+    <PackageProjectUrl>https://iqone.solutions/zero</PackageProjectUrl>
     <RepositoryUrl>https://github.com/keremcanaktas/zero</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
   </PropertyGroup>

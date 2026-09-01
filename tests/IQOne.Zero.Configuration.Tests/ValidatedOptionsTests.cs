@@ -33,7 +33,7 @@ public class ValidatedOptionsTests
     }
 
     [Fact]
-    public void Bolum_adi_tip_adindan_turetilir()
+    public void The_section_name_defaults_to_the_type_name()
     {
         var provider = Build(("MailOptions:Host", "smtp.example.com"), ("MailOptions:Port", "587"));
 
@@ -44,7 +44,7 @@ public class ValidatedOptionsTests
     }
 
     [Fact]
-    public void Eksik_zorunlu_ayar_okumada_hata_verir()
+    public void A_missing_required_setting_fails_and_the_message_names_it()
     {
         var provider = Build(("MailOptions:Port", "587"));
 
@@ -56,7 +56,7 @@ public class ValidatedOptionsTests
     }
 
     [Fact]
-    public void Araligin_disindaki_deger_reddedilir()
+    public void A_value_outside_the_allowed_range_is_rejected()
     {
         var provider = Build(("MailOptions:Host", "smtp.example.com"), ("MailOptions:Port", "70000"));
 
@@ -67,7 +67,7 @@ public class ValidatedOptionsTests
     }
 
     [Fact]
-    public void Is_kurali_dogrulamasi_da_uygulanir()
+    public void A_business_rule_predicate_is_applied_too()
     {
         var services = new ServiceCollection();
 
@@ -89,7 +89,7 @@ public class ValidatedOptionsTests
     }
 
     [Fact]
-    public void Acikca_verilen_bolum_adi_konvansiyonu_ezer()
+    public void An_explicit_section_name_overrides_the_convention()
     {
         var services = new ServiceCollection();
 
