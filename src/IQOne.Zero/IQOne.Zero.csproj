@@ -9,6 +9,10 @@
     <NoPackageAnalysis>true</NoPackageAnalysis>
   </PropertyGroup>
 
+  <!--
+    Web bilerek disarida. Metapakete konsaydi her konsol uygulamasi ve her worker
+    ASP.NET'i suruklerdi. Ihtiyaci olan acikca ekler: dotnet add package IQOne.Zero.Web
+  -->
   <ItemGroup>
     <ProjectReference Include="../IQOne.Zero.Abstractions/IQOne.Zero.Abstractions.csproj" />
     <ProjectReference Include="../IQOne.Zero.Core/IQOne.Zero.Core.csproj" />

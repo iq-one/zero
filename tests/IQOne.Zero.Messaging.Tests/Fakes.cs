@@ -1,5 +1,5 @@
 using IQOne.Zero.Messaging;
-using IQOne.Zero.Results;
+using IQOne.Zero;
 
 namespace IQOne.Zero.Messaging.Tests;
 

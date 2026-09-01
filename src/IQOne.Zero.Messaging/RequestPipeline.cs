@@ -1,4 +1,4 @@
-using IQOne.Zero.Results;
+using IQOne.Zero;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace IQOne.Zero.Messaging;

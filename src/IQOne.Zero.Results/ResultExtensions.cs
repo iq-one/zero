@@ -1,4 +1,4 @@
-namespace IQOne.Zero.Results;
+namespace IQOne.Zero;
 
 /// <summary>
 /// Composes results without unpacking them.

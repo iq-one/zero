@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>$(ZeroTargetFrameworks)</TargetFrameworks>
+    <Description>Turns commands and queries into HTTP endpoints. Routes are declared on the request, endpoints are generated, and a failed result becomes a problem response without the handler knowing HTTP exists.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../IQOne.Zero.Messaging/IQOne.Zero.Messaging.csproj" />
+  </ItemGroup>
+</Project>

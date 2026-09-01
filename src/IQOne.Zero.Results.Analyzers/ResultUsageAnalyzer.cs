@@ -18,8 +18,8 @@ namespace IQOne.Zero.Results.Analyzers;
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class ResultUsageAnalyzer : DiagnosticAnalyzer
 {
-    private const string ResultType = "IQOne.Zero.Results.Result";
-    private const string GenericResultType = "IQOne.Zero.Results.Result`1";
+    private const string ResultType = "IQOne.Zero.Result";
+    private const string GenericResultType = "IQOne.Zero.Result`1";
 
     /// <inheritdoc />
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>

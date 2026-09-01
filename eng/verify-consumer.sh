@@ -90,7 +90,7 @@ cat > Messaging.cs <<'CS'
 using System.Threading;
 using System.Threading.Tasks;
 using IQOne.Zero.Messaging;
-using IQOne.Zero.Results;
+using IQOne.Zero;
 
 namespace Consumer;
 
@@ -117,6 +117,26 @@ grep -q "RequestPipeline.RunAsync<global::Consumer.GetInvoice, string>" "$genera
 
 grep -q "builder.Declare(typeof(global::Consumer.Orphan));" "$generated" \
   || { echo "FAIL: an unhandled request was not declared, so startup could not report it"; exit 1; }
+
+echo "--- a routed request becomes a real endpoint ---"
+# Web is not in the metapackage on purpose, so this step adds it the way a consumer would.
+dotnet add package IQOne.Zero.Web --version "$version" > add.log 2>&1 \
+  || { echo "FAIL: the web package could not be added"; cat add.log; exit 1; }
+cat > Web.cs <<'CS'
+using IQOne.Zero.Messaging;
+using IQOne.Zero.Web;
+
+namespace Consumer;
+
+[Get("/invoices/{id:int}", Tag = "Invoices")]
+public sealed record GetInvoiceByRoute(int Id) : IQuery<string>;
+CS
+
+dotnet build --nologo -v q
+generated="$(find generated -name Module.g.cs)"
+
+grep -q 'ZeroEndpoint.RunAsync<global::Consumer.GetInvoiceByRoute, string>' "$generated" \
+  || { echo "FAIL: the endpoint was not generated"; cat "$generated"; exit 1; }
 
 echo "--- rule files ship inside the packages ---"
 # Listed to a file first: with pipefail, `grep -q` exiting early would SIGPIPE unzip and

@@ -24,6 +24,29 @@ public static class MessagingRegistration
 
         return services;
     }
+
+    /// <summary>
+    /// Builds the dispatch table from an explicit set of handlers, bypassing the module phase.
+    /// </summary>
+    /// <remarks>
+    /// For tests and for hosts that assemble their table by hand. An application uses the
+    /// other overload and lets the generator fill the table.
+    /// </remarks>
+    /// <param name="services">The registrations to add to.</param>
+    /// <param name="configure">Adds the entries.</param>
+    /// <returns>The same collection, for chaining.</returns>
+    public static IServiceCollection AddZeroMessaging(
+        this IServiceCollection services, Action<IRequestRegistryBuilder> configure)
+    {
+        var registry = new RequestRegistry();
+        configure(registry);
+        registry.Freeze();
+
+        services.AddSingleton(registry);
+        services.AddScoped<ISender, Sender>();
+
+        return services;
+    }
 }
 
 /// <summary>How messaging behaves.</summary>

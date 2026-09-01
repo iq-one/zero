@@ -46,6 +46,13 @@
       "package": "IQOne.Zero.Messaging",
       "title": "Commands, queries and the pipeline",
       "useWhen": "The application has use cases. Do not write your own mediator or dispatcher, and do not call a handler directly."
+    },
+    {
+      "id": "web",
+      "kind": "capability",
+      "package": "IQOne.Zero.Web",
+      "title": "HTTP endpoints",
+      "useWhen": "Commands and queries need to be reachable over HTTP. Do not write controllers or your own result-to-status-code mapping."
     }
   ]
 }

@@ -37,6 +37,20 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
             .Select(static (c, _) => c!)
             .Collect();
 
+        // A routed type need not implement anything, so the service provider above would
+        // never see it -- and a route on a non-request would go unreported. Filtered by
+        // attribute name in syntax only; the full type is verified during emission.
+        var routed = context.SyntaxProvider
+            .CreateSyntaxProvider(
+                predicate: static (node, _) => HasRouteAttribute(node),
+                transform: static (ctx, _) =>
+                    ctx.SemanticModel.GetDeclaredSymbol(ctx.Node) is INamedTypeSymbol symbol
+                        ? SymbolCollector.DescribeService(symbol, ctx.Node)
+                        : null)
+            .Where(static c => c is not null)
+            .Select(static (c, _) => c!)
+            .Collect();
+
         var moduleInfo = context.CompilationProvider.Select(static (compilation, _) =>
         {
             var references = ImmutableArray.CreateBuilder<string>();
@@ -60,13 +74,32 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
         });
 
         context.RegisterSourceOutput(
-            services.Combine(moduleInfo).Combine(platform),
-            static (spc, input) => Emit(spc, input.Left.Left, input.Left.Right, input.Right));
+            services.Combine(routed).Combine(moduleInfo).Combine(platform),
+            static (spc, input) => Emit(
+                spc, input.Left.Left.Left, input.Left.Left.Right, input.Left.Right, input.Right));
     }
+
+    private static readonly string[] RouteAttributeNames = ["Get", "Post", "Put", "Patch", "Delete"];
+
+    private static bool HasRouteAttribute(SyntaxNode node)
+        => node is TypeDeclarationSyntax { AttributeLists.Count: > 0 } declaration
+        && declaration.AttributeLists.Any(list => list.Attributes.Any(attribute =>
+        {
+            var name = attribute.Name.ToString();
+            var dot = name.LastIndexOf('.');
+
+            if (dot >= 0) name = name.Substring(dot + 1);
+
+            if (name.EndsWith("Attribute", StringComparison.Ordinal))
+                name = name.Substring(0, name.Length - "Attribute".Length);
+
+            return Array.IndexOf(RouteAttributeNames, name) >= 0;
+        }));
 
     private static void Emit(
         SourceProductionContext context,
         ImmutableArray<ServiceCandidate> serviceCandidates,
+        ImmutableArray<ServiceCandidate> routedCandidates,
         ModuleInfo moduleInfo,
         ZeroNames platform)
     {
@@ -93,6 +126,17 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
             ? ResolveRequests(serviceCandidates, platform)
             : new RequestSet([], []);
 
+        var web = moduleInfo.ReferencedAssemblies.Any(a => a == platform.WebAssembly);
+
+        var endpoints = web
+            ? ResolveEndpoints(
+                [.. serviceCandidates.Concat(routedCandidates)
+                    .GroupBy(c => c.ImplementationTypeName, StringComparer.Ordinal)
+                    .Select(g => g.First())],
+                platform,
+                Report)
+            : [];
+
         if (hasError) return;
 
         var dependencies = moduleInfo.ModuleTypes
@@ -102,7 +146,7 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
             .ToList();
 
         context.AddSource("Module.g.cs", SourceText.From(
-            Render(moduleInfo.AssemblyName, dependencies, services, requests, messaging, platform), Encoding.UTF8));
+            Render(moduleInfo.AssemblyName, dependencies, services, requests, messaging, endpoints, web, platform), Encoding.UTF8));
     }
 
     /// <summary>Requests declared in this assembly, and the handlers that serve them.</summary>
@@ -142,6 +186,66 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
         handlers.Sort((a, b) => string.CompareOrdinal(a.RequestTypeName, b.RequestTypeName));
 
         return new RequestSet(declared, handlers);
+    }
+
+    /// <summary>Requests that declare a route, and the endpoint each becomes.</summary>
+    private static List<EndpointDescriptor> ResolveEndpoints(
+        ImmutableArray<ServiceCandidate> candidates,
+        ZeroNames platform,
+        Action<DiagnosticDescriptor, LocationInfo?, object[]> report)
+    {
+        var endpoints = new List<EndpointDescriptor>();
+
+        foreach (var candidate in candidates)
+        {
+            var route = candidate.Attributes
+                .Select(a => (Attribute: a, Method: ZeroNames.RouteAttributes
+                    .FirstOrDefault(r => r.Attribute == a.TypeName).Method))
+                .FirstOrDefault(x => x.Method is not null);
+
+            if (route.Method is null) continue;
+
+            var request = candidate.ClosedInterfaces.FirstOrDefault(i =>
+                i.OpenGenericName == platform.RequestInterface && i.TypeArguments.Count == 1);
+
+            if (request is null)
+            {
+                report(Diagnostics.RouteOnNonRequest, candidate.Location, [candidate.TypeName]);
+                continue;
+            }
+
+            var arguments = route.Attribute.Arguments.ToArray();
+            var pattern = arguments.FirstOrDefault(a => !a.Contains("=")) ?? string.Empty;
+
+            if (pattern.Length == 0)
+            {
+                report(Diagnostics.EmptyRoutePattern, candidate.Location, [candidate.TypeName]);
+                continue;
+            }
+
+            endpoints.Add(new EndpointDescriptor(
+                route.Method,
+                pattern,
+                Named(arguments, "Name") ?? candidate.TypeName,
+                Named(arguments, "Tag"),
+                Named(arguments, "Policy"),
+                string.Equals(Named(arguments, "AllowAnonymous"), "True", StringComparison.OrdinalIgnoreCase),
+                candidate.ImplementationTypeName,
+                request.TypeArguments[0],
+                candidate.Location));
+        }
+
+        endpoints.Sort((a, b) => string.CompareOrdinal(a.Pattern + a.Method, b.Pattern + b.Method));
+
+        return endpoints;
+    }
+
+    private static string? Named(string[] arguments, string key)
+    {
+        var prefix = key + "=";
+
+        return arguments.FirstOrDefault(a => a.StartsWith(prefix, StringComparison.Ordinal))?.Substring(prefix.Length)
+            is { Length: > 0 } value ? value : null;
     }
 
     private static List<ServiceRegistrationDescriptor> ResolveServices(
@@ -287,6 +391,8 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
         List<ServiceRegistrationDescriptor> services,
         RequestSet requests,
         bool messaging,
+        List<EndpointDescriptor> endpoints,
+        bool web,
         ZeroNames platform)
     {
         var ns = Sanitize(assemblyName);
@@ -325,6 +431,9 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
         if (messaging)
             b.AppendLine($"        RegisterRequests(global::{platform.ModuleServiceContextExtensions}.Requests(context));");
 
+        if (web)
+            b.AppendLine($"        MapEndpoints(global::{platform.WebModuleExtensions}.Endpoints(context));");
+
         b.AppendLine("        OnConfigureServices(context);");
         b.AppendLine();
         b.AppendLine("        return default;");
@@ -358,6 +467,8 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
         b.AppendLine();
 
         if (messaging) RenderRequests(b, requests, platform);
+
+        if (web) RenderEndpoints(b, endpoints, platform);
 
         b.AppendLine("}");
 
@@ -403,6 +514,45 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
         b.AppendLine("    }");
         b.AppendLine();
     }
+
+    /// <summary>
+    /// Emits one endpoint per routed request.
+    /// </summary>
+    /// <remarks>
+    /// A real ASP.NET endpoint each, not one catch-all route: authorization, rate limiting,
+    /// caching, OpenAPI and telemetry all attach per method, and a wrong verb gives 405
+    /// instead of 404.
+    /// </remarks>
+    private static void RenderEndpoints(StringBuilder b, List<EndpointDescriptor> endpoints, ZeroNames platform)
+    {
+        var web = $"global::{platform.Web}";
+
+        b.AppendLine($"    private static void MapEndpoints({web}.IEndpointRegistryBuilder builder)");
+        b.AppendLine("    {");
+
+        if (endpoints.Count == 0) b.AppendLine("        // No request in this assembly declares a route.");
+
+        foreach (var endpoint in endpoints)
+        {
+            b.AppendLine($"        // {endpoint.Method} {endpoint.Pattern}");
+            b.AppendLine($"        builder.Add(new {web}.ZeroEndpointDescriptor(");
+            b.AppendLine($"            \"{endpoint.Method}\",");
+            b.AppendLine($"            \"{endpoint.Pattern}\",");
+            b.AppendLine($"            \"{endpoint.Name}\",");
+            b.AppendLine($"            {Literal(endpoint.Tag)},");
+            b.AppendLine($"            {Literal(endpoint.Policy)},");
+            b.AppendLine($"            {(endpoint.AllowAnonymous ? "true" : "false")},");
+            b.AppendLine($"            typeof({endpoint.RequestTypeName}),");
+            b.AppendLine($"            typeof({endpoint.ResponseTypeName}),");
+            b.AppendLine($"            static context => {web}.ZeroEndpoint.RunAsync<{endpoint.RequestTypeName}, {endpoint.ResponseTypeName}>(context)));");
+            b.AppendLine();
+        }
+
+        b.AppendLine("    }");
+        b.AppendLine();
+    }
+
+    private static string Literal(string? value) => value is null ? "null" : $"\"{value}\"";
 
     private static string Sanitize(string name)
     {

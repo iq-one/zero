@@ -1,4 +1,4 @@
-namespace IQOne.Zero.Results;
+namespace IQOne.Zero;
 
 /// <summary>What kind of failure occurred, independent of how any transport reports it.</summary>
 /// <remarks>

@@ -41,4 +41,24 @@ internal sealed record ZeroNames
     public string RequestEntry => $"{Messaging}.RequestEntry";
     public string RequestPipeline => $"{Messaging}.RequestPipeline";
     public string ModuleServiceContextExtensions => $"{Messaging}.ModuleServiceContextExtensions";
+
+    /// <summary>Assembly whose presence turns on endpoint generation.</summary>
+    public string WebAssembly => $"{Root}.Web";
+
+    public string Web => $"{Root}.Web";
+    public string RouteAttribute => $"{Web}.RouteAttribute";
+    public string EndpointRegistryBuilder => $"{Web}.IEndpointRegistryBuilder";
+    public string EndpointDescriptor => $"{Web}.ZeroEndpointDescriptor";
+    public string ZeroEndpoint => $"{Web}.ZeroEndpoint";
+    public string WebModuleExtensions => $"{Web}.ModuleServiceContextExtensions";
+
+    /// <summary>Route attributes, mapped to the HTTP method each declares.</summary>
+    public static readonly (string Attribute, string Method)[] RouteAttributes =
+    [
+        ("IQOne.Zero.Web.GetAttribute", "GET"),
+        ("IQOne.Zero.Web.PostAttribute", "POST"),
+        ("IQOne.Zero.Web.PutAttribute", "PUT"),
+        ("IQOne.Zero.Web.PatchAttribute", "PATCH"),
+        ("IQOne.Zero.Web.DeleteAttribute", "DELETE")
+    ];
 }

@@ -9,6 +9,7 @@
     <ProjectReference Include="../../src/IQOne.Zero.Configuration/IQOne.Zero.Configuration.csproj" />
     <ProjectReference Include="../../src/IQOne.Zero.Results/IQOne.Zero.Results.csproj" />
     <ProjectReference Include="../../src/IQOne.Zero.Messaging/IQOne.Zero.Messaging.csproj" />
+    <ProjectReference Include="../../src/IQOne.Zero.Web/IQOne.Zero.Web.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />

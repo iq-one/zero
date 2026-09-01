@@ -49,6 +49,18 @@ internal static class Diagnostics
         "A singleton keeps the first instance it is handed for the lifetime of the process. Every later " +
         "request then reads state belonging to whichever request arrived first.");
 
+    public static readonly DiagnosticDescriptor RouteOnNonRequest = Error(
+        "ZERO300", "A route is declared on something that is not a request",
+        "'{0}' declares an HTTP route but does not implement ICommand, ICommand<T> or IQuery<T>. " +
+        "Make it a request, or remove the route attribute.",
+        "A route is served by sending its request through the pipeline. A type that is not a " +
+        "request has nothing to send, so the attribute would silently do nothing.");
+
+    public static readonly DiagnosticDescriptor EmptyRoutePattern = Error(
+        "ZERO301", "Route pattern is empty",
+        "The route on '{0}' has no pattern. Give it one, for example \"/invoices/{{id:int}}\".",
+        "An empty pattern maps the endpoint to the application root, which is almost never intended.");
+
     public static readonly DiagnosticDescriptor DuplicateRegistration = Warning(
         "ZERO010", "Service type registered by two implementations",
         "Both '{1}' and '{2}' register as '{0}', so resolving '{0}' returns whichever came last. " +

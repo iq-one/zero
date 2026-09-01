@@ -13,7 +13,7 @@ public class RequestDispatchTests
         using System.Threading;
         using System.Threading.Tasks;
         using IQOne.Zero.Messaging;
-        using IQOne.Zero.Results;
+        using IQOne.Zero;
 
         namespace Test;
         """;
@@ -84,5 +84,79 @@ public class RequestDispatchTests
             """);
 
         run.GeneratedSource.Should().Contain("RegisterRequests(");
+    }
+}
+
+/// <summary>
+/// The compile-time half of the web layer: a route attribute on a request becomes a real
+/// endpoint, described in generated code rather than discovered at startup.
+/// </summary>
+public class EndpointGenerationTests
+{
+    private const string Preamble = """
+        using System.Threading;
+        using System.Threading.Tasks;
+        using IQOne.Zero;
+        using IQOne.Zero.Messaging;
+        using IQOne.Zero.Web;
+
+        namespace Test;
+        """;
+
+    [Fact]
+    public void A_routed_request_becomes_an_endpoint()
+    {
+        var run = GeneratorHarness.Run($$"""
+            {{Preamble}}
+
+            [Get("/things/{id:int}", Tag = "Things")]
+            public sealed record GetThing(int Id) : IQuery<string>;
+            """);
+
+        run.HasError.Should().BeFalse();
+
+        run.GeneratedSource.Should()
+            .Contain("\"GET\"")
+            .And.Contain("\"/things/{id:int}\"")
+            .And.Contain("\"Things\"")
+            .And.Contain("ZeroEndpoint.RunAsync<global::Test.GetThing, string>");
+    }
+
+    [Fact]
+    public void An_unrouted_request_produces_no_endpoint()
+    {
+        var run = GeneratorHarness.Run($$"""
+            {{Preamble}}
+
+            public sealed record Quiet : ICommand;
+            """);
+
+        run.GeneratedSource.Should().Contain("No request in this assembly declares a route.");
+    }
+
+    [Fact]
+    public void A_route_on_something_that_is_not_a_request_is_reported()
+    {
+        var run = GeneratorHarness.Run($$"""
+            {{Preamble}}
+
+            [Get("/things")]
+            public sealed record NotARequest(int Id);
+            """);
+
+        run.DiagnosticIds.Should().Contain("ZERO300");
+    }
+
+    [Fact]
+    public void An_empty_route_pattern_is_reported()
+    {
+        var run = GeneratorHarness.Run($$"""
+            {{Preamble}}
+
+            [Get("")]
+            public sealed record Rootless : IQuery<string>;
+            """);
+
+        run.DiagnosticIds.Should().Contain("ZERO301");
     }
 }

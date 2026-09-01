@@ -17,13 +17,16 @@ dependency that would give it one.
 
 ## Packages
 
-| Package | Contents |
+| Package | Use it for |
 | --- | --- |
-| `IQOne.Zero` | Metapackage covering the common set |
-| `IQOne.Zero.Abstractions` | Fundamentals, lifetime markers, module and application contracts |
-| `IQOne.Zero.Core` | Application lifecycle, steps, module graph |
+| `IQOne.Zero` | Metapackage: the kernel, results and messaging |
+| `IQOne.Zero.Abstractions` | Lifetime markers, role interfaces, module and application contracts |
+| `IQOne.Zero.Core` | Application lifecycle, module graph |
 | `IQOne.Zero.Configuration` | Options bound and validated at startup |
-| `IQOne.Zero.Generators` | Registration source generator and analyzers |
+| `IQOne.Zero.Generators` | Source generator and analyzers |
+| `IQOne.Zero.Results` | An outcome type for operations that are expected to fail |
+| `IQOne.Zero.Messaging` | Commands, queries and the pipeline around them |
+| `IQOne.Zero.Web` | HTTP endpoints, added deliberately so nothing else drags in ASP.NET |
 | `IQOne.Zero.Tool` | The `zero` command line tool |
 
 Generators and analyzers configure themselves. Nothing is added to your project file.
@@ -43,6 +46,15 @@ from what the projects actually reference. A cycle is reported by name.
 
 **Configuration is validated before traffic arrives.** A missing or malformed setting stops
 the application with a message naming it.
+
+**Failures are values.** An operation that can fail returns `Result<T>`, so the failure is in
+the signature. Discarding one, or reading its value unchecked, is a build error.
+
+**A use case is a request and one handler.** Dispatch is a generated table, so sending costs
+a dictionary read rather than reflection — and a request nobody handles stops startup.
+
+**An endpoint is a route attribute on a request.** One real ASP.NET endpoint each, generated
+at build time. The handler never mentions HTTP: a `NotFound` error becomes 404.
 
 ## Rules for AI agents
 

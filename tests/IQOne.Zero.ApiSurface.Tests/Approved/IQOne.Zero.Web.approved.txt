@@ -1,0 +1,79 @@
+interface IQOne.Zero.Web.Binding.IRequestBinder
+    ValueTask<object> BindAsync(Microsoft.AspNetCore.Http.HttpContext context, Type requestType, CancellationToken cancellationToken)
+
+sealed class IQOne.Zero.Web.Binding.JsonRequestBinder : IQOne.Zero.Web.Binding.IRequestBinder
+    .ctor JsonRequestBinder(Microsoft.Extensions.Options.IOptions<IQOne.Zero.Web.ZeroWebOptions> options)
+    ValueTask<object> BindAsync(Microsoft.AspNetCore.Http.HttpContext context, Type requestType, CancellationToken cancellationToken)
+
+sealed class IQOne.Zero.Web.Binding.RequestBindingException : Exception
+    .ctor RequestBindingException(Type requestType, string reason)
+    Type RequestType { get; }
+
+sealed class IQOne.Zero.Web.DeleteAttribute : IQOne.Zero.Web.RouteAttribute
+    .ctor DeleteAttribute(string pattern)
+
+sealed class IQOne.Zero.Web.EndpointRegistry : IQOne.Zero.Web.IEndpointRegistryBuilder
+    .ctor EndpointRegistry()
+    IQOne.Zero.Web.EndpointRegistry Freeze()
+    IReadOnlyCollection<IQOne.Zero.Web.ZeroEndpointDescriptor> Endpoints { get; }
+    void Add(IQOne.Zero.Web.ZeroEndpointDescriptor endpoint)
+
+sealed class IQOne.Zero.Web.GetAttribute : IQOne.Zero.Web.RouteAttribute
+    .ctor GetAttribute(string pattern)
+
+interface IQOne.Zero.Web.IEndpointRegistryBuilder
+    void Add(IQOne.Zero.Web.ZeroEndpointDescriptor endpoint)
+
+static class IQOne.Zero.Web.ModuleServiceContextExtensions
+    static IQOne.Zero.Web.IEndpointRegistryBuilder Endpoints(IQOne.Zero.Modules.IModuleServiceContext context)
+
+sealed class IQOne.Zero.Web.PatchAttribute : IQOne.Zero.Web.RouteAttribute
+    .ctor PatchAttribute(string pattern)
+
+sealed class IQOne.Zero.Web.PostAttribute : IQOne.Zero.Web.RouteAttribute
+    .ctor PostAttribute(string pattern)
+
+sealed class IQOne.Zero.Web.PutAttribute : IQOne.Zero.Web.RouteAttribute
+    .ctor PutAttribute(string pattern)
+
+abstract class IQOne.Zero.Web.RouteAttribute : Attribute
+    bool AllowAnonymous { get; set; }
+    protected .ctor RouteAttribute(string method, string pattern)
+    string Method { get; }
+    string Name { get; set; }
+    string Pattern { get; }
+    string Policy { get; set; }
+    string Tag { get; set; }
+
+static class IQOne.Zero.Web.WebRegistration
+    static Microsoft.AspNetCore.Routing.IEndpointRouteBuilder MapZeroEndpoints(Microsoft.AspNetCore.Routing.IEndpointRouteBuilder endpoints)
+    static Microsoft.Extensions.DependencyInjection.IServiceCollection AddZeroWeb(Microsoft.Extensions.DependencyInjection.IServiceCollection services, Action<IQOne.Zero.Web.ZeroWebOptions> configure = default)
+
+static class IQOne.Zero.Web.ZeroEndpoint
+    static Task<Microsoft.AspNetCore.Http.IResult> RunAsync<TRequest, TResponse>(Microsoft.AspNetCore.Http.HttpContext context)
+
+sealed class IQOne.Zero.Web.ZeroEndpointDescriptor : IEquatable<IQOne.Zero.Web.ZeroEndpointDescriptor>
+    .ctor ZeroEndpointDescriptor(string Method, string Pattern, string Name, string Tag, string Policy, bool AllowAnonymous, Type RequestType, Type ResponseType, Func<Microsoft.AspNetCore.Http.HttpContext, Task<Microsoft.AspNetCore.Http.IResult>> Handler)
+    Func<Microsoft.AspNetCore.Http.HttpContext, Task<Microsoft.AspNetCore.Http.IResult>> Handler { get; init; }
+    IQOne.Zero.Web.ZeroEndpointDescriptor <Clone>$()
+    Type RequestType { get; init; }
+    Type ResponseType { get; init; }
+    bool AllowAnonymous { get; init; }
+    bool Equals(IQOne.Zero.Web.ZeroEndpointDescriptor other)
+    bool Equals(object obj)
+    int GetHashCode()
+    string Method { get; init; }
+    string Name { get; init; }
+    string Pattern { get; init; }
+    string Policy { get; init; }
+    string Tag { get; init; }
+    string ToString()
+    void Deconstruct(out string Method, out string Pattern, out string Name, out string Tag, out string Policy, out bool AllowAnonymous, out Type RequestType, out Type ResponseType, out Func<Microsoft.AspNetCore.Http.HttpContext, Task<Microsoft.AspNetCore.Http.IResult>> Handler)
+
+sealed class IQOne.Zero.Web.ZeroWebOptions
+    .ctor ZeroWebOptions()
+    IDictionary<IQOne.Zero.ErrorKind, int> StatusCodeByKind { get; }
+    JsonSerializerOptions SerializerOptions { get; set; }
+    bool IncludeErrorMessages { get; set; }
+    int EmptySuccessStatusCode { get; set; }
+    string RoutePrefix { get; set; }

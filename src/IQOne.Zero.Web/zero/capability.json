@@ -1,0 +1,12 @@
+{
+  "id": "web",
+  "kind": "capability",
+  "title": "HTTP endpoints",
+  "summary": "A route attribute on a request becomes a real ASP.NET endpoint, generated at build time. The request is bound from the body with route and query values applied over it, and a failed result becomes a problem response.",
+  "useWhen": "Commands and queries need to be reachable over HTTP. Do not write controllers, minimal-API mapping code, or your own result-to-status-code mapping.",
+  "package": "IQOne.Zero.Web",
+  "entryPoint": "services.AddZeroWeb(); app.MapZeroEndpoints();",
+  "keyTypes": ["GetAttribute", "PostAttribute", "PutAttribute", "PatchAttribute", "DeleteAttribute", "ZeroWebOptions", "IRequestBinder"],
+  "diagnostics": ["ZERO300", "ZERO301"],
+  "example": "[Get(\"/invoices/{id:int}\", Tag = \"Invoices\")]\npublic sealed record GetInvoice(int Id) : IQuery<InvoiceModel>;\n\n[Post(\"/invoices/{id:int}/close\", Policy = \"invoices:write\")]\npublic sealed record CloseInvoice(int Id, string Reason) : ICommand;\n\n// Startup:\nservices.AddZeroWeb(options => options.RoutePrefix = \"/api\");\nservices.AddZeroMessaging();\nservices.AddModules(new Module());\n\napp.MapZeroEndpoints();\n\n// The handler never mentions HTTP. A NotFound error becomes 404, a Conflict 409."
+}

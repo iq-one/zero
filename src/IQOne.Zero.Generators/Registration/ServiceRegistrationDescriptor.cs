@@ -38,6 +38,18 @@ internal sealed record RequestDescriptor(
     string HandlerTypeName,
     LocationInfo? Location);
 
+/// <summary>An HTTP endpoint and the request behind it, ready for emission.</summary>
+internal sealed record EndpointDescriptor(
+    string Method,
+    string Pattern,
+    string Name,
+    string? Tag,
+    string? Policy,
+    bool AllowAnonymous,
+    string RequestTypeName,
+    string ResponseTypeName,
+    LocationInfo? Location);
+
 internal sealed record ServiceRegistrationDescriptor(
     string ImplementationTypeName,
     EquatableArray<string> ServiceTypeNames,

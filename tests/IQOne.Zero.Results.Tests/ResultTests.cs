@@ -1,4 +1,4 @@
-using IQOne.Zero.Results;
+using IQOne.Zero;
 
 namespace IQOne.Zero.Results.Tests;
 

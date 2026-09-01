@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Diagnostics.CodeAnalysis;
 
-namespace IQOne.Zero.Results;
+namespace IQOne.Zero;
 
 /// <summary>
 /// The outcome of an operation that is expected to fail sometimes.
@@ -129,8 +129,8 @@ public readonly struct Result<TValue> : IEquatable<Result<TValue>>
     /// <summary>Every reason the operation failed. Empty on success.</summary>
     public ErrorList Errors => new(IsSuccess ? null : _errors);
 
-    /// <summary>The first failure reason, or <see cref="Results.Error.None"/> on success.</summary>
-    public Error Error => Errors.Count > 0 ? Errors[0] : Results.Error.None;
+    /// <summary>The first failure reason, or <see cref="Error.None"/> on success.</summary>
+    public Error Error => Errors.Count > 0 ? Errors[0] : Error.None;
 
     /// <summary>
     /// What the operation produced.
