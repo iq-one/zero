@@ -13,18 +13,18 @@
       "useWhen": "Always."
     },
     {
-      "id": "core",
-      "kind": "kernel",
-      "package": "IQOne.Zero.Core",
-      "title": "Application lifecycle and modules",
-      "useWhen": "Always."
-    },
-    {
       "id": "configuration",
       "kind": "kernel",
       "package": "IQOne.Zero.Configuration",
       "title": "Validated configuration",
       "useWhen": "Any time the application reads a setting."
+    },
+    {
+      "id": "core",
+      "kind": "kernel",
+      "package": "IQOne.Zero.Core",
+      "title": "Application lifecycle and modules",
+      "useWhen": "Always."
     },
     {
       "id": "generators",
@@ -34,11 +34,11 @@
       "useWhen": "Always. Arrives with the metapackage."
     },
     {
-      "id": "results",
+      "id": "caching",
       "kind": "capability",
-      "package": "IQOne.Zero.Results",
-      "title": "Results and errors",
-      "useWhen": "An operation can fail in a way the caller should handle. Do not write your own Result, Either or Maybe type."
+      "package": "IQOne.Zero.Caching",
+      "title": "Caching",
+      "useWhen": "A read is expensive and a slightly stale answer is acceptable. Do not cache inside a handler and do not write your own cache abstraction or key builder."
     },
     {
       "id": "messaging",
@@ -48,11 +48,25 @@
       "useWhen": "The application has use cases. Do not write your own mediator or dispatcher, and do not call a handler directly."
     },
     {
-      "id": "web",
+      "id": "persistence",
       "kind": "capability",
-      "package": "IQOne.Zero.Web",
-      "title": "HTTP endpoints",
-      "useWhen": "Commands and queries need to be reachable over HTTP. Do not write controllers or your own result-to-status-code mapping."
+      "package": "IQOne.Zero.Persistence",
+      "title": "Data access",
+      "useWhen": "The application stores things. Do not write your own repository or specification abstraction, and do not put provider-specific query calls in a handler."
+    },
+    {
+      "id": "results",
+      "kind": "capability",
+      "package": "IQOne.Zero.Results",
+      "title": "Results and errors",
+      "useWhen": "An operation can fail in a way the caller should handle. Do not write your own Result, Either or Maybe type."
+    },
+    {
+      "id": "testing",
+      "kind": "capability",
+      "package": "IQOne.Zero.Testing",
+      "title": "Testing a Zero application",
+      "useWhen": "Writing tests for handlers, validators or a whole application. Do not hand-build a service provider or a dispatch table in a test."
     },
     {
       "id": "validation",
@@ -60,6 +74,13 @@
       "package": "IQOne.Zero.Validation",
       "title": "Request validation",
       "useWhen": "A request has rules about what it may contain. Do not validate inside a handler."
+    },
+    {
+      "id": "web",
+      "kind": "capability",
+      "package": "IQOne.Zero.Web",
+      "title": "HTTP endpoints",
+      "useWhen": "Commands and queries need to be reachable over HTTP. Do not write controllers or your own result-to-status-code mapping."
     }
   ]
 }

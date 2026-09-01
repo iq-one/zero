@@ -18,12 +18,16 @@
     <Project Path="src/IQOne.Zero/IQOne.Zero.csproj" />
     <Project Path="src/IQOne.Zero.Abstractions/IQOne.Zero.Abstractions.csproj" />
     <Project Path="src/IQOne.Zero.Core/IQOne.Zero.Core.csproj" />
+    <Project Path="src/IQOne.Zero.Caching/IQOne.Zero.Caching.csproj" />
+    <Project Path="src/IQOne.Zero.Caching.Analyzers/IQOne.Zero.Caching.Analyzers.csproj" />
+    <Project Path="src/IQOne.Zero.Testing/IQOne.Zero.Testing.csproj" />
     <Project Path="src/IQOne.Zero.Configuration/IQOne.Zero.Configuration.csproj" />
     <Project Path="src/IQOne.Zero.Generators/IQOne.Zero.Generators.csproj" />
     <Project Path="src/IQOne.Zero.Messaging/IQOne.Zero.Messaging.csproj" />
     <Project Path="src/IQOne.Zero.Results/IQOne.Zero.Results.csproj" />
     <Project Path="src/IQOne.Zero.Results.Analyzers/IQOne.Zero.Results.Analyzers.csproj" />
     <Project Path="src/IQOne.Zero.Tool/IQOne.Zero.Tool.csproj" />
+    <Project Path="src/IQOne.Zero.Persistence/IQOne.Zero.Persistence.csproj" />
     <Project Path="src/IQOne.Zero.Validation/IQOne.Zero.Validation.csproj" />
     <Project Path="src/IQOne.Zero.Web/IQOne.Zero.Web.csproj" />
   </Folder>
@@ -31,10 +35,13 @@
   <Folder Name="/tests/">
     <Project Path="tests/IQOne.Zero.ApiSurface.Tests/IQOne.Zero.ApiSurface.Tests.csproj" />
     <Project Path="tests/IQOne.Zero.Catalog.Tests/IQOne.Zero.Catalog.Tests.csproj" />
+    <Project Path="tests/IQOne.Zero.Caching.Tests/IQOne.Zero.Caching.Tests.csproj" />
+    <Project Path="tests/IQOne.Zero.Testing.Tests/IQOne.Zero.Testing.Tests.csproj" />
     <Project Path="tests/IQOne.Zero.Core.Tests/IQOne.Zero.Core.Tests.csproj" />
     <Project Path="tests/IQOne.Zero.Configuration.Tests/IQOne.Zero.Configuration.Tests.csproj" />
     <Project Path="tests/IQOne.Zero.Generators.Tests/IQOne.Zero.Generators.Tests.csproj" />
     <Project Path="tests/IQOne.Zero.Messaging.Tests/IQOne.Zero.Messaging.Tests.csproj" />
+    <Project Path="tests/IQOne.Zero.Persistence.Tests/IQOne.Zero.Persistence.Tests.csproj" />
     <Project Path="tests/IQOne.Zero.Results.Tests/IQOne.Zero.Results.Tests.csproj" />
     <Project Path="tests/IQOne.Zero.Validation.Tests/IQOne.Zero.Validation.Tests.csproj" />
     <Project Path="tests/IQOne.Zero.Web.Tests/IQOne.Zero.Web.Tests.csproj" />

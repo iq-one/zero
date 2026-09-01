@@ -10,3 +10,6 @@ artifacts/
 
 # API onay testinin uretip biraktigi dosyalar
 *.received.txt
+
+# Uretilen tuketici targets dosyalari (artik uretilmiyor; eski agaclar icin)
+src/*/zero/*.targets

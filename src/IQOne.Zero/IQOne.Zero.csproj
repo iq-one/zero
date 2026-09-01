@@ -10,8 +10,13 @@
   </PropertyGroup>
 
   <!--
-    Web bilerek disarida. Metapakete konsaydi her konsol uygulamasi ve her worker
-    ASP.NET'i suruklerdi. Ihtiyaci olan acikca ekler: dotnet add package IQOne.Zero.Web
+    Metapaketin siniri: her uygulamanin ihtiyac duydugu sey. Cekirdek, sonuclar,
+    mesajlasma ve dogrulama.
+
+    Digerleri bilerek disarida. Web metapakette olsaydi her konsol uygulamasi ASP.NET
+    suruklerdi; Persistence olsaydi hicbir sey saklamayan bir servis veri katmani
+    tasirdi. Ihtiyaci olan acikca ekler; "ihtiyacin olan paketi kur" ilkesi bunu
+    gerektiriyor ve AGENTS.md zaten neyin mevcut oldugunu ajana soyluyor.
   -->
   <ItemGroup>
     <ProjectReference Include="../IQOne.Zero.Abstractions/IQOne.Zero.Abstractions.csproj" />

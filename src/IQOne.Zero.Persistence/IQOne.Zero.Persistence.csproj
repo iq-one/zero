@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>$(ZeroTargetFrameworks)</TargetFrameworks>
+    <Description>Provider-neutral data access: specifications, segregated repositories, an explicit unit of work, and conventions applied uniformly to every entity. References no ORM.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../IQOne.Zero.Messaging/IQOne.Zero.Messaging.csproj" />
+  </ItemGroup>
+</Project>

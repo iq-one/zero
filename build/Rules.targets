@@ -1,45 +1,47 @@
 <Project>
 
   <!--
-    ================= Zero kural paketleme sozlesmesi =================
+    ================= Zero kural ve yetenek paketleme sozlesmesi =================
 
-    Zero'nun kurallarinin iki alicisi var: derleyici ve yapay zeka ajani.
-    Analyzer'lar kurali derleme aninda uygular; buradaki dosyalar ayni kurali
-    ajanin okuyabilecegi bicimde tasir.
+    Zero'nun kurallarinin iki alicisi var: derleyici ve yapay zeka ajani. Analyzer'lar
+    kurali derleme aninda uygular; buradaki dosyalar ayni kurali ajanin okuyabilecegi
+    bicimde tasir.
 
-    Kurallar paketin ICINDE gider. Sebebi versiyonlamadir: framework 1.2'ye
-    ciktiginda ajanin okudugu kural da 1.2 olur. Ayri bir repoda duran dokuman
-    bu garantiyi veremez ve sessizce eskir.
+    Ikisi de paketin ICINDE gider. Sebebi versiyonlamadir: framework 1.2'ye ciktiginda
+    ajanin okudugu kural da 1.2 olur. Ayri bir repoda duran dokuman bu garantiyi veremez
+    ve sessizce eskir.
 
     Sozlesme:
-      src/<Paket>/rules/*.md   ->   <nupkg>/zero/rules/<Paket>/*.md
-      Her .md YAML frontmatter tasir: id, title, applies-to, enforced-by.
-      'enforced-by' bir analyzer tanisini gosterdiginde kural ile derleyici
-      arasindaki bag makine tarafindan dogrulanabilir hale gelir.
+      src/<Paket>/rules/*.md        ->  <nupkg>/zero/rules/<Paket>/*.md
+      src/<Paket>/zero/*.json       ->  <nupkg>/zero/
+      src/<Paket>.Analyzers/        ->  <nupkg>/analyzers/dotnet/cs/
 
-    Tuketici tarafinda buildTransitive/<Paket>.targets kurallari @(ZeroRuleFile)
-    olarak acar; `zero rules init` bunlari okuyup AGENTS.md, CLAUDE.md ve editor
-    kural dosyalarini uretir.
+    Kural dosyalari ajana "yanlis yapma"yi, capability.json ise "bu zaten yazilmis"i
+    ogretir. Bir ajanin sinir disina cikmasinin en yaygin sebebi inat degil, var olani
+    bilmemektir.
+
+    Tuketici tarafinda `zero rules init` bu dosyalari restore edilmis paketlerden okur.
+    Kurallarin yerini MSBuild item'i olarak da acan bir buildTransitive/<Paket>.targets
+    vardi; kaldirildi. Hicbir tuketicisi yoktu ve bozuk gidiyordu: CDATA icindeki
+    $(MSBuildThisFileDirectory) yazma aninda genisliyordu, yani her paket yayinlayanin
+    makinesindeki mutlak yolu tasiyordu. Kullanilmayan bir mekanizmayi duzeltmek yerine
+    sildik.
   -->
 
   <PropertyGroup>
-    <ZeroConsumerTargetsFile>$(BaseIntermediateOutputPath)zero/$(PackageId).targets</ZeroConsumerTargetsFile>
-    <!-- Kural ve targets dosyalari lib/ disinda durur; bu yerlesim kasitlidir. -->
+    <!-- Kural ve bildirim dosyalari lib/ disinda durur; bu yerlesim kasitlidir. -->
     <NoWarn>$(NoWarn);NU5100</NoWarn>
   </PropertyGroup>
 
   <!--
-    Paket icerigi DEGERLENDIRME zamaninda bildirilir. Bir hedef icinden eklenen
-    None item'lari NuGet dosyalari topladiktan sonra olusur ve pakete girmez.
+    Paket icerigi DEGERLENDIRME zamaninda bildirilir. Bir hedef icinden eklenen None
+    item'lari NuGet dosyalari topladiktan sonra olusur ve pakete hic girmez.
   -->
   <ItemGroup>
     <None Include="$(MSBuildProjectDirectory)/rules/**/*.md"
           Pack="true"
           PackagePath="zero/rules/$(PackageId)/" />
 
-    <!-- Yetenek bildirimi ve katalog. Kural dosyalari "yanlis yapma"yi ogretir;
-         bunlar "bu zaten yazilmis"i ogretir. Bir ajanin sinir disina cikmasinin
-         en yaygin sebebi inat degil, var olani bilmemektir. -->
     <None Include="$(MSBuildProjectDirectory)/zero/*.json"
           Pack="true"
           PackagePath="zero/" />
@@ -53,19 +55,14 @@
           Condition="!Exists('$(MSBuildProjectDirectory)/README.md')"
           Pack="true"
           PackagePath="/" />
-
-    <None Include="$(ZeroConsumerTargetsFile)"
-          Condition="Exists('$(MSBuildProjectDirectory)/rules') Or Exists('$(MSBuildProjectDirectory)/zero')"
-          Pack="true"
-          PackagePath="buildTransitive/$(PackageId).targets" />
   </ItemGroup>
 
   <!--
     ================= Yetenek analyzer'i sozlesmesi =================
 
-    Bir yetenek, kendi kurallarini uygulayan analyzer'i src/<Paket>.Analyzers/ altinda
-    tutar. O proje kendi basina yayinlanmaz; bu paketin icine analyzer olarak konur.
-    Boylece tuketici tek paket kurar ve kurali derleyicide gorur.
+    Bir yetenek, kurallarini uygulayan analyzer'i src/<Paket>.Analyzers/ altinda tutar.
+    O proje kendi basina yayinlanmaz; bu paketin icine analyzer olarak konur. Boylece
+    tuketici tek paket kurar ve kurali derleyicide gorur.
 
     Klasor varsa gerisi kendiliginden olur: yeni bir yetenek eklemek icin burada
     degistirilecek bir sey yoktur.
@@ -87,29 +84,5 @@
           PackagePath="analyzers/dotnet/cs"
           Visible="false" />
   </ItemGroup>
-
-  <!--
-    Tuketicinin derlemesinde kurallarin yerini bildiren targets dosyasi.
-    Yalnizca item tanimlar; hedef tanimlamaz, cunku metapaket ile gelen her
-    paket ayni hedefi yeniden tanimlardi.
-  -->
-  <Target Name="ZeroEmitConsumerTargets"
-          BeforeTargets="PrepareForBuild"
-          Condition="Exists('$(MSBuildProjectDirectory)/rules') Or Exists('$(MSBuildProjectDirectory)/zero')">
-    <PropertyGroup>
-      <_ZeroTargetsBody><![CDATA[<Project>
-  <ItemGroup>
-    <ZeroRuleFile Include="$(MSBuildThisFileDirectory)../zero/rules/**/*.md">
-      <Package>PACKAGE_ID</Package>
-    </ZeroRuleFile>
-  </ItemGroup>
-</Project>]]></_ZeroTargetsBody>
-    </PropertyGroup>
-    <MakeDir Directories="$(BaseIntermediateOutputPath)zero" />
-    <WriteLinesToFile File="$(ZeroConsumerTargetsFile)"
-                      Lines="$(_ZeroTargetsBody.Replace('PACKAGE_ID','$(PackageId)'))"
-                      Overwrite="true"
-                      WriteOnlyWhenDifferent="true" />
-  </Target>
 
 </Project>
