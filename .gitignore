@@ -13,3 +13,4 @@ artifacts/
 
 # Uretilen tuketici targets dosyalari (artik uretilmiyor; eski agaclar icin)
 src/*/zero/*.targets
+samples/*/generated/

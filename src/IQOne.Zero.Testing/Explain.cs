@@ -11,12 +11,10 @@ internal static class Explain
 {
     /// <summary>Renders a failure's reasons, one numbered line each.</summary>
     internal static string Errors(ErrorList errors)
-        => errors.Count == 0
-            // A default(Result) is a failure with no errors. Saying so directly saves the
-            // reader from hunting for the error nobody ever set.
-            ? "it failed carrying no errors at all, which is what an uninitialised default result looks like"
-            : $"it failed with {errors.Count} {(errors.Count == 1 ? "error" : "errors")}:{Environment.NewLine}"
-              + string.Join(Environment.NewLine, errors.Select((error, index) => $"  [{index + 1}] {error}"));
+        // A failure always carries at least one reason: Result substitutes
+        // Error.Uninitialised for a default instance, so there is no empty case to explain.
+        => $"it failed with {errors.Count} {(errors.Count == 1 ? "error" : "errors")}:{Environment.NewLine}"
+           + string.Join(Environment.NewLine, errors.Select((error, index) => $"  [{index + 1}] {error}"));
 
     /// <summary>Renders a value so that an empty string or a null is unmistakable.</summary>
     internal static string Value(object? value) => value switch

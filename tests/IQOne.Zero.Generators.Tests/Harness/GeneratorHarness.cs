@@ -15,11 +15,24 @@ internal static class GeneratorHarness
     private static readonly ImmutableArray<MetadataReference> References = BuildReferences();
 
     public static GeneratorRun Run(string source, string assemblyName = "Test.Module")
+        => Run([source], assemblyName);
+
+    /// <summary>
+    /// Runs the generator over several files.
+    /// </summary>
+    /// <param name="sources">One entry per file. A partial type may be split across them.</param>
+    /// <param name="assemblyName">The compilation's assembly name, which names the module.</param>
+    /// <param name="extraReferences">Assemblies to reference in addition to the framework's own.</param>
+    /// <returns>What the consumer's build would see.</returns>
+    public static GeneratorRun Run(
+        string[] sources,
+        string assemblyName = "Test.Module",
+        params MetadataReference[] extraReferences)
     {
         var compilation = CSharpCompilation.Create(
             assemblyName,
-            [CSharpSyntaxTree.ParseText(source)],
-            References,
+            sources.Select(s => CSharpSyntaxTree.ParseText(s)),
+            References.AddRange(extraReferences),
             new CSharpCompilationOptions(
                 OutputKind.DynamicallyLinkedLibrary,
                 nullableContextOptions: NullableContextOptions.Enable));
@@ -30,15 +43,51 @@ internal static class GeneratorHarness
                 additionalTexts: null,
                 parseOptions: null,
                 optionsProvider: new TestOptionsProvider())
-            .RunGeneratorsAndUpdateCompilation(compilation, out _, out _);
+            .RunGeneratorsAndUpdateCompilation(compilation, out var updated, out _);
 
         var result = driver.GetRunResult().Results.Single();
+
+        // Errors in the generated file only. The point of several of these rules is that a
+        // mistake in generation surfaces as a compiler error in a file the developer never
+        // wrote, so that is exactly what a test has to be able to see.
+        var generatedErrors = updated.GetDiagnostics()
+            .Where(d => d.Severity == DiagnosticSeverity.Error
+                     && d.Location.SourceTree?.FilePath.EndsWith("Module.g.cs", StringComparison.Ordinal) == true);
 
         return new GeneratorRun(
             [.. result.Diagnostics],
             result.GeneratedSources.Length == 0
                 ? string.Empty
-                : result.GeneratedSources[0].SourceText.ToString());
+                : result.GeneratedSources[0].SourceText.ToString(),
+            [.. generatedErrors]);
+    }
+
+    /// <summary>
+    /// Compiles <paramref name="source"/> into a reference, so a test can exercise the module
+    /// discovery that reads a referenced assembly rather than the compilation being generated.
+    /// </summary>
+    /// <param name="source">The upstream assembly's source.</param>
+    /// <param name="assemblyName">Its assembly name, which is what discovery looks up.</param>
+    /// <returns>A reference to the compiled assembly.</returns>
+    public static MetadataReference Reference(string source, string assemblyName)
+    {
+        var compilation = CSharpCompilation.Create(
+            assemblyName,
+            [CSharpSyntaxTree.ParseText(source)],
+            References,
+            new CSharpCompilationOptions(
+                OutputKind.DynamicallyLinkedLibrary,
+                nullableContextOptions: NullableContextOptions.Enable));
+
+        using var stream = new MemoryStream();
+
+        var emitted = compilation.Emit(stream);
+
+        if (!emitted.Success)
+            throw new InvalidOperationException(
+                $"The upstream assembly did not compile: {string.Join("; ", emitted.Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error))}");
+
+        return MetadataReference.CreateFromImage(stream.ToArray());
     }
 
     private static ImmutableArray<MetadataReference> BuildReferences()
@@ -58,11 +107,13 @@ internal static class GeneratorHarness
                  {
                      typeof(Modules.IModule),
                      typeof(DependencyInjection.Descriptors.IScoped),
+                     typeof(DependencyInjection.Annotations.ScopedAttribute),
                      typeof(App.Application),
                      typeof(Zero.Messaging.ISender),
                      typeof(Zero.Result),
                      typeof(Zero.Web.GetAttribute),
-                     typeof(Zero.Validation.IValidator)
+                     typeof(Zero.Validation.IValidator),
+                     typeof(Zero.Authorization.IRequirementHandler)
                  })
             locations.Add(type.Assembly.Location);
 
@@ -70,11 +121,29 @@ internal static class GeneratorHarness
     }
 }
 
-internal sealed record GeneratorRun(ImmutableArray<Diagnostic> Diagnostics, string GeneratedSource)
+internal sealed record GeneratorRun(
+    ImmutableArray<Diagnostic> Diagnostics,
+    string GeneratedSource,
+    ImmutableArray<Diagnostic> GeneratedFileErrors)
 {
     public IEnumerable<string> DiagnosticIds => Diagnostics.Select(d => d.Id);
 
     public bool HasError => Diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error);
+
+    /// <summary>Compiler errors raised by the generated file itself, as text.</summary>
+    public IEnumerable<string> GeneratedFileErrorMessages => GeneratedFileErrors.Select(d => d.ToString());
+
+    /// <summary>How many times <paramref name="text"/> appears in the generated file.</summary>
+    public int Occurrences(string text)
+    {
+        var count = 0;
+
+        for (var i = GeneratedSource.IndexOf(text, StringComparison.Ordinal); i >= 0;
+             i = GeneratedSource.IndexOf(text, i + text.Length, StringComparison.Ordinal))
+            count++;
+
+        return count;
+    }
 }
 
 /// <summary>Minimal options provider. The generator reads no build properties.</summary>

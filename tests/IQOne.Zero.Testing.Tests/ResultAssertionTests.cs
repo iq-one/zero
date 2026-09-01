@@ -39,8 +39,10 @@ public class ResultAssertionTests
     {
         var assert = () => default(Result<int>).ShouldSucceed();
 
+        // A default result is a failure, and Result names it rather than leaving the
+        // reader to wonder which error nobody set.
         assert.Should().Throw<ZeroAssertionException>()
-            .Which.Message.Should().Contain("uninitialised default result");
+            .Which.Message.Should().Contain("result.uninitialised");
     }
 
     [Fact]

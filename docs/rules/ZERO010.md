@@ -17,6 +17,21 @@ public sealed class ExportService(IEnumerable<IExportFormat> formats);
 
 Nothing needs to change — but consider making the intent visible at the registration site.
 
+## What this rule does not report
+
+**A framework extension point.** Validators, pipeline behaviours, request handlers and
+requirement handlers are resolved as `IEnumerable<T>` by the code that runs them, so several
+implementations of one closed generic is the designed shape. Two validators for one request
+is what the Validation package's own example ships:
+
+```csharp
+public sealed class EmailValidator : Validator<Register>;
+public sealed class UniqueReferenceValidator : Validator<Register>;    // both run
+```
+
+**A keyed registration.** Neither implementation competes for the unkeyed service type, so
+the fix below silences the rule rather than leaving it standing.
+
 ## When it is not
 
 You wanted one. Separate them with a key and resolve by key:

@@ -4,12 +4,8 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../../src/IQOne.Zero.Generators/IQOne.Zero.Generators.csproj" />
-    <ProjectReference Include="../../src/IQOne.Zero.Core/IQOne.Zero.Core.csproj" />
-    <ProjectReference Include="../../src/IQOne.Zero.Messaging/IQOne.Zero.Messaging.csproj" />
-    <ProjectReference Include="../../src/IQOne.Zero.Web/IQOne.Zero.Web.csproj" />
-    <ProjectReference Include="../../src/IQOne.Zero.Validation/IQOne.Zero.Validation.csproj" />
-    <ProjectReference Include="../../src/IQOne.Zero.Authorization/IQOne.Zero.Authorization.csproj" />
+    <ProjectReference Include="../../src/IQOne.Zero.Results/IQOne.Zero.Results.csproj" />
+    <ProjectReference Include="../../src/IQOne.Zero.Results.Analyzers/IQOne.Zero.Results.Analyzers.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />

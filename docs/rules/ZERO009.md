@@ -44,3 +44,17 @@ if the singleton exists only to cache, cache the *data* rather than the service 
 `ISingleton` > `IThread` > `IScoped` > `ITransient`
 
 A service may depend on its own lifetime or a longer one, never a shorter one.
+
+## What this rule can and cannot see
+
+It compares a singleton's constructor parameters against the registrations generated for the
+**same assembly**. A closed generic is matched — a singleton taking `IValidator<Invoice>` is
+checked against the `IValidator<Invoice>` registration — and so is an open generic registered
+as `typeof(IService<>)`.
+
+It does not reach across an assembly boundary. A singleton in one project taking a scoped
+service from another compiles without a diagnostic, and the container reports it at startup
+instead, when scope validation is on. Pulling every marker-implementing type out of every
+referenced assembly on each keystroke would cost more than the rule is worth; the check stays
+where it is cheap and exact.
+

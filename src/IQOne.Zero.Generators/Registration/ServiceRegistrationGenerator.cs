@@ -1,7 +1,9 @@
 using System.Collections.Immutable;
+using System.Globalization;
 using System.Text;
 using IQOne.Zero.Generators.Internal;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 
@@ -37,12 +39,13 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
             .Select(static (c, _) => c!)
             .Collect();
 
-        // A routed type need not implement anything, so the service provider above would
-        // never see it -- and a route on a non-request would go unreported. Filtered by
-        // attribute name in syntax only; the full type is verified during emission.
-        var routed = context.SyntaxProvider
+        // A routed type need not implement anything, and a lifetime attribute is written
+        // precisely where the abstraction says nothing, so neither would be seen by the
+        // provider above. Filtered by attribute name in syntax only; the full type is
+        // verified during emission.
+        var annotated = context.SyntaxProvider
             .CreateSyntaxProvider(
-                predicate: static (node, _) => HasRouteAttribute(node),
+                predicate: static (node, _) => HasZeroAttribute(node),
                 transform: static (ctx, _) =>
                     ctx.SemanticModel.GetDeclaredSymbol(ctx.Node) is INamedTypeSymbol symbol
                         ? SymbolCollector.DescribeService(symbol, ctx.Node)
@@ -60,7 +63,11 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
             {
                 references.Add(assembly.Name);
 
-                if (assembly.GetTypeByMetadataName($"{assembly.Name}.Module") is not { } moduleType) continue;
+                // Sanitized, because that is the namespace the module was emitted into. An
+                // assembly named Acme.Billing-Core emits Acme.Billing_Core.Module, and looking
+                // for the raw name found nothing at all.
+                if (assembly.GetTypeByMetadataName($"{Sanitize(assembly.Name)}.Module") is not { } moduleType)
+                    continue;
 
                 modules.Add(new ModuleReference(
                     moduleType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
@@ -74,18 +81,35 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
         });
 
         context.RegisterSourceOutput(
-            services.Combine(routed).Combine(moduleInfo).Combine(platform),
+            services.Combine(annotated).Combine(moduleInfo).Combine(platform),
             static (spc, input) => Emit(
                 spc, input.Left.Left.Left, input.Left.Left.Right, input.Left.Right, input.Right));
     }
 
-    private static readonly string[] RouteAttributeNames = ["Get", "Post", "Put", "Patch", "Delete"];
+    /// <summary>
+    /// Attribute names worth resolving a symbol for.
+    /// </summary>
+    /// <remarks>
+    /// Matched by simple name only, so a same-named attribute of the consumer's own costs one
+    /// symbol lookup and is then discarded. The full type name decides during emission.
+    /// </remarks>
+    private static readonly string[] AnnotationNames =
+    [
+        "Get", "Post", "Put", "Patch", "Delete",
+        "ServiceTypes", "DependsOn", "LifeStyle",
+        "Singleton", "Scoped", "Transient", "Thread", "Pooled", "Custom", "Bound", "Undefined"
+    ];
 
-    private static bool HasRouteAttribute(SyntaxNode node)
+    private static bool HasZeroAttribute(SyntaxNode node)
         => node is TypeDeclarationSyntax { AttributeLists.Count: > 0 } declaration
         && declaration.AttributeLists.Any(list => list.Attributes.Any(attribute =>
         {
             var name = attribute.Name.ToString();
+            var angle = name.IndexOf('<');
+
+            // Before the namespace: a generic attribute's type argument may itself be qualified.
+            if (angle >= 0) name = name.Substring(0, angle);
+
             var dot = name.LastIndexOf('.');
 
             if (dot >= 0) name = name.Substring(dot + 1);
@@ -93,61 +117,82 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
             if (name.EndsWith("Attribute", StringComparison.Ordinal))
                 name = name.Substring(0, name.Length - "Attribute".Length);
 
-            return Array.IndexOf(RouteAttributeNames, name) >= 0;
+            return Array.IndexOf(AnnotationNames, name) >= 0;
         }));
 
     private static void Emit(
         SourceProductionContext context,
         ImmutableArray<ServiceCandidate> serviceCandidates,
-        ImmutableArray<ServiceCandidate> routedCandidates,
+        ImmutableArray<ServiceCandidate> annotatedCandidates,
         ModuleInfo moduleInfo,
         ZeroNames platform)
     {
         // A project that does not reference the module system is not a module.
         if (!moduleInfo.ReferencedAssemblies.Any(a => a == platform.CoreAssembly)) return;
 
-        var hasError = false;
-
         void Report(DiagnosticDescriptor descriptor, LocationInfo? location, params object[] args)
-        {
-            context.ReportDiagnostic(Diagnostic.Create(descriptor, location?.ToLocation(), args));
-            if (descriptor.DefaultSeverity == DiagnosticSeverity.Error) hasError = true;
-        }
+            => context.ReportDiagnostic(Diagnostic.Create(descriptor, location?.ToLocation(), args));
 
-        var services = ResolveServices(serviceCandidates, platform, Report);
+        // A partial class declared across two files arrives once per declaration, and every
+        // one of them carries the same symbol facts. Registering each produced two identical
+        // AddScoped calls, two identical dispatch rows -- which throws at startup -- and a
+        // ZERO010 naming the same type as both implementations.
+        var candidates = serviceCandidates
+            .Concat(annotatedCandidates)
+            .GroupBy(c => c.ImplementationTypeName, StringComparer.Ordinal)
+            .Select(g => g.First())
+            .ToImmutableArray();
 
-        hasError |= DetectCaptiveDependencies(services, Report);
+        var services = ResolveServices(candidates, platform, Report);
+
+        DetectCaptiveDependencies(services, Report);
 
         // Dispatch is generated only for an assembly that references messaging; an
         // application that does not use commands and queries pays nothing for them.
         var messaging = moduleInfo.ReferencedAssemblies.Any(a => a == platform.MessagingAssembly);
 
         var requests = messaging
-            ? ResolveRequests(serviceCandidates, platform)
+            ? ResolveRequests(candidates, platform)
             : new RequestSet([], []);
 
         var web = moduleInfo.ReferencedAssemblies.Any(a => a == platform.WebAssembly);
 
-        var endpoints = web
-            ? ResolveEndpoints(
-                [.. serviceCandidates.Concat(routedCandidates)
-                    .GroupBy(c => c.ImplementationTypeName, StringComparer.Ordinal)
-                    .Select(g => g.First())],
-                platform,
-                Report)
-            : [];
-
-        if (hasError) return;
+        var endpoints = web ? ResolveEndpoints(candidates, platform, Report) : [];
 
         var dependencies = moduleInfo.ModuleTypes
             .Where(m => m.Interfaces.Any(i => i == platform.ModuleInterface))
             .Select(m => m.TypeName)
+            .Concat(DeclaredDependencies(candidates, platform))
+            .Distinct(StringComparer.Ordinal)
             .OrderBy(n => n, StringComparer.Ordinal)
             .ToList();
 
+        // Emitted whatever was reported. Withholding the file turned one diagnostic into
+        // 'CS0246: Module does not exist' pointing nowhere, and a team that downgraded a
+        // rule in .editorconfig lost the module entirely. The errors fail the build by
+        // themselves; they do not need the file withheld to do it.
         context.AddSource("Module.g.cs", SourceText.From(
-            Render(moduleInfo.AssemblyName, dependencies, services, requests, messaging, endpoints, web, platform), Encoding.UTF8));
+            Render(moduleInfo.AssemblyName, dependencies, services, requests, messaging, endpoints, web, platform),
+            Encoding.UTF8));
     }
+
+    /// <summary>
+    /// Ordering constraints stated with <c>[DependsOn]</c>.
+    /// </summary>
+    /// <remarks>
+    /// The reference graph cannot express every ordering — a module that seeds data another
+    /// reads at startup needs no reference to it. The attribute was the documented way to say
+    /// so, and nothing read it; the consumer could not work around that either, because the
+    /// generated partial already declares <c>Dependencies</c>.
+    /// </remarks>
+    private static IEnumerable<string> DeclaredDependencies(
+        ImmutableArray<ServiceCandidate> candidates, ZeroNames platform)
+        => candidates
+            .SelectMany(c => c.Attributes)
+            .Where(a => string.Equals(a.TypeName, platform.DependsOnAttribute, StringComparison.Ordinal))
+            .SelectMany(a => a.ConstructorArguments)
+            .Where(a => a.IsType && a.Value is { Length: > 0 })
+            .Select(a => a.Value!);
 
     /// <summary>Requests declared in this assembly, and the handlers that serve them.</summary>
     private sealed record RequestSet(List<string> Declared, List<RequestDescriptor> Handlers);
@@ -214,8 +259,12 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
                 continue;
             }
 
-            var arguments = route.Attribute.Arguments.ToArray();
-            var pattern = arguments.FirstOrDefault(a => !a.Contains("=")) ?? string.Empty;
+            // The first positional argument, never 'the argument without an =': a pattern
+            // may legally contain one, and [Get("/reports/{page=1}")] was then read as a
+            // named argument and reported as an empty route.
+            var pattern = route.Attribute.ConstructorArguments.Count > 0
+                ? route.Attribute.ConstructorArguments[0].Value ?? string.Empty
+                : string.Empty;
 
             if (pattern.Length == 0)
             {
@@ -226,10 +275,10 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
             endpoints.Add(new EndpointDescriptor(
                 route.Method,
                 pattern,
-                Named(arguments, "Name") ?? candidate.TypeName,
-                Named(arguments, "Tag"),
-                Named(arguments, "Policy"),
-                string.Equals(Named(arguments, "AllowAnonymous"), "True", StringComparison.OrdinalIgnoreCase),
+                Named(route.Attribute, "Name") ?? EndpointName(candidate.ImplementationTypeName),
+                Named(route.Attribute, "Tag"),
+                Named(route.Attribute, "Policy"),
+                string.Equals(Named(route.Attribute, "AllowAnonymous"), "True", StringComparison.OrdinalIgnoreCase),
                 candidate.ImplementationTypeName,
                 request.TypeArguments[0],
                 candidate.Location));
@@ -240,13 +289,47 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
         return endpoints;
     }
 
-    private static string? Named(string[] arguments, string key)
+    /// <summary>The value of one named attribute argument, or null when it was not given.</summary>
+    private static string? Named(AttributeUsage attribute, string name)
     {
-        var prefix = key + "=";
+        foreach (var argument in attribute.NamedArguments)
+            if (string.Equals(argument.Name, name, StringComparison.Ordinal)
+                && argument.Argument.Value is { Length: > 0 } value)
+                return value;
 
-        return arguments.FirstOrDefault(a => a.StartsWith(prefix, StringComparison.Ordinal))?.Substring(prefix.Length)
-            is { Length: > 0 } value ? value : null;
+        return null;
     }
+
+    /// <summary>
+    /// A namespace-qualified endpoint name.
+    /// </summary>
+    /// <remarks>
+    /// The simple type name collides as soon as two modules both have a <c>GetInvoice</c>, and
+    /// ASP.NET does not notice at startup: it throws 'Duplicate endpoint name' on the first
+    /// <c>LinkGenerator</c> or OpenAPI use, far from the two declarations that caused it.
+    /// </remarks>
+    private static string EndpointName(string implementationTypeName)
+    {
+        var name = implementationTypeName.StartsWith("global::", StringComparison.Ordinal)
+            ? implementationTypeName.Substring("global::".Length)
+            : implementationTypeName;
+
+        var builder = new StringBuilder(name.Length);
+
+        foreach (var c in name)
+            builder.Append(char.IsLetterOrDigit(c) || c == '_' || c == '.' ? c : '_');
+
+        return builder.ToString();
+    }
+
+    /// <summary><c>ServiceSelectorType</c>'s flags. The generator targets netstandard2.0 and
+    /// never loads the framework it generates for, so the values are restated here.</summary>
+    private const int SelectorSelf = 1;
+    private const int SelectorInterfaces = 2 | 4 | 8;
+
+    /// <summary><c>LifeStyle</c>'s values that the container has a name for.</summary>
+    private const string LifeStyleSingleton = "1";
+    private const string LifeStyleScoped = "7";
 
     private static List<ServiceRegistrationDescriptor> ResolveServices(
         ImmutableArray<ServiceCandidate> candidates,
@@ -282,44 +365,80 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
                 .Distinct()
                 .ToList();
 
-            if (lifetimes.Count == 0) continue;
+            var annotated = AnnotatedLifetime(candidate, platform);
+
+            if (lifetimes.Count == 0 && annotated is null) continue;
             if (candidate.AllInterfaces.Any(i => i == platform.Ignored)) continue;
 
-            if (lifetimes.Count > 1)
+            // The attribute exists for the type whose lifetime no abstraction can express, so
+            // it settles a contradiction between markers rather than adding to it.
+            if (lifetimes.Count > 1 && annotated is null)
                 report(Diagnostics.MultipleLifetimes, candidate.Location,
                     [candidate.TypeName, string.Join(", ", lifetimes)]);
 
-            if (!candidate.IsConcrete)
-                report(Diagnostics.RegistrationTargetInvalid, candidate.Location, [candidate.TypeName]);
+            var lifetime = annotated ?? lifetimes[0];
 
-            var attribute = candidate.Attributes
-                .FirstOrDefault(a => a.TypeName.StartsWith(platform.ServiceTypesAttribute, StringComparison.Ordinal));
+            // An abstract type is never constructed. Its marker declares the lifetime of the
+            // classes deriving from it, and those are registered in its place -- silently,
+            // because the shape is the one the documentation tells you to write.
+            if (candidate.IsAbstract) continue;
 
-            var key = attribute?.Arguments.FirstOrDefault(a => a.StartsWith("Key=", StringComparison.Ordinal))?.Substring(4);
-            var registerSelf = attribute?.Arguments.Any(a => a.Contains("ServiceSelectorType")) == true;
+            var annotations = candidate.Attributes
+                .Where(a => a.TypeName.StartsWith(platform.ServiceTypesAttribute, StringComparison.Ordinal))
+                .ToList();
 
-            var declared = attribute?.Arguments.Where(a => a.StartsWith("global::", StringComparison.Ordinal)).ToList() ?? [];
+            var declared = annotations
+                .SelectMany(a => a.ConstructorArguments.Where(x => x.IsType).Select(x => x.Value!)
+                    .Concat(a.TypeArguments))
+                .Select(Global)
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+
+            var key = Key(annotations);
+            var selector = Selector(annotations);
+
+            var registerSelf = selector is { } self && (self & SelectorSelf) != 0;
+            var byConvention = selector is not { } stated || (stated & SelectorInterfaces) != 0;
 
             var serviceTypes = declared.Count > 0
-                ? declared
-                : Resolve(candidate, platform, nonService);
+                ? declared.Select(d => (TypeName: d, Extension: false)).ToList()
+                : byConvention ? Resolve(candidate, platform, nonService) : [];
 
             if (serviceTypes.Count == 0 && !registerSelf)
-                report(Diagnostics.ServiceTypeNotResolved, candidate.Location, [candidate.TypeName]);
-
-            foreach (var serviceType in serviceTypes)
             {
-                if (owner.TryGetValue(serviceType, out var existing) && key is null)
-                    report(Diagnostics.DuplicateRegistration, candidate.Location,
-                        [serviceType, existing, candidate.ImplementationTypeName]);
+                // An open generic can only be registered under an interface it forwards its
+                // own type parameters to. A marker it merely inherited is not this file's
+                // mistake, so reporting it would send the reader to the wrong declaration.
+                var blame = candidate.Arity == 0
+                    ? Diagnostics.ServiceTypeNotResolved
+                    : Diagnostics.RegistrationTargetInvalid;
 
-                owner[serviceType] = candidate.ImplementationTypeName;
+                if (candidate.Arity == 0 || Declares(candidate, lifetimeByInterface, platform))
+                    report(blame, candidate.Location, [candidate.TypeName]);
+
+                if (candidate.Arity > 0) continue;
             }
 
+            // A keyed registration competes with nothing: it is only ever reached through its
+            // key, which is exactly what ZERO010's message tells the reader to write.
+            if (key is null)
+                foreach (var serviceType in serviceTypes)
+                {
+                    // A closed-generic extension point is resolved as IEnumerable<T>. Several
+                    // validators for one request is the designed shape, not a collision.
+                    if (serviceType.Extension) continue;
+
+                    if (owner.TryGetValue(serviceType.TypeName, out var existing))
+                        report(Diagnostics.DuplicateRegistration, candidate.Location,
+                            [serviceType.TypeName, existing, candidate.ImplementationTypeName]);
+
+                    owner[serviceType.TypeName] = candidate.ImplementationTypeName;
+                }
+
             result.Add(new ServiceRegistrationDescriptor(
-                candidate.ImplementationTypeName,
-                new EquatableArray<string>([.. serviceTypes]),
-                lifetimes[0], key, registerSelf,
+                candidate.Arity > 0 ? candidate.UnboundImplementationTypeName : candidate.ImplementationTypeName,
+                new EquatableArray<string>([.. serviceTypes.Select(s => s.TypeName)]),
+                lifetime, key, registerSelf, candidate.Arity > 0,
                 candidate.ConstructorDependencies,
                 candidate.Location));
         }
@@ -327,7 +446,78 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
         return result;
     }
 
-    private static List<string> Resolve(ServiceCandidate candidate, ZeroNames platform, HashSet<string> nonService)
+    /// <summary>Whether a lifetime marker is reachable from the type's own declaration.</summary>
+    private static bool Declares(
+        ServiceCandidate candidate, Dictionary<string, string> lifetimeByInterface, ZeroNames platform)
+        => candidate.DeclaredInterfaces.Any(lifetimeByInterface.ContainsKey)
+        || AnnotatedLifetime(candidate, platform) is not null;
+
+    /// <summary>
+    /// The lifetime an annotation declares, or null when the type carries none.
+    /// </summary>
+    /// <remarks>
+    /// <c>[Singleton]</c>, <c>[Scoped]</c>, <c>[Transient]</c> and <c>[LifeStyle]</c> are the
+    /// documented escape hatch for when the abstraction cannot express the lifetime. Nothing
+    /// read them, so a type carrying one and no marker interface was silently not registered
+    /// at all — the failure mode the whole generated-registration design exists to avoid.
+    /// </remarks>
+    private static string? AnnotatedLifetime(ServiceCandidate candidate, ZeroNames platform)
+    {
+        foreach (var attribute in candidate.Attributes)
+        {
+            if (string.Equals(attribute.TypeName, platform.LifeStyleAttribute, StringComparison.Ordinal))
+                return (attribute.ConstructorArguments.Count > 0
+                    ? attribute.ConstructorArguments[0].Value
+                    : null) switch
+                {
+                    LifeStyleSingleton => "Singleton",
+                    LifeStyleScoped => "Scoped",
+                    _ => "Transient"
+                };
+
+            foreach (var (name, lifetime) in platform.LifetimeAttributes)
+                if (string.Equals(attribute.TypeName, name, StringComparison.Ordinal))
+                    return lifetime;
+        }
+
+        return null;
+    }
+
+    /// <summary>The service key, from either the positional or the named argument.</summary>
+    private static string? Key(List<AttributeUsage> annotations)
+    {
+        foreach (var annotation in annotations)
+        {
+            foreach (var named in annotation.NamedArguments)
+                if (string.Equals(named.Name, "Key", StringComparison.Ordinal) && !named.Argument.IsType)
+                    return named.Argument.Expression;
+
+            // [ServiceTypes("primary", typeof(IEmailSender))] -- the form both the ZERO010
+            // message and its rule page tell you to write. Everything else positional is a type.
+            foreach (var positional in annotation.ConstructorArguments)
+                if (!positional.IsType)
+                    return positional.Expression;
+        }
+
+        return null;
+    }
+
+    /// <summary>The stated <c>ServiceSelectorType</c> flags, or null when none was stated.</summary>
+    private static int? Selector(List<AttributeUsage> annotations)
+    {
+        int? selector = null;
+
+        foreach (var annotation in annotations)
+            foreach (var named in annotation.NamedArguments)
+                if (string.Equals(named.Name, "ServiceSelectorType", StringComparison.Ordinal)
+                    && int.TryParse(named.Argument.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var flags))
+                    selector = (selector ?? 0) | flags;
+
+        return selector;
+    }
+
+    private static List<(string TypeName, bool Extension)> Resolve(
+        ServiceCandidate candidate, ZeroNames platform, HashSet<string> nonService)
     {
         // Framework extension points are registered under the closed generic they implement.
         // The naming convention would pick the open definition -- IQueryHandler<TQuery,
@@ -335,28 +525,43 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
         // class rather than implementing an interface directly would match nothing at all.
         var closed = candidate.ClosedInterfaces
             .Where(i => platform.ClosedRegistrationInterfaces.Contains(i.OpenGenericName))
-            .Select(i => $"global::{i.OpenGenericName}<{string.Join(", ", i.TypeArguments.ToArray())}>")
-            .Distinct(StringComparer.Ordinal)
             .ToList();
 
-        if (closed.Count > 0) return closed;
+        var direct = candidate.DirectInterfaces.Where(i => !nonService.Contains(i.OpenGenericName)).ToList();
+        var inherited = candidate.InheritedInterfaces.Where(i => !nonService.Contains(i.OpenGenericName)).ToList();
 
-        var required = candidate.AllInterfaces
-            .Where(i => !nonService.Contains(i) && i.StartsWith(platform.Root, StringComparison.Ordinal) is false)
-            .ToList();
+        // An open generic has no closed service type: its type arguments are type parameters,
+        // which do not exist at the registration site. It goes in unbound instead --
+        // AddScoped(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>)) -- which is what
+        // IPipelineBehavior's own documentation tells the reader to write.
+        if (candidate.Arity > 0)
+        {
+            var source = closed.Count > 0 ? closed : direct.Count > 0 ? direct : inherited;
 
-        var direct = candidate.DirectInterfaces.Where(i => !nonService.Contains(i)).ToList();
+            return [.. source
+                .Where(i => i.ForwardsTypeParameters)
+                .Select(i => (i.UnboundName, closed.Count > 0))
+                .Distinct()];
+        }
 
-        if (direct.Count == 0) return [];
+        if (closed.Count > 0)
+            return [.. closed.Select(i => (i.ClosedName, true)).Distinct()];
 
-        var byConvention = SymbolCollector.DefaultInterface(candidate.TypeName, direct);
+        // The base class's interfaces, when this type declares none of its own. 'CsvExportFormat
+        // : ExportFormat', where the base implements IExportFormat, is the shape ZERO008 gives
+        // as its fix; resolving it to nothing and reporting ZERO007 made that fix a dead end.
+        var convention = direct.Count > 0 ? direct : inherited;
 
-        return byConvention is not null ? [Global(byConvention)]
-             : direct.Count == 1 ? [Global(direct[0])]
+        if (convention.Count == 0) return [];
+
+        var byName = SymbolCollector.DefaultInterface(candidate.TypeName, convention);
+
+        return byName is not null ? [(byName.ClosedName, false)]
+             : convention.Count == 1 ? [(convention[0].ClosedName, false)]
              : [];
     }
 
-    private static bool DetectCaptiveDependencies(
+    private static void DetectCaptiveDependencies(
         List<ServiceRegistrationDescriptor> services,
         Action<DiagnosticDescriptor, LocationInfo?, object[]> report)
     {
@@ -366,27 +571,27 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
             foreach (var serviceType in service.ServiceTypeNames)
                 lifetime[serviceType] = service.Lifetime;
 
-        var found = false;
-
         foreach (var service in services.Where(s => s.Lifetime == "Singleton"))
             foreach (var dependency in service.ConstructorDependencies)
-                if (lifetime.TryGetValue(dependency, out var dependencyLifetime) && dependencyLifetime == "Scoped")
-                {
+            {
+                // The closed form first. Recording only the definition meant a singleton
+                // taking IValidator<Foo> was compared against IValidator<> and never matched
+                // the IValidator<Foo> registration; the unbound form is what an open generic
+                // registration is keyed by.
+                var registered =
+                    lifetime.TryGetValue(dependency.TypeName, out var found) ? found
+                    : dependency.UnboundTypeName is { } unbound
+                        && lifetime.TryGetValue(unbound, out var open) ? open
+                    : null;
+
+                if (registered == "Scoped")
                     report(Diagnostics.CaptiveDependency, service.Location,
-                        [service.ImplementationTypeName, dependency, dependencyLifetime]);
-                    found = true;
-                }
-
-        return found;
+                        [service.ImplementationTypeName, dependency.TypeName, registered]);
+            }
     }
 
-    private static string Global(string name) => name.StartsWith("global::", StringComparison.Ordinal) ? name : $"global::{name}";
-
-    private static string Simple(string name)
-    {
-        var index = name.LastIndexOf('.');
-        return index < 0 ? name : name.Substring(index + 1);
-    }
+    private static string Global(string name)
+        => name.StartsWith("global::", StringComparison.Ordinal) ? name : $"global::{name}";
 
     private static string Render(
         string assemblyName,
@@ -415,9 +620,9 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
         b.AppendLine($"    : {modules}.IModule,");
         b.AppendLine($"      {modules}.IModuleConfigureServicesStep");
         b.AppendLine("{");
-        b.AppendLine($"    public string Name => \"{assemblyName}\";");
+        b.AppendLine($"    public string Name => {Literal(assemblyName)};");
         b.AppendLine();
-        b.AppendLine("    /// <summary>Derived from the assembly reference graph.</summary>");
+        b.AppendLine("    /// <summary>Derived from the assembly reference graph and any [DependsOn].</summary>");
         b.AppendLine("    public global::System.Collections.Generic.IReadOnlyList<global::System.Type> Dependencies { get; } =");
         b.AppendLine("    [");
 
@@ -452,18 +657,31 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
 
         foreach (var service in services)
         {
-            b.AppendLine($"        // {service.Lifetime}: {service.ImplementationTypeName}");
+            b.AppendLine($"        // {service.Lifetime}: {Comment(service.ImplementationTypeName)}");
 
             foreach (var serviceType in service.ServiceTypeNames)
             {
                 var method = service.Key is null ? $"Add{service.Lifetime}" : $"AddKeyed{service.Lifetime}";
-                var args = service.Key is null ? "services" : $"services, \"{service.Key}\"";
 
-                b.AppendLine($"        {di}.ServiceCollectionServiceExtensions.{method}<{serviceType}, {service.ImplementationTypeName}>({args});");
+                // An open generic can only be named through typeof, so the Type overloads are
+                // the only ones that can express it.
+                var args = (service.IsOpenGeneric, service.Key) switch
+                {
+                    (true, null) => $"services, typeof({serviceType}), typeof({service.ImplementationTypeName})",
+                    (true, { } key) => $"services, typeof({serviceType}), {key}, typeof({service.ImplementationTypeName})",
+                    (false, null) => "services",
+                    (false, { } key) => $"services, {key}"
+                };
+
+                var generics = service.IsOpenGeneric ? string.Empty : $"<{serviceType}, {service.ImplementationTypeName}>";
+
+                b.AppendLine($"        {di}.ServiceCollectionServiceExtensions.{method}{generics}({args});");
             }
 
             if (service.RegisterSelf || service.ServiceTypeNames.Count == 0)
-                b.AppendLine($"        {di}.ServiceCollectionServiceExtensions.Add{service.Lifetime}<{service.ImplementationTypeName}>(services);");
+                b.AppendLine(service.IsOpenGeneric
+                    ? $"        {di}.ServiceCollectionServiceExtensions.Add{service.Lifetime}(services, typeof({service.ImplementationTypeName}));"
+                    : $"        {di}.ServiceCollectionServiceExtensions.Add{service.Lifetime}<{service.ImplementationTypeName}>(services);");
         }
 
         b.AppendLine("    }");
@@ -503,7 +721,7 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
 
         foreach (var handler in requests.Handlers)
         {
-            b.AppendLine($"        // {handler.RequestTypeName} -> {handler.HandlerTypeName}");
+            b.AppendLine($"        // {Comment(handler.RequestTypeName)} -> {Comment(handler.HandlerTypeName)}");
             b.AppendLine($"        builder.Add(new {messaging}.RequestEntry(");
             b.AppendLine($"            typeof({handler.RequestTypeName}),");
             b.AppendLine($"            typeof({handler.ResponseTypeName}),");
@@ -537,11 +755,11 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
 
         foreach (var endpoint in endpoints)
         {
-            b.AppendLine($"        // {endpoint.Method} {endpoint.Pattern}");
+            b.AppendLine($"        // {endpoint.Method} {Comment(endpoint.Pattern)}");
             b.AppendLine($"        builder.Add(new {web}.ZeroEndpointDescriptor(");
-            b.AppendLine($"            \"{endpoint.Method}\",");
-            b.AppendLine($"            \"{endpoint.Pattern}\",");
-            b.AppendLine($"            \"{endpoint.Name}\",");
+            b.AppendLine($"            {Literal(endpoint.Method)},");
+            b.AppendLine($"            {Literal(endpoint.Pattern)},");
+            b.AppendLine($"            {Literal(endpoint.Name)},");
             b.AppendLine($"            {Literal(endpoint.Tag)},");
             b.AppendLine($"            {Literal(endpoint.Policy)},");
             b.AppendLine($"            {(endpoint.AllowAnonymous ? "true" : "false")},");
@@ -555,15 +773,44 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
         b.AppendLine();
     }
 
-    private static string Literal(string? value) => value is null ? "null" : $"\"{value}\"";
+    /// <summary>
+    /// A C# string literal for <paramref name="value"/>, escaped.
+    /// </summary>
+    /// <remarks>
+    /// Interpolating the raw value emitted the developer's own text as source. A route
+    /// pattern of <c>@"/products/{sku:regex(^\d{3}$)}"</c> put a <c>\d</c> escape into
+    /// Module.g.cs and failed the build with CS1009, in a file nobody wrote.
+    /// </remarks>
+    private static string Literal(string? value)
+        => value is null ? "null" : SymbolDisplay.FormatLiteral(value, quote: true);
 
+    /// <summary>Keeps an emitted comment on one line, whatever the value contained.</summary>
+    private static string Comment(string value)
+        => value.Replace("\r", " ").Replace("\n", " ");
+
+    /// <summary>
+    /// Turns an assembly name into a namespace.
+    /// </summary>
+    /// <remarks>
+    /// Applied per segment, because a namespace segment may not start with a digit:
+    /// <c>Company.2024.Api</c> used to emit a namespace that did not compile.
+    /// </remarks>
     private static string Sanitize(string name)
     {
-        var builder = new StringBuilder(name.Length);
+        var segments = name.Split('.');
 
-        foreach (var c in name)
-            builder.Append(char.IsLetterOrDigit(c) || c == '_' || c == '.' ? c : '_');
+        for (var s = 0; s < segments.Length; s++)
+        {
+            var builder = new StringBuilder(segments[s].Length + 1);
 
-        return builder.ToString();
+            foreach (var c in segments[s])
+                builder.Append(char.IsLetterOrDigit(c) || c == '_' ? c : '_');
+
+            if (builder.Length == 0 || char.IsDigit(builder[0])) builder.Insert(0, '_');
+
+            segments[s] = builder.ToString();
+        }
+
+        return string.Join(".", segments);
     }
 }

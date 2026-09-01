@@ -159,6 +159,89 @@ public class EndpointGenerationTests
 
         run.DiagnosticIds.Should().Contain("ZERO301");
     }
+
+    [Fact]
+    public void A_route_pattern_containing_an_equals_sign_is_still_a_pattern()
+    {
+        var run = GeneratorHarness.Run($$"""
+            {{Preamble}}
+
+            [Get("/reports/{page=1}")]
+            public sealed record ListReports : IQuery<string>;
+            """);
+
+        // A default value in a route segment is legal ASP.NET. Positional and named arguments
+        // were flattened into one 'Name=Value' list, so the pattern read as a named argument
+        // and ZERO301 fired on a correct route.
+        run.DiagnosticIds.Should().NotContain("ZERO301");
+        run.GeneratedSource.Should().Contain("\"/reports/{page=1}\"");
+    }
+
+    [Fact]
+    public void The_first_positional_argument_is_the_pattern_whatever_it_looks_like()
+    {
+        var run = GeneratorHarness.Run($$"""
+            {{Preamble}}
+
+            [Get("Name=oops")]
+            public sealed record Odd : IQuery<string>;
+            """);
+
+        // The old reader took the first argument without an '=' as the pattern and anything
+        // starting with 'Name=' as the endpoint name, so this route had neither.
+        run.DiagnosticIds.Should().NotContain("ZERO301");
+        run.GeneratedSource.Should().Contain("\"Name=oops\"").And.NotContain("\"oops\"");
+    }
+
+    [Fact]
+    public void A_route_pattern_is_emitted_as_an_escaped_literal()
+    {
+        var run = GeneratorHarness.Run($$"""
+            {{Preamble}}
+
+            [Get(@"/products/{sku:regex(^\d{3}$)}")]
+            public sealed record GetProduct(string Sku) : IQuery<string>;
+            """);
+
+        // Interpolated raw, the backslash reached Module.g.cs as a C# escape and failed the
+        // build with CS1009 in a file the developer did not write.
+        run.GeneratedFileErrorMessages.Should().BeEmpty();
+        run.GeneratedSource.Should().Contain(@"""/products/{sku:regex(^\\d{3}$)}""");
+    }
+
+    [Fact]
+    public void An_endpoint_name_defaults_to_the_namespace_qualified_type_name()
+    {
+        var run = GeneratorHarness.Run($$"""
+            using IQOne.Zero;
+            using IQOne.Zero.Messaging;
+            using IQOne.Zero.Web;
+
+            namespace App.Billing;
+
+            [Get("/invoices/{id:int}")]
+            public sealed record GetInvoice(int Id) : IQuery<string>;
+            """);
+
+        // App.Billing.GetInvoice and App.Sales.GetInvoice both defaulted to "GetInvoice", and
+        // ASP.NET throws 'Duplicate endpoint name' on the first LinkGenerator or OpenAPI use.
+        run.GeneratedSource.Should().Contain("\"App.Billing.GetInvoice\"");
+    }
+
+    [Fact]
+    public void The_web_diagnostics_carry_the_category_their_rule_pages_document()
+    {
+        var run = GeneratorHarness.Run($$"""
+            {{Preamble}}
+
+            [Get("/things")]
+            public sealed record NotARequest(int Id);
+            """);
+
+        // Configuring severity by the documented category affected nothing while the code
+        // said Zero.Registration and the pages said Zero.Web.
+        run.Diagnostics.Single(d => d.Id == "ZERO300").Descriptor.Category.Should().Be("Zero.Web");
+    }
 }
 
 /// <summary>

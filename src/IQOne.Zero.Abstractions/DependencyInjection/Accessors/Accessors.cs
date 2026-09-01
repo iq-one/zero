@@ -5,14 +5,6 @@ namespace IQOne.Zero.DependencyInjection.Accessors;
 /// <summary>Base of the accessor interfaces, which expose one value to their holder.</summary>
 public interface IAccessor;
 
-/// <summary>Exposes a single value of type <typeparamref name="T"/>.</summary>
-/// <typeparam name="T">The exposed value's type.</typeparam>
-public interface IObjectAccessor<out T> : IAccessor
-{
-    /// <summary>The exposed value.</summary>
-    T Value { get; }
-}
-
 /// <summary>Exposes the service collection an object is building against.</summary>
 public interface IServiceCollectionAccessor : IAccessor
 {

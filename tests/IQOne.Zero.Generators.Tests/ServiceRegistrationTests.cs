@@ -144,7 +144,11 @@ public class ServiceRegistrationTests
             """);
 
         run.DiagnosticIds.Should().Contain("ZERO009");
-        run.GeneratedSource.Should().BeEmpty();
+
+        // The module is emitted anyway. Withholding it turned one error into a second one --
+        // 'CS0246: Module does not exist' -- pointing at nothing the developer wrote, and a
+        // team that downgraded the rule in .editorconfig lost the module altogether.
+        run.GeneratedSource.Should().Contain("public sealed partial class Module");
     }
 
     [Fact]

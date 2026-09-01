@@ -32,16 +32,24 @@ if (result.IsFailure) return result.Errors;
 Use(result.Value);
 ```
 
+`return result.Errors;` compiles from a method returning `Result` or a `Result<T>` of any
+type: an `ErrorList` converts to a failed result. `return result.Cast<Other>();` says the
+same thing when what you have is a whole failed `Result<T>` of the wrong `T`.
+
 Or take the value only when there is one:
 
 ```csharp
 if (GetInvoice(id).TryGetValue(out var invoice)) Use(invoice);
 ```
 
+`TryGetError` is the same move from the other side, for code that is handling the failure
+rather than the value.
+
 ## What counts as a check
 
-The rule looks for `IsSuccess`, `IsFailure`, `TryGetValue`, `Match` or a pattern match on
-the same result anywhere in the enclosing body — not on every path to the read.
+The rule looks for `IsSuccess`, `IsFailure`, `TryGetValue`, `TryGetError`, `Match` or a
+pattern match on the same result anywhere in the enclosing body — not on every path to the
+read.
 
 That is deliberate. Demanding a guard on every path reports code people write on purpose:
 an early return, a switch, a check done in a helper. Asking whether the result was looked

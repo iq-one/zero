@@ -36,6 +36,16 @@ return await GetAsync(id, cancellationToken)
     .Map(i => i.ToModel());
 ```
 
+`Map`, `Bind`, `Ensure`, `Tap`, `TapError`, `MapError`, `WithError` and `GetValueOr` all exist
+in the awaited form as well, so one asynchronous step does not break the chain apart. A
+command that produces nothing composes the same way:
+
+```csharp
+return Authorize(user, invoice)
+    .Bind(() => Close(invoice))
+    .TapError(errors => logger.LogWarning("Could not close {Invoice}: {Errors}", invoice.Id, errors));
+```
+
 Read the outcome in a way that cannot skip the failure:
 
 ```csharp
@@ -44,14 +54,32 @@ return result.Match(
     errors => Problem(errors));
 ```
 
+When a failure has to keep travelling but the type around it changes, say so once rather
+than restating its errors:
+
+```csharp
+public Result<InvoiceModel> Describe(Result<Invoice> invoice)
+{
+    if (invoice.IsFailure) return invoice.Cast<InvoiceModel>();   // same failure, new type
+
+    return invoice.Value.ToModel();
+}
+```
+
+`return result.Errors;` works too: a list of reasons converts to a failed result of any type.
+
 ## Don't
 
 Do not discard a result. This is **ZERO100** and fails the build:
 
 ```csharp
-_ = ApplyPayment(invoice, payment);      // the failure disappears
-ApplyPayment(invoice, payment);          // so does this one
+ApplyPayment(invoice, payment);          // the failure disappears
+_ = ApplyPayment(invoice, payment);      // and the discard does not make it intentional
 ```
+
+Handling the failure — `TapError`, `Match`, `GetValueOr` — satisfies the rule even when
+nothing is done with what comes back. Ignoring a failure on purpose is fine; ignoring one by
+saying nothing is not.
 
 Do not read `Value` without checking. This is **ZERO101**:
 
@@ -64,9 +92,27 @@ Do not throw a failure you already promised to return. This is **ZERO102**:
 ```csharp
 public Result<Invoice> Get(int id)
 {
-    if (id <= 0) throw new ArgumentException(...);   // return Error.Validation instead
+    if (id <= 0) throw new ArgumentException("The id must be positive.");
+
+    return store.Find(id);
 }
 ```
+
+Return `Error.Validation("invoice.id", "The id must be positive.")` instead. The rule leaves
+alone what should still be thrown: a rethrow, a throw while handling an exception, and the
+exceptions that mean the code itself is wrong — `ArgumentNullException`,
+`InvalidOperationException`, `NotImplementedException`, `NotSupportedException`,
+`OperationCanceledException`, `UnreachableException`.
+
+## A result you never assigned is a failure
+
+`default(Result)` and `default(Result<T>)` are failures — the ones an unset field, a
+`FirstOrDefault` over an empty sequence, or a `TryGetValue` that returned `false` hand you. A
+struct that defaulted to success would turn a forgotten assignment into a silent pass.
+
+Such a failure still states a reason, `Error.Uninitialised`, so it can be logged, mapped to a
+status and propagated exactly like any other. A failure never carries an empty `Errors`; code
+downstream may read `Errors[0]` without checking the count.
 
 ## Choosing an error
 
@@ -77,3 +123,10 @@ the edge of the application, where the transport is known.
 
 Give the code a stable, greppable identifier — `area.reason` — and put the human-readable
 part in the message. Callers branch on the code; the message may change without notice.
+
+Ask `Error.IsNone`, never `Kind`, to tell a reason from the absence of one: `Error.None` has
+to have some kind, and the one it has is `Failure`.
+
+`Error.With(metadata)` attaches structured data for a caller that knows what to do with it.
+The dictionary is copied, and two errors with the same contents are equal, so an error stays
+a value you can compare and assert on.

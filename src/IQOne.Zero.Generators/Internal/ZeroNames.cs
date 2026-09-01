@@ -31,6 +31,33 @@ internal sealed record ZeroNames
     public string Required => $"{Services}.IRequiredService";
     public string ServiceTypesAttribute => $"{Annotations}.ServiceTypesAttribute";
 
+    /// <summary>States an ordering the assembly reference graph does not express.</summary>
+    public string DependsOnAttribute => $"{Modules}.DependsOnAttribute";
+
+    /// <summary>Base of the lifetime annotations; the derived ones each fix a value.</summary>
+    public string LifeStyleAttribute => $"{Annotations}.LifeStyleAttribute";
+
+    /// <summary>
+    /// Lifetime annotations, mapped to the container lifetime each declares.
+    /// </summary>
+    /// <remarks>
+    /// These are the documented escape hatch for a type whose lifetime the abstraction cannot
+    /// express. The values mirror <c>LifeStyleAttribute.ToServiceLifetime</c>: the container
+    /// has three lifetimes and Zero's vocabulary is wider, so everything without an
+    /// equivalent registers as transient.
+    /// </remarks>
+    public (string Attribute, string Lifetime)[] LifetimeAttributes =>
+    [
+        ($"{Annotations}.SingletonAttribute", "Singleton"),
+        ($"{Annotations}.ScopedAttribute", "Scoped"),
+        ($"{Annotations}.TransientAttribute", "Transient"),
+        ($"{Annotations}.ThreadAttribute", "Transient"),
+        ($"{Annotations}.PooledAttribute", "Transient"),
+        ($"{Annotations}.CustomAttribute", "Transient"),
+        ($"{Annotations}.BoundAttribute", "Transient"),
+        ($"{Annotations}.UndefinedAttribute", "Transient")
+    ];
+
     /// <summary>Assembly whose presence turns on request dispatch generation.</summary>
     public string MessagingAssembly => $"{Root}.Messaging";
 
@@ -59,7 +86,11 @@ internal sealed record ZeroNames
     [
         RequestHandlerInterface,
         $"{Root}.Validation.IValidator",
-        $"{Messaging}.IPipelineBehavior"
+        $"{Messaging}.IPipelineBehavior",
+
+        // One entry covers all three arities: authorization deliberately gave the marker and
+        // both generic forms the same name, and the open name is recorded without arity.
+        $"{Root}.Authorization.IRequirementHandler"
     ];
 
     /// <summary>Assembly whose presence turns on endpoint generation.</summary>
