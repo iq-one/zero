@@ -59,6 +59,17 @@ internal sealed record ZeroNames
         ($"{Annotations}.TransientAttribute", "Transient")
     ];
 
+    /// <summary>Assembly whose presence turns on event delivery generation.</summary>
+    public string EventsAssembly => $"{Root}.Events";
+
+    public string Events => $"{Root}.Events";
+    public string EventHandlerInterface => $"{Events}.IEventHandler";
+    public string EventInterface => $"{Events}.IEvent";
+    public string EventRegistryBuilder => $"{Events}.IEventRegistryBuilder";
+    public string EventEntry => $"{Events}.EventEntry";
+    public string EventDispatch => $"{Events}.EventDispatch";
+    public string EventsModuleContextExtensions => $"{Events}.EventsModuleContextExtensions";
+
     /// <summary>Assembly whose presence turns on request dispatch generation.</summary>
     public string MessagingAssembly => $"{Root}.Messaging";
 
@@ -68,7 +79,7 @@ internal sealed record ZeroNames
     public string RequestRegistryBuilder => $"{Messaging}.IRequestRegistryBuilder";
     public string RequestEntry => $"{Messaging}.RequestEntry";
     public string RequestPipeline => $"{Messaging}.RequestPipeline";
-    public string ModuleServiceContextExtensions => $"{Messaging}.ModuleServiceContextExtensions";
+    public string MessagingModuleContextExtensions => $"{Messaging}.MessagingModuleContextExtensions";
 
     /// <summary>
     /// Framework interfaces whose implementations are registered under the CLOSED generic
@@ -86,6 +97,7 @@ internal sealed record ZeroNames
     public string[] ClosedRegistrationInterfaces =>
     [
         RequestHandlerInterface,
+        EventHandlerInterface,
         $"{Root}.Validation.IValidator",
         $"{Messaging}.IPipelineBehavior",
 
@@ -102,7 +114,7 @@ internal sealed record ZeroNames
     public string EndpointRegistryBuilder => $"{Web}.IEndpointRegistryBuilder";
     public string EndpointDescriptor => $"{Web}.ZeroEndpointDescriptor";
     public string ZeroEndpoint => $"{Web}.ZeroEndpoint";
-    public string WebModuleExtensions => $"{Web}.ModuleServiceContextExtensions";
+    public string WebModuleExtensions => $"{Web}.WebModuleContextExtensions";
 
     /// <summary>Route attributes, mapped to the HTTP method each declares.</summary>
     public static readonly (string Attribute, string Method)[] RouteAttributes =

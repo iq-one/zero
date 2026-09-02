@@ -35,6 +35,9 @@ interface IQOne.Zero.Messaging.IRequest<TResponse>
 interface IQOne.Zero.Messaging.ISender : IQOne.Zero.DependencyInjection.Descriptors.IScoped
     Task<IQOne.Zero.Result<TResponse>> SendAsync<TResponse>(IQOne.Zero.Messaging.IRequest<TResponse> request, CancellationToken cancellationToken = default)
 
+static class IQOne.Zero.Messaging.MessagingModuleContextExtensions
+    static IQOne.Zero.Messaging.IRequestRegistryBuilder Requests(IQOne.Zero.Modules.IModuleServiceContext context)
+
 sealed class IQOne.Zero.Messaging.MessagingOptions
     .ctor MessagingOptions()
     bool RequireHandlerForEveryRequest { get; set; }
@@ -46,9 +49,6 @@ static class IQOne.Zero.Messaging.MessagingRegistration
 sealed class IQOne.Zero.Messaging.MissingRequestHandlerException : InvalidOperationException
     .ctor MissingRequestHandlerException(Type requestType)
     Type RequestType { get; }
-
-static class IQOne.Zero.Messaging.ModuleServiceContextExtensions
-    static IQOne.Zero.Messaging.IRequestRegistryBuilder Requests(IQOne.Zero.Modules.IModuleServiceContext context)
 
 sealed class IQOne.Zero.Messaging.RequestEntry : IEquatable<IQOne.Zero.Messaging.RequestEntry>
     .ctor RequestEntry(Type RequestType, Type ResponseType, Type HandlerType, Func<IServiceProvider, object, CancellationToken, object> Invoke)

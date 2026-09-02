@@ -102,6 +102,13 @@
       "package": "IQOne.Zero.Web",
       "title": "HTTP endpoints",
       "useWhen": "Commands and queries need to be reachable over HTTP. Do not write controllers or your own result-to-status-code mapping."
+    },
+    {
+      "id": "events",
+      "kind": "capability",
+      "package": "IQOne.Zero.Events",
+      "title": "Domain events",
+      "useWhen": "One thing happening should cause several others, and the caller does not need their answers. Do not write your own event bus or notification dispatcher."
     }
   ]
 }

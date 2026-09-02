@@ -32,9 +32,6 @@ sealed class IQOne.Zero.Web.GetAttribute : IQOne.Zero.Web.RouteAttribute
 interface IQOne.Zero.Web.IEndpointRegistryBuilder
     void Add(IQOne.Zero.Web.ZeroEndpointDescriptor endpoint)
 
-static class IQOne.Zero.Web.ModuleServiceContextExtensions
-    static IQOne.Zero.Web.IEndpointRegistryBuilder Endpoints(IQOne.Zero.Modules.IModuleServiceContext context)
-
 sealed class IQOne.Zero.Web.PatchAttribute : IQOne.Zero.Web.RouteAttribute
     .ctor PatchAttribute(string pattern)
 
@@ -52,6 +49,9 @@ abstract class IQOne.Zero.Web.RouteAttribute : Attribute
     string Pattern { get; }
     string Policy { get; set; }
     string Tag { get; set; }
+
+static class IQOne.Zero.Web.WebModuleContextExtensions
+    static IQOne.Zero.Web.IEndpointRegistryBuilder Endpoints(IQOne.Zero.Modules.IModuleServiceContext context)
 
 static class IQOne.Zero.Web.WebRegistration
     static Microsoft.AspNetCore.Routing.IEndpointRouteBuilder MapZeroEndpoints(Microsoft.AspNetCore.Routing.IEndpointRouteBuilder endpoints)

@@ -18,6 +18,28 @@ internal static class GeneratorHarness
         => Run([source], assemblyName);
 
     /// <summary>
+    /// Runs the generator over a compilation that does NOT reference the named assemblies.
+    /// </summary>
+    /// <remarks>
+    /// Several of the generator's guarantees are about what it does <em>not</em> emit: an
+    /// application with no events, or no web layer, must pay nothing for them. That cannot
+    /// be tested against the default reference set, which carries every Zero assembly.
+    /// </remarks>
+    /// <param name="source">The file to compile.</param>
+    /// <param name="without">Assembly names to leave out, for example <c>IQOne.Zero.Events</c>.</param>
+    /// <returns>What the consumer's build would see.</returns>
+    public static GeneratorRun RunWithout(string source, params string[] without)
+    {
+        var excluded = without.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var references = References
+            .Where(r => !excluded.Contains(Path.GetFileNameWithoutExtension(r.Display) ?? string.Empty))
+            .ToImmutableArray();
+
+        return Run([source], "Test.Module", references);
+    }
+
+    /// <summary>
     /// Runs the generator over several files.
     /// </summary>
     /// <param name="sources">One entry per file. A partial type may be split across them.</param>
@@ -28,11 +50,15 @@ internal static class GeneratorHarness
         string[] sources,
         string assemblyName = "Test.Module",
         params MetadataReference[] extraReferences)
+        => Run(sources, assemblyName, References.AddRange(extraReferences));
+
+    private static GeneratorRun Run(
+        string[] sources, string assemblyName, ImmutableArray<MetadataReference> references)
     {
         var compilation = CSharpCompilation.Create(
             assemblyName,
             sources.Select(s => CSharpSyntaxTree.ParseText(s)),
-            References.AddRange(extraReferences),
+            references,
             new CSharpCompilationOptions(
                 OutputKind.DynamicallyLinkedLibrary,
                 nullableContextOptions: NullableContextOptions.Enable));
@@ -113,6 +139,7 @@ internal static class GeneratorHarness
                      typeof(Zero.Result),
                      typeof(Zero.Web.GetAttribute),
                      typeof(Zero.Validation.IValidator),
+                     typeof(Zero.Events.IEvent),
                      typeof(Zero.Authorization.IRequirementHandler)
                  })
             locations.Add(type.Assembly.Location);

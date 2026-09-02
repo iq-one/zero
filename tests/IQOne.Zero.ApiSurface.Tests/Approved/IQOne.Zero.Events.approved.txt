@@ -1,0 +1,96 @@
+static class IQOne.Zero.Events.EventDispatch
+    static Task<IQOne.Zero.Events.PublishResult> RunAsync<TEvent>(TEvent event, IServiceProvider services, CancellationToken cancellationToken)
+
+sealed class IQOne.Zero.Events.EventEntry : IEquatable<IQOne.Zero.Events.EventEntry>
+    .ctor EventEntry(Type EventType, IReadOnlyList<Type> HandlerTypes, Func<IServiceProvider, object, CancellationToken, Task<IQOne.Zero.Events.PublishResult>> Invoke)
+    Func<IServiceProvider, object, CancellationToken, Task<IQOne.Zero.Events.PublishResult>> Invoke { get; init; }
+    IQOne.Zero.Events.EventEntry <Clone>$()
+    IReadOnlyList<Type> HandlerTypes { get; init; }
+    Type EventType { get; init; }
+    bool Equals(IQOne.Zero.Events.EventEntry other)
+    bool Equals(object obj)
+    int GetHashCode()
+    string ToString()
+    void Deconstruct(out Type EventType, out IReadOnlyList<Type> HandlerTypes, out Func<IServiceProvider, object, CancellationToken, Task<IQOne.Zero.Events.PublishResult>> Invoke)
+
+sealed class IQOne.Zero.Events.EventOptions
+    .ctor EventOptions()
+    IQOne.Zero.Events.HandlerFailure OnHandlerFailure { get; set; }
+    bool RequireSubscriberForEveryEvent { get; set; }
+    int MaxPublishDepth { get; set; }
+
+sealed class IQOne.Zero.Events.EventRegistry : IQOne.Zero.Events.IEventRegistryBuilder
+    .ctor EventRegistry()
+    IQOne.Zero.Events.EventRegistry Freeze()
+    IReadOnlyCollection<IQOne.Zero.Events.EventEntry> Entries { get; }
+    IReadOnlyCollection<Type> Unsubscribed { get; }
+    bool TryGet(Type eventType, out IQOne.Zero.Events.EventEntry entry)
+    void Add(IQOne.Zero.Events.EventEntry entry)
+    void Declare(Type eventType)
+
+static class IQOne.Zero.Events.EventsModuleContextExtensions
+    static IQOne.Zero.Events.IEventRegistryBuilder Events(IQOne.Zero.Modules.IModuleServiceContext context)
+
+static class IQOne.Zero.Events.EventsRegistration
+    static Microsoft.Extensions.DependencyInjection.IServiceCollection AddZeroEvents(Microsoft.Extensions.DependencyInjection.IServiceCollection services, Action<IQOne.Zero.Events.EventOptions> configure = default)
+    static Microsoft.Extensions.DependencyInjection.IServiceCollection AddZeroEventsWithHandlers(Microsoft.Extensions.DependencyInjection.IServiceCollection services, Action<IQOne.Zero.Events.IEventRegistryBuilder> configure, Action<IQOne.Zero.Events.EventOptions> options = default)
+
+enum IQOne.Zero.Events.HandlerFailure
+    int value__
+    static IQOne.Zero.Events.HandlerFailure Continue
+    static IQOne.Zero.Events.HandlerFailure Stop
+
+sealed class IQOne.Zero.Events.HandlerOutcome : IEquatable<IQOne.Zero.Events.HandlerOutcome>
+    .ctor HandlerOutcome(Type HandlerType, IQOne.Zero.Result Result, TimeSpan Elapsed, Exception Exception = default)
+    Exception Exception { get; init; }
+    IQOne.Zero.Events.HandlerOutcome <Clone>$()
+    IQOne.Zero.Result Result { get; init; }
+    TimeSpan Elapsed { get; init; }
+    Type HandlerType { get; init; }
+    bool Equals(IQOne.Zero.Events.HandlerOutcome other)
+    bool Equals(object obj)
+    bool IsFailure { get; }
+    bool IsSuccess { get; }
+    int GetHashCode()
+    string ToString()
+    void Deconstruct(out Type HandlerType, out IQOne.Zero.Result Result, out TimeSpan Elapsed, out Exception Exception)
+
+interface IQOne.Zero.Events.IEvent
+
+interface IQOne.Zero.Events.IEventHandler : IQOne.Zero.DependencyInjection.Descriptors.IScoped
+
+interface IQOne.Zero.Events.IEventHandler<TEvent> : IQOne.Zero.Events.IEventHandler
+    Task<IQOne.Zero.Result> HandleAsync(TEvent event, CancellationToken cancellationToken)
+
+interface IQOne.Zero.Events.IEventRegistryBuilder
+    void Add(IQOne.Zero.Events.EventEntry entry)
+    void Declare(Type eventType)
+
+interface IQOne.Zero.Events.IPublishBehavior<TEvent> : IQOne.Zero.DependencyInjection.Descriptors.IScoped
+    Task<IQOne.Zero.Events.PublishResult> HandleAsync(TEvent event, IQOne.Zero.Events.PublishHandlerDelegate next, CancellationToken cancellationToken)
+    int Order { get; }
+
+interface IQOne.Zero.Events.IPublisher : IQOne.Zero.DependencyInjection.Descriptors.IScoped
+    Task<IQOne.Zero.Events.PublishResult> PublishAsync<TEvent>(TEvent event, CancellationToken cancellationToken = default)
+
+sealed class IQOne.Zero.Events.PublishDepthExceededException : InvalidOperationException
+    .ctor PublishDepthExceededException(Type eventType, int depth)
+    Type EventType { get; }
+    int Depth { get; }
+
+sealed class IQOne.Zero.Events.PublishHandlerDelegate : MulticastDelegate
+    .ctor PublishHandlerDelegate(object object, IntPtr method)
+    IAsyncResult BeginInvoke(AsyncCallback callback, object object)
+    Task<IQOne.Zero.Events.PublishResult> EndInvoke(IAsyncResult result)
+    Task<IQOne.Zero.Events.PublishResult> Invoke()
+
+sealed class IQOne.Zero.Events.PublishResult
+    .ctor PublishResult(Type eventType, IReadOnlyList<IQOne.Zero.Events.HandlerOutcome> outcomes)
+    IQOne.Zero.Result AsResult()
+    IReadOnlyList<Exception> Exceptions { get; }
+    IReadOnlyList<IQOne.Zero.Error> Errors { get; }
+    IReadOnlyList<IQOne.Zero.Events.HandlerOutcome> Outcomes { get; }
+    Type EventType { get; }
+    bool IsFailure { get; }
+    bool IsSuccess { get; }
+    string ToString()

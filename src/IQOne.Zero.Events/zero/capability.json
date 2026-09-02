@@ -1,0 +1,12 @@
+{
+  "id": "events",
+  "kind": "capability",
+  "title": "Domain events",
+  "summary": "Publish a fact to any number of subscribers, in process and awaited. Dispatch is a generated table, every subscriber's outcome comes back separately, and the compiler traces publish cycles.",
+  "useWhen": "One thing happening should cause several others, and the caller does not need their answers. Do not write your own event bus, mediator or notification dispatcher.",
+  "package": "IQOne.Zero.Events",
+  "entryPoint": "services.AddZeroEvents()",
+  "keyTypes": ["IEvent", "IEventHandler<TEvent>", "IPublisher", "PublishResult", "HandlerOutcome", "EventOptions"],
+  "diagnostics": ["ZERO500", "ZERO501"],
+  "example": "public sealed record InvoicePaid(int InvoiceId, decimal Amount) : IEvent;\n\npublic sealed class UpdateLedger(ILedger ledger) : IEventHandler<InvoicePaid>\n{\n    public async Task<Result> HandleAsync(InvoicePaid @event, CancellationToken cancellationToken)\n    {\n        await ledger.RecordAsync(@event.InvoiceId, @event.Amount, cancellationToken);\n\n        return Result.Success();\n    }\n}\n\n// Published from the handler that made the fact true. Subscribers share the caller's\n// scope, so their database writes are inside the caller's transaction -- but an email\n// already sent is not, which is what an outbox is for.\nvar published = await publisher.PublishAsync(new InvoicePaid(invoice.Id, amount), cancellationToken);\n\nif (published.IsFailure)\n    logger.LogWarning(\"Subscribers behind: {Outcomes}\", published.Outcomes);"
+}

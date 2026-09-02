@@ -132,7 +132,7 @@ internal sealed class MessagingFeatureContributor(MessagingOptions options, Requ
 }
 
 /// <summary>Reaches the dispatch table from inside a module's configure-services step.</summary>
-public static class ModuleServiceContextExtensions
+public static class MessagingModuleContextExtensions
 {
     /// <summary>The dispatch table a module registers its handlers into.</summary>
     /// <param name="context">The module's configure-services context.</param>

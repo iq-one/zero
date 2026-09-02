@@ -169,7 +169,7 @@ internal sealed class WebFeatureContributor : IModuleFeatureContributor
 }
 
 /// <summary>Reaches the endpoint table from inside a module's configure-services step.</summary>
-public static class ModuleServiceContextExtensions
+public static class WebModuleContextExtensions
 {
     /// <summary>The endpoint table a module contributes its routes to.</summary>
     /// <param name="context">The module's configure-services context.</param>

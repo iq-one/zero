@@ -155,6 +155,12 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
             ? ResolveRequests(candidates, platform)
             : new RequestSet([], []);
 
+        var events = moduleInfo.ReferencedAssemblies.Any(a => a == platform.EventsAssembly);
+
+        var subscriptions = events
+            ? ResolveEvents(candidates, platform)
+            : new EventSet([], []);
+
         var web = moduleInfo.ReferencedAssemblies.Any(a => a == platform.WebAssembly);
 
         var endpoints = web ? ResolveEndpoints(candidates, platform, Report) : [];
@@ -172,7 +178,8 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
         // rule in .editorconfig lost the module entirely. The errors fail the build by
         // themselves; they do not need the file withheld to do it.
         context.AddSource("Module.g.cs", SourceText.From(
-            Render(moduleInfo.AssemblyName, dependencies, services, requests, messaging, endpoints, web, platform),
+            Render(moduleInfo.AssemblyName, dependencies, services, requests, messaging,
+                   subscriptions, events, endpoints, web, platform),
             Encoding.UTF8));
     }
 
@@ -193,6 +200,60 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
             .SelectMany(a => a.ConstructorArguments)
             .Where(a => a.IsType && a.Value is { Length: > 0 })
             .Select(a => a.Value!);
+
+    /// <summary>Events declared in this assembly, and the subscribers to each.</summary>
+    private sealed record EventSet(List<string> Declared, List<EventSubscription> Subscriptions);
+
+    /// <summary>One event and every subscriber to it in this assembly.</summary>
+    private sealed record EventSubscription(string EventTypeName, List<string> HandlerTypeNames);
+
+    /// <summary>
+    /// Groups subscribers by the event they handle.
+    /// </summary>
+    /// <remarks>
+    /// Unlike a request, an event has any number of subscribers — that is the whole point —
+    /// so this groups rather than rejecting a second one. A type may subscribe to several
+    /// events, and each subscription becomes its own row.
+    /// </remarks>
+    private static EventSet ResolveEvents(
+        ImmutableArray<ServiceCandidate> candidates, ZeroNames platform)
+    {
+        var declared = new List<string>();
+        var byEvent = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+
+        foreach (var candidate in candidates)
+        {
+            if (!candidate.IsConcrete) continue;
+
+            var handled = candidate.ClosedInterfaces
+                .Where(i => i.OpenGenericName == platform.EventHandlerInterface && i.TypeArguments.Count == 1)
+                .ToList();
+
+            foreach (var subscription in handled)
+            {
+                if (!byEvent.TryGetValue(subscription.TypeArguments[0], out var handlers))
+                    byEvent[subscription.TypeArguments[0]] = handlers = [];
+
+                handlers.Add(candidate.ImplementationTypeName);
+            }
+
+            if (handled.Count > 0) continue;
+
+            // An event declares itself so a host can be told about one nobody subscribes to.
+            if (candidate.AllInterfaces.ToArray().Any(i => i == platform.EventInterface))
+                declared.Add(candidate.ImplementationTypeName);
+        }
+
+        declared.Sort(StringComparer.Ordinal);
+
+        var subscriptions = byEvent
+            .OrderBy(pair => pair.Key, StringComparer.Ordinal)
+            .Select(pair => new EventSubscription(
+                pair.Key, [.. pair.Value.OrderBy(h => h, StringComparer.Ordinal)]))
+            .ToList();
+
+        return new EventSet(declared, subscriptions);
+    }
 
     /// <summary>Requests declared in this assembly, and the handlers that serve them.</summary>
     private sealed record RequestSet(List<string> Declared, List<RequestDescriptor> Handlers);
@@ -613,6 +674,8 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
         List<ServiceRegistrationDescriptor> services,
         RequestSet requests,
         bool messaging,
+        EventSet subscriptions,
+        bool events,
         List<EndpointDescriptor> endpoints,
         bool web,
         ZeroNames platform)
@@ -651,7 +714,10 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
         b.AppendLine("        RegisterServices(context.Services);");
 
         if (messaging)
-            b.AppendLine($"        RegisterRequests(global::{platform.ModuleServiceContextExtensions}.Requests(context));");
+            b.AppendLine($"        RegisterRequests(global::{platform.MessagingModuleContextExtensions}.Requests(context));");
+
+        if (events)
+            b.AppendLine($"        RegisterEvents(global::{platform.EventsModuleContextExtensions}.Events(context));");
 
         if (web)
             b.AppendLine($"        MapEndpoints(global::{platform.WebModuleExtensions}.Endpoints(context));");
@@ -702,6 +768,8 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
         b.AppendLine();
 
         if (messaging) RenderRequests(b, requests, platform);
+
+        if (events) RenderEvents(b, subscriptions, platform);
 
         if (web) RenderEndpoints(b, endpoints, platform);
 
@@ -809,6 +877,45 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
     /// Applied per segment, because a namespace segment may not start with a digit:
     /// <c>Company.2024.Api</c> used to emit a namespace that did not compile.
     /// </remarks>
+    /// <summary>Emits the delivery rows for this assembly.</summary>
+    /// <remarks>
+    /// The event type is known here, so the emitted lambda calls a closed generic and
+    /// delivery costs a dictionary read and a cast. Subscribers are listed by type so a
+    /// caller can see which ones ran without their instances being kept alive.
+    /// </remarks>
+    private static void RenderEvents(StringBuilder b, EventSet events, ZeroNames platform)
+    {
+        var ns = $"global::{platform.Events}";
+
+        b.AppendLine($"    private static void RegisterEvents({ns}.IEventRegistryBuilder builder)");
+        b.AppendLine("    {");
+
+        if (events.Declared.Count == 0 && events.Subscriptions.Count == 0)
+            b.AppendLine("        // This assembly declares no event and subscribes to none.");
+
+        foreach (var declared in events.Declared)
+            b.AppendLine($"        builder.Declare(typeof({declared}));");
+
+        if (events.Declared.Count > 0 && events.Subscriptions.Count > 0) b.AppendLine();
+
+        foreach (var subscription in events.Subscriptions)
+        {
+            var handlers = string.Join(", ", subscription.HandlerTypeNames.Select(h => $"typeof({h})"));
+
+            b.AppendLine($"        // {subscription.EventTypeName} -> {subscription.HandlerTypeNames.Count} subscriber(s)");
+            b.AppendLine($"        builder.Add(new {ns}.EventEntry(");
+            b.AppendLine($"            typeof({subscription.EventTypeName}),");
+            b.AppendLine($"            [{handlers}],");
+            b.AppendLine("            static (services, @event, cancellationToken) =>");
+            b.AppendLine($"                {ns}.EventDispatch.RunAsync<{subscription.EventTypeName}>(");
+            b.AppendLine($"                    ({subscription.EventTypeName})@event, services, cancellationToken)));");
+            b.AppendLine();
+        }
+
+        b.AppendLine("    }");
+        b.AppendLine();
+    }
+
     private static string Sanitize(string name)
     {
         var segments = name.Split('.');
