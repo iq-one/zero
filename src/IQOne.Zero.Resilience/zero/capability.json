@@ -1,0 +1,12 @@
+{
+  "id": "resilience",
+  "kind": "capability",
+  "title": "Retrying what is worth retrying",
+  "summary": "Retries a request that failed for a reason another attempt could change — and only when trying again is safe. Queries are retried by default; a command has to declare itself idempotent first.",
+  "useWhen": "A dependency is sometimes unavailable. Do not write a retry loop in a handler, and do not reach for a general-purpose retry policy — those fire on exceptions, and a Zero failure is a returned value.",
+  "package": "IQOne.Zero.Resilience",
+  "entryPoint": "services.AddZeroResilience()",
+  "keyTypes": ["IIdempotent", "ResilienceOptions", "ResilienceOrder", "IRetryBrake"],
+  "diagnostics": ["ZERO600"],
+  "example": "services.AddZeroResilience();\n\n// A query is retried without being asked: a query changes nothing, so trying again\n// costs a round trip and nothing else.\npublic sealed record GetRate(string Pair) : IQuery<decimal>;\n\n// A command is not retried unless it says the second handling is safe. The claim is\n// specific: the same command handled twice leaves the state one handling would have.\n// That needs the command to carry the identity of what it changes.\npublic sealed record BookPayment(Guid PaymentId, decimal Amount) : ICommand, IIdempotent;\n\n// Only failures another attempt could change are retried -- Unavailable by default.\n// Validation and Forbidden never are: the same input fails identically.\nservices.AddZeroResilience(options =>\n{\n    options.MaxAttempts = 4;\n    options.RetryOn.Add(ErrorKind.Conflict);\n});"
+}

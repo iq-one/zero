@@ -31,6 +31,16 @@ internal static class Diagnostics
         "Lifetime is carried by the abstraction. Implementing two lifetime markers leaves the registration " +
         "ambiguous, and picking one silently would hide the contradiction.");
 
+    public static readonly DiagnosticDescriptor LifetimeOverridesAbstraction = Error(
+        "ZERO011", Registration, "A type contradicts the lifetime its abstraction declares",
+        "'{0}' declares {1}, but '{2}' already declares {3}. Callers depend on the abstraction and will " +
+        "read {3} from it. Remove the marker from '{0}', change the abstraction, or state the exception " +
+        "with [{1}] — the attribute exists for a lifetime no abstraction can express.",
+        "Letting the type win silently would make the abstraction lie: a consumer injecting the interface " +
+        "reads its lifetime from there and has no way to learn the implementation chose another. Letting " +
+        "the abstraction win silently would ignore something the author wrote on purpose. Neither is safe " +
+        "to guess, so the contradiction is reported and the author settles it.");
+
     public static readonly DiagnosticDescriptor ServiceTypeNotResolved = Error(
         "ZERO007", Registration, "Service type could not be determined",
         "No interface was found to register '{0}' under. " +

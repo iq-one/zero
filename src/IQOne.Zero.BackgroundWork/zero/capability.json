@@ -1,0 +1,12 @@
+{
+  "id": "background-work",
+  "kind": "capability",
+  "title": "Recurring work",
+  "summary": "A job states an interval and a body — usually just a command to send — and the host runs it in a fresh scope per run, never overlapping, stopping when the application stops. Time comes from TimeProvider, so a schedule is testable without waiting.",
+  "useWhen": "Work has to happen on a clock rather than on a request. Do not write an IHostedService with a while loop and a Task.Delay.",
+  "package": "IQOne.Zero.BackgroundWork",
+  "entryPoint": "services.AddZeroBackgroundWork()",
+  "keyTypes": ["IRecurringJob", "JobSchedule", "JobRunContext", "BackgroundWorkOptions", "IBackgroundWorkStatus"],
+  "diagnostics": ["ZERO550", "ZERO551"],
+  "example": "// Most scheduled work is a use case that already exists, run on a clock. No class:\nservices.AddZeroBackgroundWork();\nservices.AddRecurringCommand(\n    \"reconcile-payments\",\n    JobSchedule.Every(TimeSpan.FromMinutes(15)),\n    context => new ReconcilePayments(Since: context.ScheduledFor));\n\n// When it needs its own class, it resolves fresh from that run's scope:\npublic sealed class SweepExpiredHolds(IHoldStore holds) : IRecurringJob\n{\n    public async Task<Result> RunAsync(JobRunContext context, CancellationToken cancellationToken)\n    {\n        await holds.ReleaseBefore(context.ScheduledFor, cancellationToken);\n\n        return Result.Success();\n    }\n}\n\nservices.AddRecurringJob<SweepExpiredHolds>(\"sweep-holds\", JobSchedule.Every(TimeSpan.FromHours(1)));"
+}

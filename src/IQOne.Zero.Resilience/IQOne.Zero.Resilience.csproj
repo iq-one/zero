@@ -1,9 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <!-- Half-finished: no entry point, no manifest, no tests. Not publishable, so not
-         published; the catalog test enumerates packable projects and would otherwise
-         advertise a package that cannot be used. Flip this back with the rest. -->
-    <IsPackable>false</IsPackable>
     <TargetFrameworks>$(ZeroTargetFrameworks)</TargetFrameworks>
     <Description>Retry as a pipeline behaviour, driven by the Result a request returns rather than by an exception. A query is retried; a command only when it says it is idempotent; and only the error kinds that another attempt could actually change. Not a replacement for Polly at the dependency — this is the part Polly cannot see.</Description>
   </PropertyGroup>

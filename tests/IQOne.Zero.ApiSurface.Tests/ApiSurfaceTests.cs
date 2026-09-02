@@ -22,7 +22,9 @@ public class ApiSurfaceTests
         "IQOne.Zero.Messaging",
         "IQOne.Zero.Web",
         "IQOne.Zero.Validation",
-        "IQOne.Zero.Events"
+        "IQOne.Zero.Events",
+        "IQOne.Zero.BackgroundWork",
+        "IQOne.Zero.Resilience"
     ];
 
     [Theory]

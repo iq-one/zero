@@ -12,6 +12,8 @@
     <ProjectReference Include="../../src/IQOne.Zero.Web/IQOne.Zero.Web.csproj" />
     <ProjectReference Include="../../src/IQOne.Zero.Validation/IQOne.Zero.Validation.csproj" />
     <ProjectReference Include="../../src/IQOne.Zero.Events/IQOne.Zero.Events.csproj" />
+    <ProjectReference Include="../../src/IQOne.Zero.BackgroundWork/IQOne.Zero.BackgroundWork.csproj" />
+    <ProjectReference Include="../../src/IQOne.Zero.Resilience/IQOne.Zero.Resilience.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />

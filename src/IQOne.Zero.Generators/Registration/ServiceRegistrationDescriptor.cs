@@ -77,6 +77,16 @@ internal sealed record InterfaceUsage(
 /// <param name="UnboundTypeName">Fully qualified and unbound, or null when the type is not generic.</param>
 internal sealed record DependencyReference(string TypeName, string? UnboundTypeName);
 
+/// <summary>
+/// One marker interface reached through a directly-implemented interface.
+/// </summary>
+/// <remarks>
+/// Raw, like everything else the collector produces: which interface carries which marker,
+/// with no opinion about what the marker means. Emission decides that. It exists so a
+/// diagnostic can name the abstraction a lifetime came from rather than saying "several".
+/// </remarks>
+internal sealed record InheritedMarker(string Interface, string Marker);
+
 /// <summary>Raw registration facts; lifetime interfaces are matched during emission.</summary>
 /// <param name="ImplementationTypeName">Fully qualified, as declared.</param>
 /// <param name="UnboundImplementationTypeName">
@@ -95,6 +105,11 @@ internal sealed record DependencyReference(string TypeName, string? UnboundTypeN
 /// <param name="Attributes">Attributes applied directly to this type.</param>
 /// <param name="ConstructorDependencies">Parameter types of the widest public constructor.</param>
 /// <param name="ClosedInterfaces">Generic interfaces with their type arguments kept.</param>
+/// <param name="InheritedMarkers">
+/// Which of this type's own interfaces carries which marker. Flattening loses that, and it
+/// is the difference between "you wrote two lifetime markers" and "your abstraction already
+/// declared one" — two mistakes with different fixes.
+/// </param>
 /// <param name="Location">Where to point a diagnostic.</param>
 internal sealed record ServiceCandidate(
     string ImplementationTypeName,
@@ -109,6 +124,7 @@ internal sealed record ServiceCandidate(
     EquatableArray<AttributeUsage> Attributes,
     EquatableArray<DependencyReference> ConstructorDependencies,
     EquatableArray<InterfaceUsage> ClosedInterfaces,
+    EquatableArray<InheritedMarker> InheritedMarkers,
     LocationInfo? Location)
 {
     /// <summary>Whether the container can construct it and dispatch can name it.</summary>

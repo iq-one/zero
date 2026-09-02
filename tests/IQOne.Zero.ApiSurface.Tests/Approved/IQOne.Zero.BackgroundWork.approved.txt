@@ -1,0 +1,76 @@
+sealed class IQOne.Zero.BackgroundWork.BackgroundWorkOptions
+    .ctor BackgroundWorkOptions()
+    ISet<string> Disabled { get; }
+    bool Enabled { get; set; }
+
+static class IQOne.Zero.BackgroundWork.BackgroundWorkRegistration
+    static Microsoft.Extensions.DependencyInjection.IServiceCollection AddRecurringCommand<TCommand>(Microsoft.Extensions.DependencyInjection.IServiceCollection services, string name, IQOne.Zero.BackgroundWork.JobSchedule schedule, Func<IQOne.Zero.BackgroundWork.JobRunContext, TCommand> create)
+    static Microsoft.Extensions.DependencyInjection.IServiceCollection AddRecurringJob(Microsoft.Extensions.DependencyInjection.IServiceCollection services, string name, IQOne.Zero.BackgroundWork.JobSchedule schedule, Func<IServiceProvider, IQOne.Zero.BackgroundWork.JobRunContext, CancellationToken, Task<IQOne.Zero.Result>> run)
+    static Microsoft.Extensions.DependencyInjection.IServiceCollection AddRecurringJob<TJob>(Microsoft.Extensions.DependencyInjection.IServiceCollection services, string name, IQOne.Zero.BackgroundWork.JobSchedule schedule)
+    static Microsoft.Extensions.DependencyInjection.IServiceCollection AddZeroBackgroundWork(Microsoft.Extensions.DependencyInjection.IServiceCollection services, Action<IQOne.Zero.BackgroundWork.BackgroundWorkOptions> configure = default)
+
+interface IQOne.Zero.BackgroundWork.IBackgroundWorkStatus
+    IQOne.Zero.BackgroundWork.RecurringJobStatus Find(string name)
+    IReadOnlyList<IQOne.Zero.BackgroundWork.RecurringJobStatus> Jobs { get; }
+
+interface IQOne.Zero.BackgroundWork.IRecurringJob
+    Task<IQOne.Zero.Result> RunAsync(IQOne.Zero.BackgroundWork.JobRunContext context, CancellationToken cancellationToken)
+
+sealed class IQOne.Zero.BackgroundWork.JobRunContext : IEquatable<IQOne.Zero.BackgroundWork.JobRunContext>
+    .ctor JobRunContext(string JobName, Int64 Number, DateTimeOffset ScheduledFor, DateTimeOffset StartedAt)
+    DateTimeOffset ScheduledFor { get; init; }
+    DateTimeOffset StartedAt { get; init; }
+    IQOne.Zero.BackgroundWork.JobRunContext <Clone>$()
+    Int64 Number { get; init; }
+    bool Equals(IQOne.Zero.BackgroundWork.JobRunContext other)
+    bool Equals(object obj)
+    int GetHashCode()
+    string JobName { get; init; }
+    string ToString()
+    void Deconstruct(out string JobName, out Int64 Number, out DateTimeOffset ScheduledFor, out DateTimeOffset StartedAt)
+
+enum IQOne.Zero.BackgroundWork.JobRunOutcome
+    int value__
+    static IQOne.Zero.BackgroundWork.JobRunOutcome Cancelled
+    static IQOne.Zero.BackgroundWork.JobRunOutcome Failed
+    static IQOne.Zero.BackgroundWork.JobRunOutcome Faulted
+    static IQOne.Zero.BackgroundWork.JobRunOutcome Succeeded
+
+struct IQOne.Zero.BackgroundWork.JobSchedule : IEquatable<IQOne.Zero.BackgroundWork.JobSchedule>
+    TimeSpan InitialDelay { get; }
+    TimeSpan Period { get; }
+    bool Equals(IQOne.Zero.BackgroundWork.JobSchedule other)
+    bool Equals(object obj)
+    int GetHashCode()
+    static IQOne.Zero.BackgroundWork.JobSchedule Every(TimeSpan period)
+    static IQOne.Zero.BackgroundWork.JobSchedule Every(TimeSpan period, TimeSpan initialDelay)
+    string ToString()
+
+sealed class IQOne.Zero.BackgroundWork.RecurringJobStatus : IEquatable<IQOne.Zero.BackgroundWork.RecurringJobStatus>
+    .ctor RecurringJobStatus(string Name, TimeSpan Period, bool Enabled, DateTimeOffset? NextDueAt, DateTimeOffset? LastStartedAt, IQOne.Zero.BackgroundWork.JobRunOutcome? LastOutcome, string LastFailure, Int64 Runs, Int64 Failures, Int64 ConsecutiveFailures, Int64 Skipped)
+    DateTimeOffset? LastStartedAt { get; init; }
+    DateTimeOffset? NextDueAt { get; init; }
+    IQOne.Zero.BackgroundWork.JobRunOutcome? LastOutcome { get; init; }
+    IQOne.Zero.BackgroundWork.RecurringJobStatus <Clone>$()
+    Int64 ConsecutiveFailures { get; init; }
+    Int64 Failures { get; init; }
+    Int64 Runs { get; init; }
+    Int64 Skipped { get; init; }
+    TimeSpan Period { get; init; }
+    bool Enabled { get; init; }
+    bool Equals(IQOne.Zero.BackgroundWork.RecurringJobStatus other)
+    bool Equals(object obj)
+    int GetHashCode()
+    string LastFailure { get; init; }
+    string Name { get; init; }
+    string ToString()
+    void Deconstruct(out string Name, out TimeSpan Period, out bool Enabled, out DateTimeOffset? NextDueAt, out DateTimeOffset? LastStartedAt, out IQOne.Zero.BackgroundWork.JobRunOutcome? LastOutcome, out string LastFailure, out Int64 Runs, out Int64 Failures, out Int64 ConsecutiveFailures, out Int64 Skipped)
+
+static class IQOne.Zero.BackgroundWork.ZeroJobTelemetry
+    static string ActivitySourceName
+    static string ErrorTypeTag
+    static string JobDurationName
+    static string JobNameTag
+    static string JobOutcomeTag
+    static string JobRunCountName
+    static string MeterName

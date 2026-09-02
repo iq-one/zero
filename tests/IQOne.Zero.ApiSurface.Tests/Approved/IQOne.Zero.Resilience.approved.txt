@@ -1,0 +1,29 @@
+interface IQOne.Zero.Resilience.IIdempotent
+
+interface IQOne.Zero.Resilience.IRetryBrake : IQOne.Zero.DependencyInjection.Descriptors.ISingleton
+    bool AllowsRetry(Type requestType)
+    void Exhausted(Type requestType)
+    void Succeeded(Type requestType)
+
+sealed class IQOne.Zero.Resilience.ResilienceOptions
+    .ctor ResilienceOptions()
+    Double BackoffFactor { get; set; }
+    Double Jitter { get; set; }
+    ISet<IQOne.Zero.ErrorKind> RetryOn { get; }
+    TimeSpan FirstDelay { get; set; }
+    TimeSpan MaxDelay { get; set; }
+    TimeSpan RetryPause { get; set; }
+    bool Enabled { get; set; }
+    int MaxAttempts { get; set; }
+    int PauseRetriesAfterConsecutiveFailures { get; set; }
+
+static class IQOne.Zero.Resilience.ResilienceOrder
+    static int Retry
+
+static class IQOne.Zero.Resilience.ResilienceRegistration
+    static Microsoft.Extensions.DependencyInjection.IServiceCollection AddZeroResilience(Microsoft.Extensions.DependencyInjection.IServiceCollection services, Action<IQOne.Zero.Resilience.ResilienceOptions> configure = default)
+
+sealed class IQOne.Zero.Resilience.RetryBehavior<TRequest, TResponse> : IQOne.Zero.Messaging.IPipelineBehavior<TRequest, TResponse>
+    .ctor RetryBehavior(Microsoft.Extensions.Options.IOptions<IQOne.Zero.Resilience.ResilienceOptions> options, IQOne.Zero.Resilience.IRetryBrake brake, TimeProvider time)
+    Task<IQOne.Zero.Result<TResponse>> HandleAsync(TRequest request, IQOne.Zero.Messaging.RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
+    int Order { get; }

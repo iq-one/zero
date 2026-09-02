@@ -12,3 +12,4 @@ ZERO010 | Zero.Registration | Warning | Service type registered by two implement
 ZERO300 | Zero.Web | Error | A route is declared on something that is not a request
 ZERO301 | Zero.Web | Error | Route pattern is empty
 ZERO302 | Zero.Web | Warning | A routed request does not say who may make it
+ZERO011 | Zero.Registration | Error | A type contradicts the lifetime its abstraction declares

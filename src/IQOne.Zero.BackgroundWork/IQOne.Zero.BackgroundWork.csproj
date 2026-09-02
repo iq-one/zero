@@ -1,9 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <!-- Half-finished: no entry point, no manifest, no tests. Not publishable, so not
-         published; the catalog test enumerates packable projects and would otherwise
-         advertise a package that cannot be used. Flip this back with the rest. -->
-    <IsPackable>false</IsPackable>
     <TargetFrameworks>$(ZeroTargetFrameworks)</TargetFrameworks>
     <Description>Recurring work that happens outside a request. A job states an interval and a body — usually just a command to send — and the host runs it in a fresh scope per run, never overlapping, stopping when the application stops. Time comes from TimeProvider, so a schedule is testable without waiting.</Description>
   </PropertyGroup>

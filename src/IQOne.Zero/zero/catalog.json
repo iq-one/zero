@@ -109,6 +109,20 @@
       "package": "IQOne.Zero.Events",
       "title": "Domain events",
       "useWhen": "One thing happening should cause several others, and the caller does not need their answers. Do not write your own event bus or notification dispatcher."
+    },
+    {
+      "id": "background-work",
+      "kind": "capability",
+      "package": "IQOne.Zero.BackgroundWork",
+      "title": "Recurring work",
+      "useWhen": "Work has to happen on a clock rather than on a request. Do not write an IHostedService with a while loop and a Task.Delay."
+    },
+    {
+      "id": "resilience",
+      "kind": "capability",
+      "package": "IQOne.Zero.Resilience",
+      "title": "Retrying what is worth retrying",
+      "useWhen": "A dependency is sometimes unavailable. Do not write a retry loop in a handler, and do not reach for a policy that fires on exceptions -- a Zero failure is a returned value."
     }
   ]
 }

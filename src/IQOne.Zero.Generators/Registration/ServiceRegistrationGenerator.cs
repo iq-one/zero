@@ -402,6 +402,45 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
     private const string LifeStyleSingleton = "1";
     private const string LifeStyleScoped = "7";
 
+    /// <summary>
+    /// The abstraction a candidate inherits a lifetime from, when that lifetime is not one
+    /// the candidate declares itself.
+    /// </summary>
+    /// <remarks>
+    /// Named so the diagnostic can point at the interface the caller actually depends on,
+    /// rather than saying "several lifetimes" and leaving the author to find out which came
+    /// from where.
+    /// </remarks>
+    private static (string Abstraction, string Lifetime)? Inherited(
+        ServiceCandidate candidate, Dictionary<string, string> lifetimeByInterface, List<string> direct)
+    {
+        foreach (var usage in candidate.DirectInterfaces)
+        {
+            var declared = usage.OpenGenericName;
+
+            if (lifetimeByInterface.ContainsKey(declared)) continue;
+
+            foreach (var carried in candidate.InheritedMarkers)
+            {
+                if (carried.Interface != declared) continue;
+                if (!lifetimeByInterface.TryGetValue(carried.Marker, out var lifetime)) continue;
+                if (direct.Contains(lifetime)) continue;
+
+                return (Short(declared), lifetime);
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>The interface's simple name, which is what the author sees in their file.</summary>
+    private static string Short(string name)
+    {
+        var dot = name.LastIndexOf('.');
+
+        return dot < 0 ? name : name.Substring(dot + 1);
+    }
+
     private static List<ServiceRegistrationDescriptor> ResolveServices(
         ImmutableArray<ServiceCandidate> candidates,
         ZeroNames platform,
@@ -443,8 +482,31 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
             // The attribute exists for the type whose lifetime no abstraction can express, so
             // it settles a contradiction between markers rather than adding to it.
             if (lifetimes.Count > 1 && annotated is null)
-                report(Diagnostics.MultipleLifetimes, candidate.Location,
-                    [candidate.TypeName, string.Join(", ", lifetimes)]);
+            {
+                // Two markers on the type itself and one inherited from its abstraction are
+                // different mistakes with different fixes, and the flattened interface set
+                // cannot tell them apart. Direct markers are what the author wrote here.
+                var direct = candidate.DirectInterfaces
+                    .Select(i => i.OpenGenericName)
+                    .Where(lifetimeByInterface.ContainsKey)
+                    .Select(i => lifetimeByInterface[i])
+                    .Distinct()
+                    .ToList();
+
+                var inherited = Inherited(candidate, lifetimeByInterface, direct);
+
+                if (direct.Count == 1 && inherited is not null)
+                    report(Diagnostics.LifetimeOverridesAbstraction, candidate.Location,
+                        [candidate.TypeName, direct[0], inherited.Value.Abstraction, inherited.Value.Lifetime]);
+                else
+                    report(Diagnostics.MultipleLifetimes, candidate.Location,
+                        [candidate.TypeName, string.Join(", ", lifetimes)]);
+            }
+
+            // Ordered so the emitted registration does not depend on the order the compiler
+            // happens to report interfaces in. It only matters when a team has downgraded
+            // the diagnostic, and 'arbitrary' is the wrong answer even then.
+            lifetimes.Sort(StringComparer.Ordinal);
 
             var lifetime = annotated ?? lifetimes[0];
 

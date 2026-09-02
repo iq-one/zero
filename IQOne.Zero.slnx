@@ -20,6 +20,10 @@
     <Project Path="src/IQOne.Zero.Observability.Analyzers/IQOne.Zero.Observability.Analyzers.csproj" />
     <Project Path="src/IQOne.Zero.Events/IQOne.Zero.Events.csproj" />
     <Project Path="src/IQOne.Zero.Events.Analyzers/IQOne.Zero.Events.Analyzers.csproj" />
+    <Project Path="src/IQOne.Zero.BackgroundWork/IQOne.Zero.BackgroundWork.csproj" />
+    <Project Path="src/IQOne.Zero.BackgroundWork.Analyzers/IQOne.Zero.BackgroundWork.Analyzers.csproj" />
+    <Project Path="src/IQOne.Zero.Resilience/IQOne.Zero.Resilience.csproj" />
+    <Project Path="src/IQOne.Zero.Resilience.Analyzers/IQOne.Zero.Resilience.Analyzers.csproj" />
     <Project Path="src/IQOne.Zero.Core/IQOne.Zero.Core.csproj" />
     <Project Path="src/IQOne.Zero.Authorization/IQOne.Zero.Authorization.csproj" />
     <Project Path="src/IQOne.Zero.Authorization.Analyzers/IQOne.Zero.Authorization.Analyzers.csproj" />
@@ -54,6 +58,8 @@
     <Project Path="tests/IQOne.Zero.Results.Analyzers.Tests/IQOne.Zero.Results.Analyzers.Tests.csproj" />
     <Project Path="tests/Zero.Sample.Invoices.Tests/Zero.Sample.Invoices.Tests.csproj" />
     <Project Path="tests/IQOne.Zero.Events.Tests/IQOne.Zero.Events.Tests.csproj" />
+    <Project Path="tests/IQOne.Zero.BackgroundWork.Tests/IQOne.Zero.BackgroundWork.Tests.csproj" />
+    <Project Path="tests/IQOne.Zero.Resilience.Tests/IQOne.Zero.Resilience.Tests.csproj" />
     <Project Path="tests/IQOne.Zero.Core.Tests/IQOne.Zero.Core.Tests.csproj" />
     <Project Path="tests/IQOne.Zero.Guidance.Tests/IQOne.Zero.Guidance.Tests.csproj" />
     <Project Path="tests/IQOne.Zero.Configuration.Tests/IQOne.Zero.Configuration.Tests.csproj" />

@@ -174,3 +174,86 @@ public class ServiceRegistrationTests
         run.HasError.Should().BeFalse();
     }
 }
+
+/// <summary>
+/// Where a lifetime came from, when two disagree.
+/// </summary>
+/// <remarks>
+/// Zero deliberately does not let the nearest declaration win here, which is what an
+/// inherited <em>attribute</em> does. A lifetime on an abstraction is part of what callers
+/// read from it, so an implementation quietly overriding it makes the interface lie.
+/// </remarks>
+public class LifetimeSourceTests
+{
+    [Fact]
+    public void A_type_contradicting_its_abstraction_is_ZERO011_and_names_the_interface()
+    {
+        var run = GeneratorHarness.Run("""
+            using IQOne.Zero.DependencyInjection.Descriptors;
+
+            namespace Test;
+
+            public interface IInvoiceStore : IScoped;
+
+            public sealed class InvoiceStore : IInvoiceStore, ISingleton;
+            """);
+
+        var reported = run.Diagnostics.Single(d => d.Id == "ZERO011");
+
+        reported.GetMessage().Should()
+            .Contain("IInvoiceStore").And.Contain("Scoped").And.Contain("Singleton");
+    }
+
+    [Fact]
+    public void Two_markers_written_directly_on_one_type_stay_ZERO006()
+    {
+        var run = GeneratorHarness.Run("""
+            using IQOne.Zero.DependencyInjection.Descriptors;
+
+            namespace Test;
+
+            public interface IInvoiceStore;
+
+            public sealed class InvoiceStore : IInvoiceStore, IScoped, ISingleton;
+            """);
+
+        run.Diagnostics.Select(d => d.Id).Should().Contain("ZERO006").And.NotContain("ZERO011",
+            "nothing was inherited here; the author simply wrote two");
+    }
+
+    [Fact]
+    public void The_attribute_settles_the_contradiction_instead_of_adding_to_it()
+    {
+        var run = GeneratorHarness.Run("""
+            using IQOne.Zero.DependencyInjection.Annotations;
+            using IQOne.Zero.DependencyInjection.Descriptors;
+
+            namespace Test;
+
+            public interface IInvoiceStore : IScoped;
+
+            [Singleton]
+            public sealed class CachedInvoiceStore : IInvoiceStore;
+            """);
+
+        run.Diagnostics.Should().BeEmpty("this is the documented way to state the exception");
+        run.GeneratedSource.Should().Contain("AddSingleton<global::Test.IInvoiceStore, global::Test.CachedInvoiceStore>");
+    }
+
+    [Fact]
+    public void Taking_the_lifetime_from_the_abstraction_alone_is_silent()
+    {
+        var run = GeneratorHarness.Run("""
+            using IQOne.Zero.DependencyInjection.Descriptors;
+
+            namespace Test;
+
+            public interface IInvoiceStore : IScoped;
+
+            public sealed class InvoiceStore : IInvoiceStore;
+            """);
+
+        run.Diagnostics.Should().BeEmpty();
+        run.GeneratedSource.Should().Contain("AddScoped<global::Test.IInvoiceStore, global::Test.InvoiceStore>");
+    }
+}

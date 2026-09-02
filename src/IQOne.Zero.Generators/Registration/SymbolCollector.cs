@@ -65,6 +65,14 @@ internal static class SymbolCollector
             .Select(OpenName)
             .Distinct(StringComparer.Ordinal);
 
+        // Which of the type's own interfaces carries which marker. Flattening loses this,
+        // and it is the difference between "you wrote two markers" and "your abstraction
+        // already said one" -- two mistakes with different fixes.
+        var carriedMarkers = type.Interfaces
+            .SelectMany(own => own.AllInterfaces.Select(carried => new InheritedMarker(
+                own.OriginalDefinition.ToDisplayString(),
+                carried.OriginalDefinition.ToDisplayString())));
+
         return new ServiceCandidate(
             type.ToDisplayString(Full),
             Unbound(type),
@@ -78,6 +86,7 @@ internal static class SymbolCollector
             new EquatableArray<AttributeUsage>(attributes.ToImmutable()),
             new EquatableArray<DependencyReference>([.. dependencies]),
             new EquatableArray<InterfaceUsage>([.. closed]),
+            new EquatableArray<InheritedMarker>([.. carriedMarkers]),
             LocationInfo.From(node));
     }
 
