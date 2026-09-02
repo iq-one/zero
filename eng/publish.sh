@@ -1,6 +1,17 @@
 #!/usr/bin/env bash
 #
-# Publishes the packages to nuget.org.
+# Publishes the packages to nuget.org from a developer machine.
+#
+# THE NORMAL PATH IS CI, NOT THIS. Tag a commit and the publish job pushes with Trusted
+# Publishing: the workflow proves who it is with its OIDC identity and nuget.org hands back
+# a key that lives for minutes. Nothing is stored and nothing can leak.
+#
+#   git tag v0.1.0 && git push origin v0.1.0
+#
+# This script exists for the case CI cannot cover -- a first release before the trusted
+# publishing policy is approved, or a push from somewhere GitHub cannot reach. It needs a
+# long-lived API key, which is the thing Trusted Publishing exists to avoid, so prefer the
+# tag whenever the tag will do.
 #
 # Publishing is not reversible: nuget.org does not delete a version, only unlists it, and a
 # version number is never reusable afterwards. So this script refuses to guess. It checks
