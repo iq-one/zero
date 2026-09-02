@@ -99,7 +99,11 @@ jobs:
         uses: NuGet/login@v1
         id: login
         with:
-          user: IQOne
+          # The account that CREATED the policy, not the account that owns the packages.
+          # nuget.org resolves this with GetPoliciesCreatedByUser(FindByUsername(user)), and
+          # a policy carries CreatedBy and PackageOwner as two separate fields. The policy
+          # here is owned by IQOne but was created by keremcanaktas, so IQOne matches nothing.
+          user: keremcanaktas
 
       - name: Push to nuget.org
         run: |
