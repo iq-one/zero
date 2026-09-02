@@ -18,7 +18,7 @@
     <PackageReleaseNotes>See CHANGELOG.md. The API will change before 1.0; pin the version.</PackageReleaseNotes>
     <PackageTags>zero;iqone;framework;aspnetcore;source-generator;analyzer;ai-agents</PackageTags>
     <PackageProjectUrl>https://iqone.solutions/zero</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/keremcanaktas/zero</RepositoryUrl>
+    <RepositoryUrl>https://github.com/iq-one/zero</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
   </PropertyGroup>
 
