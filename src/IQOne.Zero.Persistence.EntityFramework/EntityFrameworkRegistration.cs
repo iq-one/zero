@@ -5,6 +5,10 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace IQOne.Zero.Persistence.EntityFramework;
 
+/// <summary>Records which context the open-generic repositories resolve through.</summary>
+/// <param name="Context">The bound context type.</param>
+internal sealed record ZeroBoundContext(Type Context);
+
 /// <summary>Adds Entity Framework Core as the implementation behind Zero's data access.</summary>
 public static class EntityFrameworkRegistration
 {
@@ -63,6 +67,27 @@ public static class EntityFrameworkRegistration
 
         // The repositories and the unit of work are open over any context: they take the base
         // type so that one open-generic registration serves every aggregate in the model.
+        //
+        // That is also why a second context cannot simply be added. TryAdd would make the
+        // second call a no-op, leaving every repository bound to the FIRST context — and the
+        // symptom is not an error but a query against the wrong database. Refusing is the
+        // only safe answer, and the message says what to do instead.
+        var bound = services.FirstOrDefault(d => d.ServiceType == typeof(ZeroBoundContext));
+
+        if (bound?.ImplementationInstance is ZeroBoundContext existing && existing.Context != typeof(TContext))
+            throw new InvalidOperationException(
+                $"AddZeroEntityFramework is already bound to '{existing.Context.Name}' and cannot also " +
+                $"bind '{typeof(TContext).Name}'. The open-generic IRepository<T> resolves through a " +
+                $"single DbContext, so a second binding would silently read from the first context's " +
+                $"database. For an application with a context per module, register that module's " +
+                $"repositories explicitly against its own context: " +
+                $"'public sealed class OrderRepository(OrderContext context, ISpecificationEvaluator evaluator) " +
+                $": EfRepository<Order>(context, evaluator), IOrderRepository;'. " +
+                $"Call AddZeroEntityFramework once, for the context the open generics should serve, and " +
+                $"use AddDbContext for the others.");
+
+        services.TryAddSingleton(new ZeroBoundContext(typeof(TContext)));
+
         services.TryAddScoped<DbContext>(provider => provider.GetRequiredService<TContext>());
         services.TryAddScoped<IUnitOfWork, EfUnitOfWork>();
 

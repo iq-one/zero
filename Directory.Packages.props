@@ -39,6 +39,9 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.0" />
     <!-- Saglayici secimi tuketicinin: bunu yalnizca ornek ve testler kullanir. -->
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.0" />
+    <!-- Yalnizca rehber testinde: dokumantasyon somut bir saglayici gosteriyor ve o
+         kodun gercekten derlendigi dogrulanmali. Cerceve hicbir saglayiciya bagimli degil. -->
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.0" />
 
     <!-- Sqlite 2.1.11'i dolayli getiriyor ve onda GHSA-2m69-gcr7-jv3q var. Transitive
          sabitleme kapali oldugu icin bunu kullanan her proje acikca basvurur. Surum

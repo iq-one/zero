@@ -33,11 +33,17 @@ internal sealed record NamedAttributeArgument(string Name, AttributeArgument Arg
 /// The attribute's own type arguments. A generic attribute passes them in a base-constructor
 /// call, where they never reach <c>ConstructorArguments</c>.
 /// </param>
+/// <param name="BaseTypeNames">
+/// The attribute's base chain, nearest first. Lets a generator recognise an attribute by
+/// what it derives from rather than only by its own name — an application may declare its
+/// own route attribute, and matching names alone would leave it unseen.
+/// </param>
 internal sealed record AttributeUsage(
     string TypeName,
     EquatableArray<AttributeArgument> ConstructorArguments,
     EquatableArray<NamedAttributeArgument> NamedArguments,
-    EquatableArray<string> TypeArguments);
+    EquatableArray<string> TypeArguments,
+    EquatableArray<string> BaseTypeNames);
 
 /// <summary>
 /// One interface a candidate implements, in every form registration needs.

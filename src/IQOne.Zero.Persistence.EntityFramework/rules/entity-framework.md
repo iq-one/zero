@@ -14,9 +14,9 @@ evaluator here turns those into queries.
 ```csharp
 public sealed class ShopContext(
     DbContextOptions<ShopContext> options,
-    IEnumerable<IEntityFilterConvention> filters,
-    IEnumerable<IModelConvention<ModelBuilder>> model)
-    : ConventionDbContext(options, filters, model)
+    IEnumerable<IModelConvention<ModelBuilder>> model,
+    IEnumerable<IEntityFilterConvention> filters)
+    : ConventionDbContext(options, model, filters)
 {
     public DbSet<Invoice> Invoices => Set<Invoice>();
 }

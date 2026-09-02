@@ -14,6 +14,12 @@
     <ProjectReference Include="../../src/IQOne.Zero.Events/IQOne.Zero.Events.csproj" />
     <ProjectReference Include="../../src/IQOne.Zero.BackgroundWork/IQOne.Zero.BackgroundWork.csproj" />
     <ProjectReference Include="../../src/IQOne.Zero.Resilience/IQOne.Zero.Resilience.csproj" />
+    <ProjectReference Include="../../src/IQOne.Zero.Persistence/IQOne.Zero.Persistence.csproj" />
+    <ProjectReference Include="../../src/IQOne.Zero.Persistence.EntityFramework/IQOne.Zero.Persistence.EntityFramework.csproj" />
+    <ProjectReference Include="../../src/IQOne.Zero.Caching/IQOne.Zero.Caching.csproj" />
+    <ProjectReference Include="../../src/IQOne.Zero.Observability/IQOne.Zero.Observability.csproj" />
+    <ProjectReference Include="../../src/IQOne.Zero.Authorization/IQOne.Zero.Authorization.csproj" />
+    <ProjectReference Include="../../src/IQOne.Zero.Testing/IQOne.Zero.Testing.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />

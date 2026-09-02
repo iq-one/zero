@@ -34,11 +34,19 @@ internal static class SymbolCollector
                 ? generic.TypeArguments.Select(a => a.ToDisplayString(Full))
                 : [];
 
+            // The base chain, so a generator can tell that an attribute IS a route
+            // attribute even when it is not one of the five this package declares.
+            var bases = new List<string>();
+
+            for (var b = attribute.AttributeClass?.BaseType; b is not null; b = b.BaseType)
+                bases.Add(b.OriginalDefinition.ToDisplayString());
+
             attributes.Add(new AttributeUsage(
                 attribute.AttributeClass?.OriginalDefinition.ToDisplayString() ?? string.Empty,
                 new EquatableArray<AttributeArgument>([.. constructorArguments]),
                 new EquatableArray<NamedAttributeArgument>([.. namedArguments]),
-                new EquatableArray<string>([.. typeArguments])));
+                new EquatableArray<string>([.. typeArguments]),
+                new EquatableArray<string>([.. bases])));
         }
 
         var dependencies = type.InstanceConstructors

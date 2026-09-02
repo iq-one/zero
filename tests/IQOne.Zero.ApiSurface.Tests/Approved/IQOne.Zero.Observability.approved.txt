@@ -1,0 +1,49 @@
+static class IQOne.Zero.Observability.CorrelationId
+    static IDisposable Begin(string id)
+    static string Current { get; }
+
+sealed class IQOne.Zero.Observability.LoggingBehavior<TRequest, TResponse> : IQOne.Zero.Messaging.IPipelineBehavior<TRequest, TResponse>
+    .ctor LoggingBehavior(Microsoft.Extensions.Logging.ILogger<TRequest> logger, IQOne.Zero.Observability.ObservabilityOptions options, TimeProvider time)
+    Task<IQOne.Zero.Result<TResponse>> HandleAsync(TRequest request, IQOne.Zero.Messaging.RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
+    int Order { get; }
+
+sealed class IQOne.Zero.Observability.MetricsBehavior<TRequest, TResponse> : IQOne.Zero.Messaging.IPipelineBehavior<TRequest, TResponse>
+    .ctor MetricsBehavior(IQOne.Zero.Observability.ObservabilityOptions options, TimeProvider time)
+    Task<IQOne.Zero.Result<TResponse>> HandleAsync(TRequest request, IQOne.Zero.Messaging.RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
+    int Order { get; }
+
+sealed class IQOne.Zero.Observability.ObservabilityOptions
+    .ctor ObservabilityOptions()
+    bool EnableLogging { get; set; }
+    bool EnableMetrics { get; set; }
+    bool EnableTracing { get; set; }
+    bool LogRequestContents { get; set; }
+
+static class IQOne.Zero.Observability.ObservabilityOrder
+    static int Metrics
+    static int Tracing
+
+static class IQOne.Zero.Observability.ObservabilityRegistration
+    static Microsoft.Extensions.DependencyInjection.IServiceCollection AddZeroObservability(Microsoft.Extensions.DependencyInjection.IServiceCollection services, Action<IQOne.Zero.Observability.ObservabilityOptions> configure = default)
+
+enum IQOne.Zero.Observability.RequestOutcome
+    int value__
+    static IQOne.Zero.Observability.RequestOutcome Cancelled
+    static IQOne.Zero.Observability.RequestOutcome Faulted
+    static IQOne.Zero.Observability.RequestOutcome Rejected
+    static IQOne.Zero.Observability.RequestOutcome Success
+
+static class IQOne.Zero.Observability.RequestOutcomeExtensions
+    static IQOne.Zero.Observability.RequestOutcome ToOutcome(IQOne.Zero.ErrorKind kind)
+    static Microsoft.Extensions.Logging.LogLevel ToLogLevel(IQOne.Zero.ErrorKind kind)
+
+sealed class IQOne.Zero.Observability.TracingBehavior<TRequest, TResponse> : IQOne.Zero.Messaging.IPipelineBehavior<TRequest, TResponse>
+    .ctor TracingBehavior(IQOne.Zero.Observability.ObservabilityOptions options)
+    Task<IQOne.Zero.Result<TResponse>> HandleAsync(TRequest request, IQOne.Zero.Messaging.RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
+    int Order { get; }
+
+static class IQOne.Zero.Observability.ZeroTelemetry
+    static string ActivitySourceName
+    static string MeterName
+    static string RequestCountName
+    static string RequestDurationName

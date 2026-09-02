@@ -1,0 +1,105 @@
+sealed class IQOne.Zero.Authorization.AllowAnonymousAttribute : Attribute, IQOne.Zero.Authorization.IAuthorizationDeclaration
+    .ctor AllowAnonymousAttribute()
+    bool AllowsAnonymous { get; }
+    string Policy { get; }
+    string Roles { get; }
+
+sealed class IQOne.Zero.Authorization.AuthorizationBehavior<TRequest, TResponse> : IQOne.Zero.Messaging.IPipelineBehavior<TRequest, TResponse>
+    .ctor AuthorizationBehavior(IQOne.Zero.Authorization.ICurrentUser user, IQOne.Zero.Authorization.AuthorizationOptions options, IServiceProvider services)
+    Task<IQOne.Zero.Result<TResponse>> HandleAsync(TRequest request, IQOne.Zero.Messaging.RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
+    int Order { get; }
+
+struct IQOne.Zero.Authorization.AuthorizationDecision : IEquatable<IQOne.Zero.Authorization.AuthorizationDecision>
+    bool Equals(IQOne.Zero.Authorization.AuthorizationDecision other)
+    bool Equals(object obj)
+    bool IsAllowed { get; }
+    int GetHashCode()
+    static IQOne.Zero.Authorization.AuthorizationDecision Allowed
+    static IQOne.Zero.Authorization.AuthorizationDecision Deny()
+    static IQOne.Zero.Authorization.AuthorizationDecision Deny(string code, string message)
+    string Code { get; }
+    string Message { get; }
+    string ToString()
+
+static class IQOne.Zero.Authorization.AuthorizationModuleContextExtensions
+    static IQOne.Zero.Authorization.AuthorizationOptions Authorization(IQOne.Zero.Modules.IModuleServiceContext context)
+
+sealed class IQOne.Zero.Authorization.AuthorizationOptions
+    .ctor AuthorizationOptions()
+    IQOne.Zero.Authorization.AuthorizationOptions AddPolicy(string name, IQOne.Zero.Authorization.IAuthorizationRequirement[] requirements)
+    IQOne.Zero.Authorization.MissingAuthorization Unannotated { get; set; }
+    IReadOnlyDictionary<string, IQOne.Zero.Authorization.AuthorizationPolicy> Policies { get; }
+    string RoleClaimType { get; set; }
+
+sealed class IQOne.Zero.Authorization.AuthorizationPolicy
+    IReadOnlyList<IQOne.Zero.Authorization.IAuthorizationRequirement> Requirements { get; }
+    string Name { get; }
+
+static class IQOne.Zero.Authorization.AuthorizationRegistration
+    static Microsoft.Extensions.DependencyInjection.IServiceCollection AddRequirementHandler<TRequirement, THandler>(Microsoft.Extensions.DependencyInjection.IServiceCollection services)
+    static Microsoft.Extensions.DependencyInjection.IServiceCollection AddRequirementHandler<TRequirement, TResource, THandler>(Microsoft.Extensions.DependencyInjection.IServiceCollection services)
+    static Microsoft.Extensions.DependencyInjection.IServiceCollection AddZeroAuthorization(Microsoft.Extensions.DependencyInjection.IServiceCollection services, Action<IQOne.Zero.Authorization.AuthorizationOptions> configure = default)
+
+sealed class IQOne.Zero.Authorization.AuthorizeAttribute : Attribute, IQOne.Zero.Authorization.IAuthorizationDeclaration
+    .ctor AuthorizeAttribute()
+    .ctor AuthorizeAttribute(string policy)
+    string Policy { get; set; }
+    string Roles { get; set; }
+
+sealed class IQOne.Zero.Authorization.ClaimRequirement : IQOne.Zero.Authorization.IAuthorizationRequirement
+    .ctor ClaimRequirement(string claimType, string[] allowedValues)
+    IReadOnlyList<string> AllowedValues { get; }
+    string ClaimType { get; }
+
+sealed class IQOne.Zero.Authorization.ClaimsPrincipalCurrentUser : IQOne.Zero.Authorization.ICurrentUser
+    .ctor ClaimsPrincipalCurrentUser(ClaimsPrincipal principal, string[] identifierClaimTypes)
+    IReadOnlyCollection<Claim> Claims { get; }
+    bool IsAuthenticated { get; }
+    static IReadOnlyList<string> DefaultIdentifierClaimTypes
+    string Id { get; }
+
+sealed class IQOne.Zero.Authorization.CurrentUser : IQOne.Zero.Authorization.ICurrentUser
+    .ctor CurrentUser(string id, Claim[] claims)
+    IReadOnlyCollection<Claim> Claims { get; }
+    bool IsAuthenticated { get; }
+    static IQOne.Zero.Authorization.ICurrentUser Anonymous
+    string Id { get; }
+
+static class IQOne.Zero.Authorization.CurrentUserExtensions
+    static IEnumerable<string> FindAll(IQOne.Zero.Authorization.ICurrentUser user, string claimType)
+    static bool HasClaim(IQOne.Zero.Authorization.ICurrentUser user, string claimType, string value)
+    static bool IsInRole(IQOne.Zero.Authorization.ICurrentUser user, string role, string roleClaimType = default)
+    static string FindFirst(IQOne.Zero.Authorization.ICurrentUser user, string claimType)
+
+interface IQOne.Zero.Authorization.IAuthorizationDeclaration
+    bool AllowsAnonymous { get; }
+    string Policy { get; }
+    string Roles { get; }
+
+interface IQOne.Zero.Authorization.IAuthorizationRequirement
+
+interface IQOne.Zero.Authorization.ICurrentUser : IQOne.Zero.DependencyInjection.Descriptors.IScoped
+    IReadOnlyCollection<Claim> Claims { get; }
+    bool IsAuthenticated { get; }
+    string Id { get; }
+
+interface IQOne.Zero.Authorization.IRequirementHandler : IQOne.Zero.DependencyInjection.Descriptors.IScoped
+
+interface IQOne.Zero.Authorization.IRequirementHandler<TRequirement> : IQOne.Zero.Authorization.IRequirementHandler
+    ValueTask<IQOne.Zero.Authorization.AuthorizationDecision> CheckAsync(TRequirement requirement, IQOne.Zero.Authorization.ICurrentUser user, CancellationToken cancellationToken)
+
+interface IQOne.Zero.Authorization.IRequirementHandler<TRequirement, TResource> : IQOne.Zero.Authorization.IRequirementHandler
+    ValueTask<IQOne.Zero.Authorization.AuthorizationDecision> CheckAsync(TRequirement requirement, TResource resource, IQOne.Zero.Authorization.ICurrentUser user, CancellationToken cancellationToken)
+
+interface IQOne.Zero.Authorization.IResourceAuthorizer
+    ValueTask<IQOne.Zero.Result> AuthorizeAsync<TRequirement, TResource>(TRequirement requirement, TResource resource, CancellationToken cancellationToken)
+
+enum IQOne.Zero.Authorization.MissingAuthorization
+    int value__
+    static IQOne.Zero.Authorization.MissingAuthorization Allow
+    static IQOne.Zero.Authorization.MissingAuthorization Deny
+    static IQOne.Zero.Authorization.MissingAuthorization RequireAuthentication
+
+sealed class IQOne.Zero.Authorization.RolesRequirement : IQOne.Zero.Authorization.IAuthorizationRequirement
+    .ctor RolesRequirement(string[] roles)
+    IReadOnlyList<string> Roles { get; }

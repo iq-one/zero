@@ -1,0 +1,109 @@
+interface IQOne.Zero.Persistence.Conventions.IEntityFilterConvention
+    LambdaExpression Build(Type entityType, object context)
+    bool AppliesTo(Type entityType)
+    string Key { get; }
+
+interface IQOne.Zero.Persistence.Conventions.IModelConvention<TModelBuilder>
+    void Apply(TModelBuilder modelBuilder)
+
+interface IQOne.Zero.Persistence.Conventions.ISaveChangesConvention<TContext>
+    void Apply(TContext context)
+
+interface IQOne.Zero.Persistence.Conventions.IWriteOwnership
+    bool CanWrite(string schema, string table)
+
+sealed class IQOne.Zero.Persistence.Conventions.WriteOwnershipViolationException : InvalidOperationException
+    .ctor WriteOwnershipViolationException(string table, string operation)
+    string Operation { get; }
+    string Table { get; }
+
+interface IQOne.Zero.Persistence.IAggregateRoot : IQOne.Zero.Persistence.IEntity
+
+interface IQOne.Zero.Persistence.IEntity
+
+interface IQOne.Zero.Persistence.IEntity<TKey> : IQOne.Zero.Persistence.IEntity
+    TKey Id { get; }
+
+interface IQOne.Zero.Persistence.IReadRepository<T> : IQOne.Zero.DependencyInjection.Descriptors.IScoped
+    Task<IReadOnlyList<T>> ListAsync(IQOne.Zero.Persistence.ISpecification<T> specification, CancellationToken cancellationToken = default)
+    Task<IReadOnlyList<TResult>> ListAsync<TResult>(IQOne.Zero.Persistence.ISpecification<T, TResult> specification, CancellationToken cancellationToken = default)
+    Task<T> FindAsync(IQOne.Zero.Persistence.ISpecification<T> specification, CancellationToken cancellationToken = default)
+    Task<TResult> FindAsync<TResult>(IQOne.Zero.Persistence.ISpecification<T, TResult> specification, CancellationToken cancellationToken = default)
+    Task<bool> AnyAsync(IQOne.Zero.Persistence.ISpecification<T> specification, CancellationToken cancellationToken = default)
+    Task<int> CountAsync(IQOne.Zero.Persistence.ISpecification<T> specification, CancellationToken cancellationToken = default)
+
+interface IQOne.Zero.Persistence.IReadRepository<T, TKey> : IQOne.Zero.Persistence.IReadRepository<T>
+    Task<T> GetAsync(TKey key, CancellationToken cancellationToken = default)
+
+interface IQOne.Zero.Persistence.IRepository<T> : IQOne.Zero.Persistence.IReadRepository<T>
+    Task AddAsync(T entity, CancellationToken cancellationToken = default)
+    Task AddRangeAsync(IEnumerable<T> entities, CancellationToken cancellationToken = default)
+    void Remove(T entity)
+    void RemoveRange(IEnumerable<T> entities)
+    void Update(T entity)
+
+interface IQOne.Zero.Persistence.IRepository<T, TKey> : IQOne.Zero.Persistence.IReadRepository<T, TKey>, IQOne.Zero.Persistence.IRepository<T>
+
+interface IQOne.Zero.Persistence.ISpecification<T>
+    Expression<Func<T, bool>> Criteria { get; }
+    IReadOnlyList<Expression<Func<T, object>>> Includes { get; }
+    IReadOnlyList<IQOne.Zero.Persistence.Ordering<T>> Orderings { get; }
+    IReadOnlySet<string> IgnoredFilters { get; }
+    bool AsNoTracking { get; }
+    int? Skip { get; }
+    int? Take { get; }
+
+interface IQOne.Zero.Persistence.ISpecification<T, TResult> : IQOne.Zero.Persistence.ISpecification<T>
+    Expression<Func<T, TResult>> Selector { get; }
+
+interface IQOne.Zero.Persistence.ITransaction : IAsyncDisposable
+    Task CompleteAsync(CancellationToken cancellationToken = default)
+    bool IsOwner { get; }
+
+interface IQOne.Zero.Persistence.IUnitOfWork : IQOne.Zero.DependencyInjection.Descriptors.IScoped
+    Task<IQOne.Zero.Persistence.ITransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
+    Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    bool HasActiveTransaction { get; }
+
+struct IQOne.Zero.Persistence.Ordering<T> : IEquatable<IQOne.Zero.Persistence.Ordering<T>>
+    .ctor Ordering(Expression<Func<T, object>> KeySelector, bool Descending)
+    Expression<Func<T, object>> KeySelector { get; init; }
+    bool Descending { get; init; }
+    bool Equals(IQOne.Zero.Persistence.Ordering<T> other)
+    bool Equals(object obj)
+    int GetHashCode()
+    string ToString()
+    void Deconstruct(out Expression<Func<T, object>> KeySelector, out bool Descending)
+
+static class IQOne.Zero.Persistence.PersistenceRegistration
+    static Microsoft.Extensions.DependencyInjection.IServiceCollection AddZeroTransactions(Microsoft.Extensions.DependencyInjection.IServiceCollection services)
+
+static class IQOne.Zero.Persistence.SpecificationExpressions
+    static Expression<Func<T, bool>> AndAlso<T>(Expression<Func<T, bool>> left, Expression<Func<T, bool>> right)
+    static Expression<Func<T, bool>> OrElse<T>(Expression<Func<T, bool>> left, Expression<Func<T, bool>> right)
+
+abstract class IQOne.Zero.Persistence.Specification<T> : IQOne.Zero.Persistence.ISpecification<T>
+    Expression<Func<T, bool>> Criteria { get; }
+    IReadOnlyList<Expression<Func<T, object>>> Includes { get; }
+    IReadOnlyList<IQOne.Zero.Persistence.Ordering<T>> Orderings { get; }
+    IReadOnlySet<string> IgnoredFilters { get; }
+    bool AsNoTracking { get; }
+    int? Skip { get; }
+    int? Take { get; }
+    protected .ctor Specification()
+    protected IQOne.Zero.Persistence.Specification<T> IgnoreFilter(string key)
+    protected IQOne.Zero.Persistence.Specification<T> Include(Expression<Func<T, object>> include)
+    protected IQOne.Zero.Persistence.Specification<T> OrderBy(Expression<Func<T, object>> keySelector)
+    protected IQOne.Zero.Persistence.Specification<T> OrderByDescending(Expression<Func<T, object>> keySelector)
+    protected IQOne.Zero.Persistence.Specification<T> Page(int skip, int? take)
+    protected IQOne.Zero.Persistence.Specification<T> ReadOnly()
+    protected IQOne.Zero.Persistence.Specification<T> Where(Expression<Func<T, bool>> criteria)
+
+abstract class IQOne.Zero.Persistence.Specification<T, TResult> : IQOne.Zero.Persistence.Specification<T>, IQOne.Zero.Persistence.ISpecification<T, TResult>
+    Expression<Func<T, TResult>> Selector { get; }
+    protected .ctor Specification()
+
+sealed class IQOne.Zero.Persistence.TransactionBehavior<TRequest, TResponse> : IQOne.Zero.Messaging.IPipelineBehavior<TRequest, TResponse>
+    .ctor TransactionBehavior(IQOne.Zero.Persistence.IUnitOfWork unitOfWork)
+    Task<IQOne.Zero.Result<TResponse>> HandleAsync(TRequest request, IQOne.Zero.Messaging.RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
+    int Order { get; }

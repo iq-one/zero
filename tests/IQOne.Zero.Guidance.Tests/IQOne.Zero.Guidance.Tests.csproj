@@ -8,6 +8,17 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+    <!--
+      Her yetenegin BAGIMLI OLDUGU paketler de burada olmak zorunda. Yoksa o paketin
+      tipleri cozulemez, CS0246 olur, CS0246 da "ornekteki uydurma alan adi" sayilip
+      yok sayilir — ve o yetenegin ornegi sessizce hic kontrol edilmez. EF eksikti;
+      Persistence.EntityFramework'un ornegi bu yuzden yanlis ctor sirasiyla yayina cikti.
+    -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+    <!-- Rehber somut bir saglayici gosteriyor (UseSqlServer) ve gostermeli: saglayici
+         adi olmayan bir ornek kopyalanip calistirilamaz. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />

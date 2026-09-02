@@ -6,7 +6,12 @@
   "useWhen": "The application stores things in a relational database through Entity Framework. Add the engine's own EF package alongside this one.",
   "package": "IQOne.Zero.Persistence.EntityFramework",
   "entryPoint": "services.AddZeroEntityFramework<TContext>(...)",
-  "keyTypes": ["ConventionDbContext", "SpecificationEvaluator", "EfRepository<T>", "EfUnitOfWork"],
+  "keyTypes": [
+    "ConventionDbContext",
+    "SpecificationEvaluator",
+    "EfRepository<T>",
+    "EfUnitOfWork"
+  ],
   "diagnostics": [],
-  "example": "public sealed class ShopContext(\n    DbContextOptions<ShopContext> options,\n    IEnumerable<IEntityFilterConvention> filters,\n    IEnumerable<IModelConvention<ModelBuilder>> model)\n    : ConventionDbContext(options, filters, model)\n{\n    public DbSet<Invoice> Invoices => Set<Invoice>();\n}\n\n// One call: the context, the unit of work, the repositories, the interceptors.\nservices.AddZeroEntityFramework<ShopContext>(options => options.UseSqlServer(connectionString));\nservices.AddZeroTransactions();"
+  "example": "public sealed class ShopContext(\n    DbContextOptions<ShopContext> options,\n    IEnumerable<IModelConvention<ModelBuilder>> model,\n    IEnumerable<IEntityFilterConvention> filters)\n    : ConventionDbContext(options, model, filters)\n{\n    public DbSet<Invoice> Invoices => Set<Invoice>();\n}\n\n// One call: the context, the unit of work, the repositories, the interceptors.\nservices.AddZeroEntityFramework<ShopContext>(options => options.UseSqlServer(connectionString));\nservices.AddZeroTransactions();"
 }

@@ -88,6 +88,13 @@ public static class GuidanceCompiler
             }
         }
 
+        // Namespaces the framework's own public API names — DbContext, ModelBuilder,
+        // HttpContext and so on. Derived rather than listed, for the same reason the IQOne
+        // namespaces are: a hand-written list goes stale, and a stale list here does not
+        // fail, it silently stops checking. Entity Framework was missing from the list this
+        // replaces, so every snippet naming a DbContext went unverified.
+        foreach (var name in DependencyNamespaces()) namespaces.Add(name);
+
         string[] assumed =
         [
             "System",
@@ -95,12 +102,82 @@ public static class GuidanceCompiler
             "System.ComponentModel.DataAnnotations",
             "System.Linq",
             "System.Threading",
-            "System.Threading.Tasks",
-            "Microsoft.Extensions.DependencyInjection",
-            "Microsoft.Extensions.Logging"
+            "System.Threading.Tasks"
         ];
 
         return string.Join("\n", assumed.Concat(namespaces).Select(n => $"using {n};"));
+    }
+
+    /// <summary>
+    /// Every non-framework namespace the framework's public API mentions.
+    /// </summary>
+    /// <remarks>
+    /// Walks the public surface of each <c>IQOne.Zero.*</c> assembly and collects the
+    /// namespace of everything it names: base types, implemented interfaces, parameter and
+    /// return types. If guidance is allowed to show a type, the framework's own API had to
+    /// name it first.
+    /// </remarks>
+    private static SortedSet<string> DependencyNamespaces()
+    {
+        var probe = CSharpCompilation.Create("Probe", references: References);
+        var found = new SortedSet<string>(StringComparer.Ordinal);
+
+        foreach (var assembly in probe.SourceModule.ReferencedAssemblySymbols)
+        {
+            if (!assembly.Name.StartsWith("IQOne.Zero", StringComparison.Ordinal)) continue;
+
+            foreach (var type in PublicTypes(assembly.GlobalNamespace))
+            {
+                Note(type.BaseType);
+
+                foreach (var contract in type.Interfaces) Note(contract);
+
+                foreach (var member in type.GetMembers().Where(m => m.DeclaredAccessibility == Accessibility.Public))
+                    switch (member)
+                    {
+                        case IMethodSymbol method:
+                            Note(method.ReturnType);
+                            foreach (var parameter in method.Parameters) Note(parameter.Type);
+                            break;
+
+                        case IPropertySymbol property:
+                            Note(property.Type);
+                            break;
+                    }
+            }
+        }
+
+        return found;
+
+        void Note(ITypeSymbol? type)
+        {
+            if (type is null) return;
+
+            if (type is INamedTypeSymbol named)
+                foreach (var argument in named.TypeArguments) Note(argument);
+
+            var space = type.ContainingNamespace;
+
+            if (space is null || space.IsGlobalNamespace) return;
+
+            var name = space.ToDisplayString();
+
+            if (name.StartsWith("IQOne", StringComparison.Ordinal)) return;
+            if (name.StartsWith("System", StringComparison.Ordinal)) return;
+
+            found.Add(name);
+        }
+    }
+
+    private static IEnumerable<INamedTypeSymbol> PublicTypes(INamespaceSymbol space)
+    {
+        foreach (var type in space.GetTypeMembers())
+            if (type.DeclaredAccessibility == Accessibility.Public)
+                yield return type;
+
+        foreach (var child in space.GetNamespaceMembers())
+            foreach (var type in PublicTypes(child))
+                yield return type;
     }
 
     /// <summary>Compiles one snippet and returns only the failures that matter.</summary>
@@ -162,6 +239,39 @@ public static class GuidanceCompiler
     /// By path, not by project reference: this test must not have to be edited every time a
     /// capability is added, and it must be able to check a package it does not depend on.
     /// </remarks>
+    /// <summary>
+    /// Where a type of this name is defined, across everything the checker can see.
+    /// </summary>
+    /// <remarks>
+    /// Exists so the checker can be checked. A type it cannot resolve makes every snippet
+    /// using that type report CS0246, which is ignored as an illustrative domain name, and
+    /// the snippet silently stops being verified. A type it resolves TWICE is worse: the
+    /// snippet binds to one definition and the framework to the other, and the mismatch is
+    /// reported as a defect in guidance that is in fact correct.
+    /// </remarks>
+    public static IReadOnlyList<string> DefiningAssemblies(string metadataName)
+    {
+        var compilation = CSharpCompilation.Create("Probe", references: References);
+
+        return [.. compilation
+            .GetTypesByMetadataName(metadataName)
+            .Select(t => t.ContainingAssembly.Identity.GetDisplayName())
+            .Distinct(StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal)];
+    }
+
+    public static IReadOnlyList<string> AllDiagnostics(string code)
+    {
+        var tree = CSharpSyntaxTree.ParseText(Usings + code);
+        var compilation = CSharpCompilation.Create(
+            "Snippet", [tree], References,
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+        return [.. compilation.GetDiagnostics()
+            .Where(d => d.Severity == DiagnosticSeverity.Error)
+            .Select(d => $"{d.Id}: {d.GetMessage()}")];
+    }
+
     private static ImmutableArray<MetadataReference> Build()
     {
         var trusted = ((string?)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES") ?? string.Empty)
@@ -170,6 +280,17 @@ public static class GuidanceCompiler
         var locations = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var path in trusted) locations[Path.GetFileNameWithoutExtension(path)] = path;
+
+        // Everything this project references, whether or not it happens to be loaded.
+        //
+        // Loaded-assembly enumeration alone is not enough, and the way it fails is the worst
+        // kind: an assembly nothing has touched yet is simply absent, its types resolve to
+        // nothing, and every snippet that uses them reports CS0246 — which this checker
+        // deliberately ignores as "an illustrative domain type". So the snippet is not
+        // checked and the run is green. That is how a ConventionDbContext example with its
+        // arguments in the wrong order shipped in 0.1.0.
+        foreach (var path in Directory.EnumerateFiles(AppContext.BaseDirectory, "*.dll"))
+            locations[Path.GetFileNameWithoutExtension(path)] = path;
 
         foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
             if (!assembly.IsDynamic && !string.IsNullOrEmpty(assembly.Location))

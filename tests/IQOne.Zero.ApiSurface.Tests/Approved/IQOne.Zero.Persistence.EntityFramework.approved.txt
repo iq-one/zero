@@ -1,0 +1,58 @@
+abstract class IQOne.Zero.Persistence.EntityFramework.ConventionDbContext : Microsoft.EntityFrameworkCore.DbContext
+    protected .ctor ConventionDbContext(Microsoft.EntityFrameworkCore.DbContextOptions options, IEnumerable<IQOne.Zero.Persistence.Conventions.IModelConvention<Microsoft.EntityFrameworkCore.ModelBuilder>> modelConventions, IEnumerable<IQOne.Zero.Persistence.Conventions.IEntityFilterConvention> filterConventions)
+    protected void ConfigureModel(Microsoft.EntityFrameworkCore.ModelBuilder modelBuilder)
+    protected void OnModelCreating(Microsoft.EntityFrameworkCore.ModelBuilder modelBuilder)
+
+class IQOne.Zero.Persistence.EntityFramework.EfRepository<T> : IQOne.Zero.Persistence.IRepository<T>
+    .ctor EfRepository(Microsoft.EntityFrameworkCore.DbContext context, IQOne.Zero.Persistence.EntityFramework.ISpecificationEvaluator evaluator)
+    Task AddAsync(T entity, CancellationToken cancellationToken = default)
+    Task AddRangeAsync(IEnumerable<T> entities, CancellationToken cancellationToken = default)
+    Task<IReadOnlyList<T>> ListAsync(IQOne.Zero.Persistence.ISpecification<T> specification, CancellationToken cancellationToken = default)
+    Task<IReadOnlyList<TResult>> ListAsync<TResult>(IQOne.Zero.Persistence.ISpecification<T, TResult> specification, CancellationToken cancellationToken = default)
+    Task<T> FindAsync(IQOne.Zero.Persistence.ISpecification<T> specification, CancellationToken cancellationToken = default)
+    Task<TResult> FindAsync<TResult>(IQOne.Zero.Persistence.ISpecification<T, TResult> specification, CancellationToken cancellationToken = default)
+    Task<bool> AnyAsync(IQOne.Zero.Persistence.ISpecification<T> specification, CancellationToken cancellationToken = default)
+    Task<int> CountAsync(IQOne.Zero.Persistence.ISpecification<T> specification, CancellationToken cancellationToken = default)
+    protected IQOne.Zero.Persistence.EntityFramework.ISpecificationEvaluator Evaluator { get; }
+    protected IQueryable<T> Query(IQOne.Zero.Persistence.ISpecification<T> specification)
+    protected IQueryable<TResult> Query<TResult>(IQOne.Zero.Persistence.ISpecification<T, TResult> specification)
+    protected Microsoft.EntityFrameworkCore.DbContext Context { get; }
+    protected Microsoft.EntityFrameworkCore.DbSet<T> Set { get; }
+    void Remove(T entity)
+    void RemoveRange(IEnumerable<T> entities)
+    void Update(T entity)
+
+class IQOne.Zero.Persistence.EntityFramework.EfRepository<T, TKey> : IQOne.Zero.Persistence.EntityFramework.EfRepository<T>, IQOne.Zero.Persistence.IRepository<T, TKey>
+    .ctor EfRepository(Microsoft.EntityFrameworkCore.DbContext context, IQOne.Zero.Persistence.EntityFramework.ISpecificationEvaluator evaluator)
+    Task<T> GetAsync(TKey key, CancellationToken cancellationToken = default)
+
+sealed class IQOne.Zero.Persistence.EntityFramework.EfUnitOfWork : IQOne.Zero.Persistence.IUnitOfWork
+    .ctor EfUnitOfWork(Microsoft.EntityFrameworkCore.DbContext context)
+    Task<IQOne.Zero.Persistence.ITransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
+    Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    bool HasActiveTransaction { get; }
+
+static class IQOne.Zero.Persistence.EntityFramework.EntityFrameworkRegistration
+    static Microsoft.Extensions.DependencyInjection.IServiceCollection AddZeroEntityFramework<TContext>(Microsoft.Extensions.DependencyInjection.IServiceCollection services, Action<Microsoft.EntityFrameworkCore.DbContextOptionsBuilder> configure = default)
+
+interface IQOne.Zero.Persistence.EntityFramework.ISpecificationEvaluator
+    IQueryable<T> Evaluate<T>(IQueryable<T> source, IQOne.Zero.Persistence.ISpecification<T> specification)
+    IQueryable<T> EvaluateForCount<T>(IQueryable<T> source, IQOne.Zero.Persistence.ISpecification<T> specification)
+    IQueryable<TResult> Evaluate<T, TResult>(IQueryable<T> source, IQOne.Zero.Persistence.ISpecification<T, TResult> specification)
+
+sealed class IQOne.Zero.Persistence.EntityFramework.Interceptors.SaveChangesConventionInterceptor : Microsoft.EntityFrameworkCore.Diagnostics.SaveChangesInterceptor
+    .ctor SaveChangesConventionInterceptor(IEnumerable<IQOne.Zero.Persistence.Conventions.ISaveChangesConvention<Microsoft.EntityFrameworkCore.DbContext>> conventions)
+    Microsoft.EntityFrameworkCore.Diagnostics.InterceptionResult<int> SavingChanges(Microsoft.EntityFrameworkCore.Diagnostics.DbContextEventData eventData, Microsoft.EntityFrameworkCore.Diagnostics.InterceptionResult<int> result)
+    ValueTask<Microsoft.EntityFrameworkCore.Diagnostics.InterceptionResult<int>> SavingChangesAsync(Microsoft.EntityFrameworkCore.Diagnostics.DbContextEventData eventData, Microsoft.EntityFrameworkCore.Diagnostics.InterceptionResult<int> result, CancellationToken cancellationToken = default)
+
+sealed class IQOne.Zero.Persistence.EntityFramework.Interceptors.WriteOwnershipInterceptor : Microsoft.EntityFrameworkCore.Diagnostics.SaveChangesInterceptor
+    .ctor WriteOwnershipInterceptor(IEnumerable<IQOne.Zero.Persistence.Conventions.IWriteOwnership> ownerships)
+    Microsoft.EntityFrameworkCore.Diagnostics.InterceptionResult<int> SavingChanges(Microsoft.EntityFrameworkCore.Diagnostics.DbContextEventData eventData, Microsoft.EntityFrameworkCore.Diagnostics.InterceptionResult<int> result)
+    ValueTask<Microsoft.EntityFrameworkCore.Diagnostics.InterceptionResult<int>> SavingChangesAsync(Microsoft.EntityFrameworkCore.Diagnostics.DbContextEventData eventData, Microsoft.EntityFrameworkCore.Diagnostics.InterceptionResult<int> result, CancellationToken cancellationToken = default)
+
+sealed class IQOne.Zero.Persistence.EntityFramework.SpecificationEvaluator : IQOne.Zero.Persistence.EntityFramework.ISpecificationEvaluator
+    .ctor SpecificationEvaluator()
+    IQueryable<T> Evaluate<T>(IQueryable<T> source, IQOne.Zero.Persistence.ISpecification<T> specification)
+    IQueryable<T> EvaluateForCount<T>(IQueryable<T> source, IQOne.Zero.Persistence.ISpecification<T> specification)
+    IQueryable<TResult> Evaluate<T, TResult>(IQueryable<T> source, IQOne.Zero.Persistence.ISpecification<T, TResult> specification)
+    static IQOne.Zero.Persistence.EntityFramework.ISpecificationEvaluator Default { get; }

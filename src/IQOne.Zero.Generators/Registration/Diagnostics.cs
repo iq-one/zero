@@ -75,6 +75,15 @@ internal static class Diagnostics
         "The route on '{0}' has no pattern. Give it one, for example \"/invoices/{{id:int}}\".",
         "An empty pattern maps the endpoint to the application root, which is almost never intended.");
 
+    public static readonly DiagnosticDescriptor UnrecognisedRouteAttribute = Error(
+        "ZERO303", Web, "A derived route attribute produces no endpoint",
+        "'{0}' derives from RouteAttribute, but only Get, Post, Put, Patch and Delete are read. " +
+        "'{1}' would be reachable at no URL. Use one of those five on the request instead.",
+        "RouteAttribute is public and abstract, so deriving from it looks supported. The generator " +
+        "matches the five attributes this package declares, because it cannot evaluate a derived " +
+        "constructor to learn the method and pattern it passes down. Without this the endpoint is " +
+        "simply never mapped, and nothing says so.");
+
     public static readonly DiagnosticDescriptor DuplicateRegistration = Warning(
         "ZERO010", Registration, "Service type registered by two implementations",
         "Both '{1}' and '{2}' register as '{0}', so resolving '{0}' returns whichever came last. " +

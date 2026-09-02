@@ -92,9 +92,13 @@ public abstract class Specification<T> : ISpecification<T>
     /// up under load, so add an ordering as well.
     /// </remarks>
     /// <param name="skip">Matches to skip.</param>
-    /// <param name="take">Matches to take.</param>
+    /// <param name="take">
+    /// Matches to take, or <see langword="null"/> for all of them from <paramref name="skip"/>
+    /// onwards. An offset with no limit is unusual but legitimate, and a required limit
+    /// forced callers to invent one.
+    /// </param>
     /// <returns>This specification, for chaining.</returns>
-    protected Specification<T> Page(int skip, int take)
+    protected Specification<T> Page(int skip, int? take)
     {
         Skip = skip;
         Take = take;

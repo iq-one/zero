@@ -309,7 +309,20 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
                     .FirstOrDefault(r => r.Attribute == a.TypeName).Method))
                 .FirstOrDefault(x => x.Method is not null);
 
-            if (route.Method is null) continue;
+            if (route.Method is null)
+            {
+                // Nothing here looked like a route. But an attribute that DERIVES from
+                // RouteAttribute did mean to be one, and silently mapping no endpoint is the
+                // worst possible answer: the build is green and the URL 404s.
+                var derived = candidate.Attributes.FirstOrDefault(a =>
+                    a.BaseTypeNames.Contains(platform.RouteAttribute));
+
+                if (derived is not null)
+                    report(Diagnostics.UnrecognisedRouteAttribute, candidate.Location,
+                        [derived.TypeName, candidate.TypeName]);
+
+                continue;
+            }
 
             var request = candidate.ClosedInterfaces.FirstOrDefault(i =>
                 i.OpenGenericName == platform.RequestInterface && i.TypeArguments.Count == 1);

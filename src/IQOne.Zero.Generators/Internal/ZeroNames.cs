@@ -101,6 +101,11 @@ internal sealed record ZeroNames
         $"{Root}.Validation.IValidator",
         $"{Root}.Persistence.Conventions.IModelConvention",
         $"{Root}.Persistence.Conventions.ISaveChangesConvention",
+
+        // The third convention belongs with the other two. It was missing, so a filter
+        // convention was the one kind of convention an application had to register by hand
+        // — and the omission showed up as a query with no tenant filter, not as an error.
+        $"{Root}.Persistence.Conventions.IEntityFilterConvention",
         $"{Messaging}.IPipelineBehavior",
 
         // One entry covers all three arities: authorization deliberately gave the marker and

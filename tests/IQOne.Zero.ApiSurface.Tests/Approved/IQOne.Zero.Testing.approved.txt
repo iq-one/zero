@@ -1,0 +1,94 @@
+sealed class IQOne.Zero.Testing.FakeSender : IQOne.Zero.Messaging.ISender
+    .ctor FakeSender()
+    IQOne.Zero.Testing.FakeSender Fails<TRequest, TResponse>(IQOne.Zero.Error error)
+    IQOne.Zero.Testing.FakeSender Fails<TRequest>(IQOne.Zero.Error error)
+    IQOne.Zero.Testing.FakeSender Returns<TRequest, TResponse>(Func<TRequest, CancellationToken, Task<IQOne.Zero.Result<TResponse>>> respond)
+    IQOne.Zero.Testing.FakeSender Returns<TRequest, TResponse>(Func<TRequest, IQOne.Zero.Result<TResponse>> respond)
+    IQOne.Zero.Testing.FakeSender Returns<TRequest, TResponse>(IQOne.Zero.Result<TResponse> result)
+    IQOne.Zero.Testing.FakeSender Returns<TRequest, TResponse>(TResponse value)
+    IQOne.Zero.Testing.FakeSender Succeeds<TRequest>()
+    IReadOnlyList<TRequest> SentOf<TRequest>()
+    IReadOnlyList<object> Sent { get; }
+    TRequest ShouldHaveSent<TRequest>()
+    TRequest ShouldHaveSent<TRequest>(Func<TRequest, bool> match, string expression = default)
+    Task<IQOne.Zero.Result<TResponse>> SendAsync<TResponse>(IQOne.Zero.Messaging.IRequest<TResponse> request, CancellationToken cancellationToken = default)
+    void ShouldHaveSent<TRequest>(int times)
+    void ShouldHaveSentNothing()
+    void ShouldNotHaveSent<TRequest>()
+
+static class IQOne.Zero.Testing.HandlerHarness
+    static IQOne.Zero.Testing.HandlerHarness<TRequest, TResponse> For<TRequest, TResponse>(Func<IServiceProvider, IQOne.Zero.Messaging.IRequestHandler<TRequest, TResponse>> handler)
+    static IQOne.Zero.Testing.HandlerHarness<TRequest, TResponse> For<TRequest, TResponse>(IQOne.Zero.Messaging.IRequestHandler<TRequest, TResponse> handler)
+
+sealed class IQOne.Zero.Testing.HandlerHarness<TRequest, TResponse>
+    IQOne.Zero.Testing.HandlerHarness<TRequest, TResponse> WithBehavior(IQOne.Zero.Messaging.IPipelineBehavior<TRequest, TResponse> behavior)
+    IQOne.Zero.Testing.HandlerHarness<TRequest, TResponse> WithService<TService>(TService instance)
+    IQOne.Zero.Testing.HandlerHarness<TRequest, TResponse> WithServices(Action<Microsoft.Extensions.DependencyInjection.IServiceCollection> configure)
+    IQOne.Zero.Testing.HandlerHarness<TRequest, TResponse> WithValidator(IQOne.Zero.Validation.IValidator<TRequest> validator)
+    Task<IQOne.Zero.Result<TResponse>> HandleAsync(TRequest request, CancellationToken cancellationToken = default)
+    Task<IQOne.Zero.Result<TResponse>> SendAsync(TRequest request, CancellationToken cancellationToken = default)
+
+sealed class IQOne.Zero.Testing.RecordingBehavior<TRequest, TResponse> : IQOne.Zero.Messaging.IPipelineBehavior<TRequest, TResponse>
+    .ctor RecordingBehavior(IList<string> log, string name, int order = default)
+    Task<IQOne.Zero.Result<TResponse>> HandleAsync(TRequest request, IQOne.Zero.Messaging.RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
+    int Order { get; }
+
+static class IQOne.Zero.Testing.ResultAssertions
+    static IQOne.Zero.Error ShouldFailWith(IQOne.Zero.Result result, IQOne.Zero.ErrorKind kind)
+    static IQOne.Zero.Error ShouldFailWith(IQOne.Zero.Result result, string code)
+    static IQOne.Zero.Error ShouldFailWith<TValue>(IQOne.Zero.Result<TValue> result, IQOne.Zero.ErrorKind kind)
+    static IQOne.Zero.Error ShouldFailWith<TValue>(IQOne.Zero.Result<TValue> result, string code)
+    static IQOne.Zero.ErrorList ShouldFail(IQOne.Zero.Result result)
+    static IQOne.Zero.ErrorList ShouldFail<TValue>(IQOne.Zero.Result<TValue> result)
+    static IQOne.Zero.ErrorList ShouldFailWithCodes(IQOne.Zero.Result result, string[] codes)
+    static IQOne.Zero.ErrorList ShouldFailWithCodes<TValue>(IQOne.Zero.Result<TValue> result, string[] codes)
+    static IQOne.Zero.Result ShouldSucceed(IQOne.Zero.Result result)
+    static TValue ShouldHaveValue<TValue>(IQOne.Zero.Result<TValue> result, Func<TValue, bool> predicate, string expression = default)
+    static TValue ShouldHaveValue<TValue>(IQOne.Zero.Result<TValue> result, TValue expected)
+    static TValue ShouldSucceed<TValue>(IQOne.Zero.Result<TValue> result)
+
+sealed class IQOne.Zero.Testing.ShortCircuitBehavior<TRequest, TResponse> : IQOne.Zero.Messaging.IPipelineBehavior<TRequest, TResponse>
+    .ctor ShortCircuitBehavior(IQOne.Zero.Error error, int order = default)
+    Task<IQOne.Zero.Result<TResponse>> HandleAsync(TRequest request, IQOne.Zero.Messaging.RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
+    int Order { get; }
+
+sealed class IQOne.Zero.Testing.StubHandler<TRequest, TResponse> : IQOne.Zero.Messaging.IRequestHandler<TRequest, TResponse>
+    .ctor StubHandler(Func<TRequest, CancellationToken, Task<IQOne.Zero.Result<TResponse>>> respond)
+    .ctor StubHandler(IQOne.Zero.Result<TResponse> result)
+    IReadOnlyList<TRequest> Received { get; }
+    TRequest ShouldHaveRun()
+    Task<IQOne.Zero.Result<TResponse>> HandleAsync(TRequest request, CancellationToken cancellationToken)
+    bool Ran { get; }
+    static IQOne.Zero.Testing.StubHandler<TRequest, TResponse> Failing(IQOne.Zero.Error error)
+    static IQOne.Zero.Testing.StubHandler<TRequest, TResponse> Returning(TResponse value)
+    void ShouldNotHaveRun()
+
+static class IQOne.Zero.Testing.ValidatorAssertions
+    static Task ShouldAcceptAsync<T>(IQOne.Zero.Validation.IValidator<T> validator, T value, CancellationToken cancellationToken = default)
+    static Task<IQOne.Zero.Error> ShouldRejectAsync<T>(IQOne.Zero.Validation.IValidator<T> validator, T value, string code, CancellationToken cancellationToken = default)
+    static Task<IReadOnlyList<IQOne.Zero.Error>> ShouldRejectAsync<T>(IQOne.Zero.Validation.IValidator<T> validator, T value, CancellationToken cancellationToken = default)
+
+sealed class IQOne.Zero.Testing.ZeroAssertionException : Exception
+    .ctor ZeroAssertionException(string message)
+    .ctor ZeroAssertionException(string message, Exception innerException)
+
+sealed class IQOne.Zero.Testing.ZeroTestApplication : IQOne.Zero.Fundamentals.Disposable.AsyncDisposable
+    IServiceProvider Services { get; }
+    Microsoft.Extensions.DependencyInjection.IServiceScope CreateScope()
+    TResult InScope<TService, TResult>(Func<TService, TResult> use)
+    Task<IQOne.Zero.Result<TResponse>> SendAsync<TResponse>(IQOne.Zero.Messaging.IRequest<TResponse> request, CancellationToken cancellationToken = default)
+    protected ValueTask ReleaseManagedResourcesAsync()
+    protected void ReleaseManagedResources()
+    static IQOne.Zero.Testing.ZeroTestApplicationBuilder Create()
+
+sealed class IQOne.Zero.Testing.ZeroTestApplicationBuilder
+    IQOne.Zero.Testing.ZeroTestApplicationBuilder AddBehavior(Type behaviorType)
+    IQOne.Zero.Testing.ZeroTestApplicationBuilder AddBehavior<TRequest, TResponse>(IQOne.Zero.Messaging.IPipelineBehavior<TRequest, TResponse> behavior)
+    IQOne.Zero.Testing.ZeroTestApplicationBuilder AddConfiguration(ValueTuple<string, string>[] settings)
+    IQOne.Zero.Testing.ZeroTestApplicationBuilder AddHandler<TRequest, TResponse, THandler>()
+    IQOne.Zero.Testing.ZeroTestApplicationBuilder AddHandler<TRequest, TResponse>(IQOne.Zero.Messaging.IRequestHandler<TRequest, TResponse> handler)
+    IQOne.Zero.Testing.ZeroTestApplicationBuilder AddModule(IQOne.Zero.Modules.IModule module)
+    IQOne.Zero.Testing.ZeroTestApplicationBuilder AddServices(Action<Microsoft.Extensions.DependencyInjection.IServiceCollection> configure)
+    IQOne.Zero.Testing.ZeroTestApplicationBuilder AddValidator<T, TValidator>()
+    IQOne.Zero.Testing.ZeroTestApplicationBuilder AddValidator<T>(IQOne.Zero.Validation.IValidator<T> validator)
+    ValueTask<IQOne.Zero.Testing.ZeroTestApplication> BuildAsync(CancellationToken cancellationToken = default)

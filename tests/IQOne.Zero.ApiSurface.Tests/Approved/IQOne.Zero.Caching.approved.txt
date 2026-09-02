@@ -1,0 +1,33 @@
+struct IQOne.Zero.Caching.Cached<TValue>
+    bool Found { get; }
+    bool TryGetValue(out TValue value)
+    static IQOne.Zero.Caching.Cached<TValue> Hit(TValue value)
+    static IQOne.Zero.Caching.Cached<TValue> Miss { get; }
+
+sealed class IQOne.Zero.Caching.CachingBehavior<TRequest, TResponse> : IQOne.Zero.Messaging.IPipelineBehavior<TRequest, TResponse>
+    .ctor CachingBehavior(IQOne.Zero.Caching.ICache cache, Microsoft.Extensions.Options.IOptions<IQOne.Zero.Caching.CachingOptions> options)
+    Task<IQOne.Zero.Result<TResponse>> HandleAsync(TRequest request, IQOne.Zero.Messaging.RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
+    int Order { get; }
+
+sealed class IQOne.Zero.Caching.CachingOptions
+    .ctor CachingOptions()
+    TimeSpan DefaultLifetime { get; set; }
+    bool Enabled { get; set; }
+    string KeyPrefix { get; set; }
+
+static class IQOne.Zero.Caching.CachingRegistration
+    static Microsoft.Extensions.DependencyInjection.IServiceCollection AddZeroCaching(Microsoft.Extensions.DependencyInjection.IServiceCollection services, Action<IQOne.Zero.Caching.CachingOptions> configure = default)
+
+interface IQOne.Zero.Caching.ICache : IQOne.Zero.DependencyInjection.Descriptors.ISingleton
+    ValueTask RemoveAsync(string key, CancellationToken cancellationToken)
+    ValueTask RemoveByPrefixAsync(string keyPrefix, CancellationToken cancellationToken)
+    ValueTask SetAsync<TValue>(string key, TValue value, TimeSpan lifetime, CancellationToken cancellationToken)
+    ValueTask<IQOne.Zero.Caching.Cached<TValue>> GetAsync<TValue>(string key, CancellationToken cancellationToken)
+
+interface IQOne.Zero.Caching.ICacheInvalidator : IQOne.Zero.DependencyInjection.Descriptors.ISingleton
+    ValueTask InvalidateAsync(string cacheKey, CancellationToken cancellationToken)
+    ValueTask InvalidateByPrefixAsync(string keyPrefix, CancellationToken cancellationToken)
+
+interface IQOne.Zero.Caching.ICacheable
+    TimeSpan? Lifetime { get; }
+    string CacheKey { get; }
