@@ -14,6 +14,8 @@
     <Copyright>Copyright (c) IQOne</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageReleaseNotes>See CHANGELOG.md. The API will change before 1.0; pin the version.</PackageReleaseNotes>
     <PackageTags>zero;iqone;framework;aspnetcore;source-generator;analyzer;ai-agents</PackageTags>
     <PackageProjectUrl>https://iqone.solutions/zero</PackageProjectUrl>
     <RepositoryUrl>https://github.com/keremcanaktas/zero</RepositoryUrl>
@@ -38,6 +40,20 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!--
+    One icon for all of them. A static item, not one added in a target: pack resolves the
+    icon before any target of ours runs, and adding it later fails with NU5046 saying the
+    file is not in the package.
+
+    Nineteen grey squares in a package list is nineteen packages nobody can tell apart.
+
+    No licence FILE: PackageLicenseExpression above is what nuget.org reads, and it renders
+    the licence properly without one. LICENSE stays in the repository, where people look.
+  -->
+  <ItemGroup>
+    <None Include="$(ZeroRepositoryRoot)icon.png" Pack="true" PackagePath="icon.png" Visible="false" />
   </ItemGroup>
 
   <!--
