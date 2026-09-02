@@ -4,6 +4,7 @@ sealed class IQOne.Zero.BackgroundWork.BackgroundWorkOptions
     bool Enabled { get; set; }
 
 static class IQOne.Zero.BackgroundWork.BackgroundWorkRegistration
+    static Microsoft.Extensions.DependencyInjection.IServiceCollection AddRecurringCommand<TCommand, TResponse>(Microsoft.Extensions.DependencyInjection.IServiceCollection services, string name, IQOne.Zero.BackgroundWork.JobSchedule schedule, Func<IQOne.Zero.BackgroundWork.JobRunContext, TCommand> create)
     static Microsoft.Extensions.DependencyInjection.IServiceCollection AddRecurringCommand<TCommand>(Microsoft.Extensions.DependencyInjection.IServiceCollection services, string name, IQOne.Zero.BackgroundWork.JobSchedule schedule, Func<IQOne.Zero.BackgroundWork.JobRunContext, TCommand> create)
     static Microsoft.Extensions.DependencyInjection.IServiceCollection AddRecurringJob(Microsoft.Extensions.DependencyInjection.IServiceCollection services, string name, IQOne.Zero.BackgroundWork.JobSchedule schedule, Func<IServiceProvider, IQOne.Zero.BackgroundWork.JobRunContext, CancellationToken, Task<IQOne.Zero.Result>> run)
     static Microsoft.Extensions.DependencyInjection.IServiceCollection AddRecurringJob<TJob>(Microsoft.Extensions.DependencyInjection.IServiceCollection services, string name, IQOne.Zero.BackgroundWork.JobSchedule schedule)

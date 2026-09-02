@@ -54,6 +54,26 @@ public readonly struct Result : IEquatable<Result>
     /// <returns>The result.</returns>
     public static Result Success() => new(true, null);
 
+    /// <summary>
+    /// A successful outcome carrying a value, with the type inferred.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The implicit conversion from a value cannot be used when the value's type is an
+    /// interface: C# forbids a user-defined conversion whose source or target is one. That
+    /// rules it out for the single most common thing a query handler returns —
+    /// <c>IReadOnlyList&lt;T&gt;</c> — so <c>return page;</c> does not compile and the
+    /// alternative is naming the whole closed type at the return.
+    /// </para>
+    /// <para>
+    /// This infers it: <c>return Result.Success(page);</c>.
+    /// </para>
+    /// </remarks>
+    /// <typeparam name="TValue">What the operation produced. Inferred from the argument.</typeparam>
+    /// <param name="value">What the operation produced.</param>
+    /// <returns>The result.</returns>
+    public static Result<TValue> Success<TValue>(TValue value) => Result<TValue>.Success(value);
+
     /// <summary>A failed outcome.</summary>
     /// <param name="error">Why it failed.</param>
     /// <returns>The result.</returns>

@@ -6,4 +6,11 @@
   <ItemGroup>
     <ProjectReference Include="../IQOne.Zero.Messaging/IQOne.Zero.Messaging.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <!-- One line at startup when the application left ICurrentUser unregistered. Without
+         it the omission is silent and every request is refused with no clue why. -->
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
 </Project>

@@ -198,3 +198,39 @@ public class ResultTests
         Describe(4).Value.Should().Be("4");
     }
 }
+
+/// <summary>
+/// The conversions a caller actually reaches for, and the one C# will not give them.
+/// </summary>
+public class ResultConversionTests
+{
+    [Fact]
+    public void A_value_whose_type_is_an_interface_needs_the_inferring_factory()
+    {
+        IReadOnlyList<int> page = [1, 2, 3];
+
+        // The implicit conversion cannot apply here: C# forbids a user-defined conversion
+        // whose source is an interface type, and IReadOnlyList<T> is the most common thing a
+        // query handler returns. Without this factory the caller has to name the closed type
+        // at every return.
+        var result = Result.Success(page);
+
+        result.Should().BeOfType<Result<IReadOnlyList<int>>>();
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Equal([1, 2, 3]);
+    }
+
+    [Fact]
+    public void A_value_whose_type_is_concrete_still_converts_on_its_own()
+    {
+        Result<int> result = 42;
+
+        result.Value.Should().Be(42);
+    }
+
+    [Fact]
+    public void The_inferring_factory_agrees_with_the_explicit_one()
+    {
+        Result.Success(7).Should().Be(Result<int>.Success(7));
+    }
+}

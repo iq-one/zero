@@ -17,7 +17,8 @@ namespace IQOne.Zero.Web;
 /// <param name="method">The HTTP method.</param>
 /// <param name="pattern">The route pattern, with ASP.NET's constraint syntax.</param>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, Inherited = false)]
-public abstract class RouteAttribute(string method, string pattern) : Attribute
+public abstract class RouteAttribute(string method, string pattern)
+    : Attribute, IQOne.Zero.Authorization.IAuthorizationDeclaration
 {
     /// <summary>The HTTP method.</summary>
     public string Method { get; } = method;
@@ -47,6 +48,12 @@ public abstract class RouteAttribute(string method, string pattern) : Attribute
 
     /// <summary>Whether the endpoint may be reached without authentication.</summary>
     public bool AllowAnonymous { get; set; }
+
+    /// <summary>Roles, any one of which will do. Comma-separated.</summary>
+    public string? Roles { get; set; }
+
+    /// <inheritdoc />
+    bool IQOne.Zero.Authorization.IAuthorizationDeclaration.AllowsAnonymous => AllowAnonymous;
 }
 
 /// <summary>Reachable with GET. Safe to cache and to retry.</summary>

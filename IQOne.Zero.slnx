@@ -44,6 +44,7 @@
   </Folder>
 
   <Folder Name="/samples/">
+    <Project Path="samples/Zero.Sample.Orders/Zero.Sample.Orders.csproj" />
     <Project Path="samples/Zero.Sample.Invoices/Zero.Sample.Invoices.csproj" />
   </Folder>
 
@@ -60,6 +61,7 @@
     <Project Path="tests/IQOne.Zero.Events.Tests/IQOne.Zero.Events.Tests.csproj" />
     <Project Path="tests/IQOne.Zero.BackgroundWork.Tests/IQOne.Zero.BackgroundWork.Tests.csproj" />
     <Project Path="tests/IQOne.Zero.Resilience.Tests/IQOne.Zero.Resilience.Tests.csproj" />
+    <Project Path="tests/Zero.Sample.Orders.Tests/Zero.Sample.Orders.Tests.csproj" />
     <Project Path="tests/IQOne.Zero.Core.Tests/IQOne.Zero.Core.Tests.csproj" />
     <Project Path="tests/IQOne.Zero.Guidance.Tests/IQOne.Zero.Guidance.Tests.csproj" />
     <Project Path="tests/IQOne.Zero.Configuration.Tests/IQOne.Zero.Configuration.Tests.csproj" />

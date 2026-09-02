@@ -1,6 +1,33 @@
 namespace IQOne.Zero.Authorization;
 
 /// <summary>
+/// Something applied to a request that says who may make it.
+/// </summary>
+/// <remarks>
+/// <para>
+/// An interface rather than a fixed attribute type, so a declaration that also carries
+/// transport detail can be the same declaration. A routed request states its policy on its
+/// route attribute; without this the pipeline could not see it, and the author would have to
+/// write the same thing twice — where the two can then disagree, and the one the pipeline
+/// reads is the one that matters.
+/// </para>
+/// <para>
+/// Implement it on an attribute; nothing else is read.
+/// </para>
+/// </remarks>
+public interface IAuthorizationDeclaration
+{
+    /// <summary>Named policy the caller must satisfy, or null for "merely authenticated".</summary>
+    string? Policy { get; }
+
+    /// <summary>Roles, any one of which will do. Comma-separated, or null.</summary>
+    string? Roles { get; }
+
+    /// <summary>Whether the request may be made by anyone, identified or not.</summary>
+    bool AllowsAnonymous { get; }
+}
+
+/// <summary>
 /// Declares who may make this request.
 /// </summary>
 /// <remarks>
@@ -20,13 +47,14 @@ namespace IQOne.Zero.Authorization;
 /// either. Two attributes are the way to say "admin, and also in the finance policy".
 /// </para>
 /// <para>
-/// This attribute is what the pipeline reads, in every host. It is not the same thing as the
-/// <c>Policy</c> property on a route attribute, which configures the HTTP endpoint; see the
-/// package's rule file.
+/// This is what the pipeline reads in a host with no transport of its own — a worker, a
+/// consumer, a test. A routed request does not need it: a route attribute is itself an
+/// <see cref="IAuthorizationDeclaration"/>, so its <c>Policy</c> is the same declaration and
+/// the pipeline reads it directly.
 /// </para>
 /// </remarks>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, Inherited = false, AllowMultiple = true)]
-public sealed class AuthorizeAttribute : Attribute
+public sealed class AuthorizeAttribute : Attribute, IAuthorizationDeclaration
 {
     /// <summary>The caller must be authenticated, and nothing more.</summary>
     public AuthorizeAttribute() { }
@@ -43,6 +71,9 @@ public sealed class AuthorizeAttribute : Attribute
     /// the safe reading of a rule nobody wrote is that nobody passes it.
     /// </remarks>
     public string? Policy { get; set; }
+
+    /// <inheritdoc />
+    bool IAuthorizationDeclaration.AllowsAnonymous => false;
 
     /// <summary>
     /// Roles the caller may hold, separated by commas. Any one of them is enough.
@@ -63,4 +94,14 @@ public sealed class AuthorizeAttribute : Attribute
 /// nobody thought about it is not.
 /// </remarks>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, Inherited = false)]
-public sealed class AllowAnonymousAttribute : Attribute;
+public sealed class AllowAnonymousAttribute : Attribute, IAuthorizationDeclaration
+{
+    /// <inheritdoc />
+    public string? Policy => null;
+
+    /// <inheritdoc />
+    public string? Roles => null;
+
+    /// <inheritdoc />
+    public bool AllowsAnonymous => true;
+}

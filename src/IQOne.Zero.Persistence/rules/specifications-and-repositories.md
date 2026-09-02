@@ -42,9 +42,27 @@ var invoices = await context.Invoices
     .ToListAsync(cancellationToken);      // the handler now depends on EF
 ```
 
-Do not call `SaveChanges` in a handler. `TransactionBehavior` commits when a command
-succeeds and rolls back when it fails, and a handler that saves halfway through has already
-committed part of its work by the time it returns a failure.
+Do not **commit** in a handler. `TransactionBehavior` commits when a command succeeds and
+rolls back when it fails, so a handler that completes the transaction itself has decided the
+outcome before the pipeline knows what it is.
+
+Calling `SaveChangesAsync` is a different thing and is allowed: inside the transaction it
+flushes, and the transaction still decides whether any of it survives. You need it when the
+database assigns something you have to return — an identity column, a computed value:
+
+```csharp
+await orders.AddAsync(order, cancellationToken);
+
+// The id does not exist until the insert happens, and the pipeline saves after this method
+// returns. Flushing here fills it in; the transaction still governs whether it stands.
+await unitOfWork.SaveChangesAsync(cancellationToken);
+
+return order.Id;
+```
+
+Better still, avoid needing it: if the caller chose the identity — a reference, a
+client-generated id — then the caller already has it and nothing has to be read back. That is
+also what makes the command safe to retry.
 
 Do not write your own repository or specification interface. This is the one Zero has.
 

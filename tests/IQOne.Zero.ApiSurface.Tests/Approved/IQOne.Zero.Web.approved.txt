@@ -41,13 +41,14 @@ sealed class IQOne.Zero.Web.PostAttribute : IQOne.Zero.Web.RouteAttribute
 sealed class IQOne.Zero.Web.PutAttribute : IQOne.Zero.Web.RouteAttribute
     .ctor PutAttribute(string pattern)
 
-abstract class IQOne.Zero.Web.RouteAttribute : Attribute
+abstract class IQOne.Zero.Web.RouteAttribute : Attribute, IQOne.Zero.Authorization.IAuthorizationDeclaration
     bool AllowAnonymous { get; set; }
     protected .ctor RouteAttribute(string method, string pattern)
     string Method { get; }
     string Name { get; set; }
     string Pattern { get; }
     string Policy { get; set; }
+    string Roles { get; set; }
     string Tag { get; set; }
 
 static class IQOne.Zero.Web.WebModuleContextExtensions

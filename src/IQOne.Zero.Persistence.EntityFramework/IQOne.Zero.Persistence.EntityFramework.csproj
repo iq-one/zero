@@ -18,15 +18,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!--
-      The engine is the consumer's decision. This package knows relational metadata — a
-      table has a name and a schema — and nothing about which server holds it.
-
-      VersionOverride is temporary: Directory.Packages.props carries no central version for
-      these yet, and this package may not edit that file.
-    -->
-    <PackageReference Include="Microsoft.EntityFrameworkCore" VersionOverride="10.0.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" VersionOverride="10.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
   </ItemGroup>
 
 </Project>

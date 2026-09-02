@@ -110,6 +110,42 @@ public static class BackgroundWorkRegistration
                 .ConfigureAwait(false));
     }
 
+    /// <summary>
+    /// Sends a command that produces a value on a schedule.
+    /// </summary>
+    /// <remarks>
+    /// The value is recorded with the run and otherwise discarded — nobody is waiting for
+    /// it. This overload exists because the most natural scheduled command answers "how many
+    /// did I do": a sweep, a reconciliation, a retry pass. Without it those had to be
+    /// rewritten as <see cref="ICommand"/> and lose the count they already knew.
+    /// </remarks>
+    /// <typeparam name="TCommand">The command to send.</typeparam>
+    /// <typeparam name="TResponse">What the command produces.</typeparam>
+    /// <param name="services">The registrations to add to.</param>
+    /// <param name="name">How the job is named in logs, in status and when switching it off.</param>
+    /// <param name="schedule">When it runs.</param>
+    /// <param name="create">
+    /// Builds the command for one occurrence. Takes the context so the command can carry the
+    /// occurrence it serves rather than reading a clock.
+    /// </param>
+    /// <returns>The same collection, for chaining.</returns>
+    public static IServiceCollection AddRecurringCommand<TCommand, TResponse>(
+        this IServiceCollection services,
+        string name,
+        JobSchedule schedule,
+        Func<JobRunContext, TCommand> create)
+        where TCommand : ICommand<TResponse>
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(create);
+
+        return services.AddRecurringJob(name, schedule, async (provider, context, cancellationToken) =>
+            await provider
+                .GetRequiredService<ISender>()
+                .SendAsync(create(context), cancellationToken)
+                .ConfigureAwait(false));
+    }
+
     /// <summary>Runs an inline body on a schedule.</summary>
     /// <remarks>
     /// For work too small to name. Anything that needs a test of its own wants

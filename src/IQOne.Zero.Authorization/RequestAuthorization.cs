@@ -46,10 +46,16 @@ internal sealed class RequestAuthorization
         // AllowAnonymous wins over Authorize on the same type, as it does everywhere else, so
         // that a reader who knows one framework is not surprised by this one. Writing both is
         // still a mistake, and ZERO451 reports it rather than leaving it to be discovered.
-        if (type.GetCustomAttributes(typeof(AllowAnonymousAttribute), inherit: false).Length > 0)
-            return AnyoneMay;
+        // Any attribute implementing IAuthorizationDeclaration, not one fixed type. A routed
+        // request states its policy on its route attribute; reading only AuthorizeAttribute
+        // would mean writing the same thing twice, and two declarations of one fact are two
+        // that can disagree.
+        var declarations = type
+            .GetCustomAttributes(inherit: false)
+            .OfType<IAuthorizationDeclaration>()
+            .ToArray();
 
-        var declarations = (AuthorizeAttribute[])type.GetCustomAttributes(typeof(AuthorizeAttribute), inherit: false);
+        if (declarations.Any(declaration => declaration.AllowsAnonymous)) return AnyoneMay;
 
         if (declarations.Length == 0) return Nothing;
 

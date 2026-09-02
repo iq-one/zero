@@ -34,6 +34,21 @@
     <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.0" />
   </ItemGroup>
 
+  <ItemGroup Label="Veri">
+    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.0" />
+    <!-- Saglayici secimi tuketicinin: bunu yalnizca ornek ve testler kullanir. -->
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.0" />
+
+    <!-- Sqlite 2.1.11'i dolayli getiriyor ve onda GHSA-2m69-gcr7-jv3q var. Transitive
+         sabitleme kapali oldugu icin bunu kullanan her proje acikca basvurur. Surum
+         burada, tek yerde: dagitmak merkezi paket yonetiminin amacini bosa cikarir. -->
+    <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.13" />
+    <PackageVersion Include="SQLitePCLRaw.core" Version="2.1.13" />
+    <PackageVersion Include="SQLitePCLRaw.lib.e_sqlite3" Version="2.1.13" />
+    <PackageVersion Include="SQLitePCLRaw.provider.e_sqlite3" Version="2.1.13" />
+  </ItemGroup>
+
   <ItemGroup Label="Test">
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageVersion Include="xunit" Version="2.9.3" />

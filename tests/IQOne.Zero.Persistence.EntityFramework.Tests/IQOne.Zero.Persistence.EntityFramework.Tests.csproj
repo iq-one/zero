@@ -17,13 +17,13 @@
       does not translate fails the test instead of quietly running in memory — which is what
       the InMemory provider would let it do.
     -->
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" VersionOverride="10.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
     <!--
       Pinned past an advisory in the version EF Core 10 asks for. Directory.Packages.props
       says a security pin is made one reference at a time rather than by turning transitive
       pinning on, and this is that case.
     -->
-    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" VersionOverride="2.1.13" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
   </ItemGroup>
   <ItemGroup>
     <Using Include="Xunit" />

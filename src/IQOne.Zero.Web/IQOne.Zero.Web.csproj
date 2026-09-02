@@ -8,5 +8,9 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../IQOne.Zero.Messaging/IQOne.Zero.Messaging.csproj" />
+    <!-- Authorization is transport-independent and sits below this package. Referencing it
+         is what lets a route attribute BE the authorization declaration, instead of the
+         author writing the same policy twice and the two drifting apart. -->
+    <ProjectReference Include="../IQOne.Zero.Authorization/IQOne.Zero.Authorization.csproj" />
   </ItemGroup>
 </Project>

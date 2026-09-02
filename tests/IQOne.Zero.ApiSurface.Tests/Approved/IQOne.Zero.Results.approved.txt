@@ -53,6 +53,7 @@ struct IQOne.Zero.Result : IEquatable<IQOne.Zero.Result>
     static IQOne.Zero.Result Failure(IEnumerable<IQOne.Zero.Error> errors)
     static IQOne.Zero.Result Failure(IQOne.Zero.Error error)
     static IQOne.Zero.Result Success()
+    static IQOne.Zero.Result<TValue> Success<TValue>(TValue value)
     static IQOne.Zero.Result<TValue[]> Combine<TValue>(IEnumerable<IQOne.Zero.Result<TValue>> results)
     static IQOne.Zero.Result<TValue[]> Combine<TValue>(IQOne.Zero.Result<TValue>[] results)
     string ToString()

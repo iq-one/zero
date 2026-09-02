@@ -43,6 +43,11 @@ public static class AuthorizationRegistration
         // registration does.
         services.TryAddScoped(_ => CurrentUser.Anonymous);
 
+        // Reports the omission once at startup. The fallback above keeps a host with no
+        // notion of a user working; this keeps forgetting from looking the same as meaning it.
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<Microsoft.Extensions.Hosting.IHostedService, CurrentUserCheck>());
+
         services.AddScoped<IResourceAuthorizer, ResourceAuthorizer>();
         services.AddScoped<IRequirementHandler<RolesRequirement>, RolesRequirementHandler>();
         services.AddScoped<IRequirementHandler<ClaimRequirement>, ClaimRequirementHandler>();
