@@ -1,3 +1,5 @@
+<img src="assets/logo.png" alt="Zero" width="96" />
+
 # Zero
 
 An application framework for .NET 10 that resolves registration, dispatch, routing and
