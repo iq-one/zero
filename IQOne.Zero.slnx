@@ -44,7 +44,11 @@
   </Folder>
 
   <Folder Name="/samples/">
-    <Project Path="samples/Zero.Sample.Orders/Zero.Sample.Orders.csproj" />
+    <Project Path="samples/Zero.Sample.Orders/Catalog/Zero.Sample.Orders.Catalog.csproj" />
+    <Project Path="samples/Zero.Sample.Orders/Data/Zero.Sample.Orders.Data.csproj" />
+    <Project Path="samples/Zero.Sample.Orders/Host/Zero.Sample.Orders.Host.csproj" />
+    <Project Path="samples/Zero.Sample.Orders/Ordering/Zero.Sample.Orders.Ordering.csproj" />
+    <Project Path="samples/Zero.Sample.Orders/Pricing/Zero.Sample.Orders.Pricing.csproj" />
     <Project Path="samples/Zero.Sample.Invoices/Zero.Sample.Invoices.csproj" />
   </Folder>
 

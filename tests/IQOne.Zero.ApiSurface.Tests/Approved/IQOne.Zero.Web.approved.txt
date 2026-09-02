@@ -97,5 +97,4 @@ sealed class IQOne.Zero.Web.ZeroWebOptions
     bool IncludeErrorMessages { get; set; }
     bool RequireAuthorizationByDefault { get; set; }
     int EmptySuccessStatusCode { get; set; }
-    string DefaultPolicy { get; set; }
     string RoutePrefix { get; set; }

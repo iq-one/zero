@@ -36,7 +36,13 @@ public static class AuthorizationRegistration
 
         // Checked and sealed before anything can resolve it, so a bad setting stops startup
         // rather than surfacing on the first request that happens to exercise it.
-        services.AddSingleton(options.Freeze());
+        // Checked now, sealed later. Checking here means a nonsensical setting stops startup
+        // even in a host with no modules; sealing here would be before the modules run, and a
+        // module that owns a set of routes owns the policies guarding them.
+        services.AddSingleton(options.Validate());
+
+        services.AddSingleton<IQOne.Zero.Modules.IModuleFeatureContributor>(
+            new AuthorizationFeatureContributor(options));
 
         // TryAdd, so a host that registers its own is unaffected whichever order the two calls
         // happen in: added first, this one is skipped; added after, it wins as the later

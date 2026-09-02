@@ -2,6 +2,9 @@ using IQOne.Zero.Persistence;
 
 namespace Zero.Sample.Orders.Catalog;
 
+/// <summary>Every product, whatever its state. Used to decide whether the shelf is empty.</summary>
+public sealed class AllProducts : Specification<Product>;
+
 /// <summary>One product by its customer-visible code.</summary>
 public sealed class ProductByCode : Specification<Product>
 {

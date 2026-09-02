@@ -8,7 +8,6 @@ using IQOne.Zero.Validation;
 using IQOne.Zero.Web;
 using Microsoft.Extensions.Options;
 using Zero.Sample.Orders.Catalog;
-using Zero.Sample.Orders.Configuration;
 using Zero.Sample.Orders.Pricing;
 
 namespace Zero.Sample.Orders.Ordering;

@@ -337,11 +337,10 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
             var anonymous = string.Equals(
                 Named(route.Attribute, "AllowAnonymous"), "True", StringComparison.OrdinalIgnoreCase);
 
-            // Zero refuses an unauthenticated caller by default, so a forgotten endpoint
-            // fails loudly. What stays silent is one that should have named a policy and
-            // instead serves every logged-in caller.
-            if (policy is null && !anonymous)
-                report(Diagnostics.UndeclaredEndpointPolicy, candidate.Location, [candidate.TypeName]);
+            // Not reported here. A route attribute is an IAuthorizationDeclaration, so
+            // ZERO450 already sees a request that says nothing -- and it applies in every
+            // host, not only an HTTP one. Two diagnostics for one mistake is noise, and the
+            // one that belongs to the package owning the concept is the one that stays.
 
             endpoints.Add(new EndpointDescriptor(
                 route.Method,

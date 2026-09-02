@@ -18,6 +18,9 @@ public static class OrderPolicies
 
     /// <summary>May read any order, not only their own.</summary>
     public const string ReadAny = "orders:read-any";
+
+    /// <summary>All of them, so the module can declare each as a policy in one loop.</summary>
+    public static string[] All => [Place, Pay, ReadAny];
 }
 
 /// <summary>The caller must carry a named permission.</summary>

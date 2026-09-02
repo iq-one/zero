@@ -99,6 +99,8 @@ internal sealed record ZeroNames
         RequestHandlerInterface,
         EventHandlerInterface,
         $"{Root}.Validation.IValidator",
+        $"{Root}.Persistence.Conventions.IModelConvention",
+        $"{Root}.Persistence.Conventions.ISaveChangesConvention",
         $"{Messaging}.IPipelineBehavior",
 
         // One entry covers all three arities: authorization deliberately gave the marker and

@@ -43,6 +43,7 @@ cat > Consumer.csproj <<XML
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="IQOne.Zero" Version="$version" />
+    <PackageReference Include="IQOne.Zero.Authorization" Version="$version" />
   </ItemGroup>
   <ItemGroup>
     <Compile Remove="generated/**/*.cs" />
@@ -94,11 +95,16 @@ echo "--- commands and queries dispatch through a generated table ---"
 cat > Messaging.cs <<'CS'
 using System.Threading;
 using System.Threading.Tasks;
+using IQOne.Zero.Authorization;
 using IQOne.Zero.Messaging;
 using IQOne.Zero;
 
 namespace Consumer;
 
+// Says who may make it, because ZERO450 requires every request to. A request whose
+// permissions nobody wrote down is refused at run time, and a codebase where most say
+// something makes the one that forgot look exactly like the rest.
+[AllowAnonymous]
 public sealed record GetInvoice(int Id) : IQuery<string>;
 
 public sealed class GetInvoiceHandler : IQueryHandler<GetInvoice, string>
@@ -107,6 +113,7 @@ public sealed class GetInvoiceHandler : IQueryHandler<GetInvoice, string>
         => Task.FromResult(Result<string>.Success($"invoice {query.Id}"));
 }
 
+[AllowAnonymous]
 public sealed record Orphan : ICommand;
 CS
 
@@ -128,12 +135,16 @@ echo "--- a routed request becomes a real endpoint ---"
 dotnet add package IQOne.Zero.Web --version "$version" > add.log 2>&1 \
   || { echo "FAIL: the web package could not be added"; cat add.log; exit 1; }
 cat > Web.cs <<'CS'
+using IQOne.Zero.Authorization;
 using IQOne.Zero.Messaging;
 using IQOne.Zero.Web;
 
 namespace Consumer;
 
-[Get("/invoices/{id:int}", Tag = "Invoices")]
+// The route attribute IS the authorization declaration: naming a policy here satisfies
+// ZERO450, and the same declaration is what the pipeline evaluates. Saying it twice would
+// let the two disagree.
+[Get("/invoices/{id:int}", Tag = "Invoices", Policy = "invoices:read")]
 public sealed record GetInvoiceByRoute(int Id) : IQuery<string>;
 CS
 

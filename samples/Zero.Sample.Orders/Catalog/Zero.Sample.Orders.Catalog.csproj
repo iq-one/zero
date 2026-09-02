@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>What can be ordered, and how it is read.</Description>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <CompilerGeneratedFilesOutputPath>generated</CompilerGeneratedFilesOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="generated/**/*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The metapackage: a module belongs to the module system, and IModule plus
+         AddModules live there. -->
+    <ProjectReference Include="../../../src/IQOne.Zero/IQOne.Zero.csproj" />
+    <ProjectReference Include="../../../src/IQOne.Zero.Generators/IQOne.Zero.Generators.csproj"
+                      OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Data/Zero.Sample.Orders.Data.csproj" />
+    <ProjectReference Include="../../../src/IQOne.Zero.Caching/IQOne.Zero.Caching.csproj" />
+    <ProjectReference Include="../../../src/IQOne.Zero.Web/IQOne.Zero.Web.csproj" />
+  </ItemGroup>
+
+</Project>

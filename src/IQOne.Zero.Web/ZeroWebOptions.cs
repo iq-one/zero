@@ -42,12 +42,6 @@ public sealed class ZeroWebOptions
     /// </remarks>
     public bool RequireAuthorizationByDefault { get; set; } = true;
 
-    /// <summary>
-    /// The policy applied to an endpoint that names none, when
-    /// <see cref="RequireAuthorizationByDefault"/> is on. Null requires only that the caller
-    /// is authenticated.
-    /// </summary>
-    public string? DefaultPolicy { get; set; }
 
     /// <summary>
     /// The status code each failure kind is reported with.

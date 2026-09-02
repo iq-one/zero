@@ -96,16 +96,32 @@ request. It can only see the services, not the middleware — on `WebApplication
 together, because that host adds `UseAuthorization` for itself once the services are there;
 on a host that composes its own pipeline, both halves are yours.
 
-An application with a policy every endpoint should start from names it, and one with no
-authentication at all opts out of the default deliberately:
-
-```csharp
-services.AddZeroWeb(options => options.DefaultPolicy = "authenticated-employee");
-```
+An application with no authentication at all opts out of the default deliberately:
 
 ```csharp
 services.AddZeroWeb(options => options.RequireAuthorizationByDefault = false);
 ```
+
+## The endpoint requires authentication; the policy is the pipeline's
+
+`Policy` on a route attribute is *not* an ASP.NET policy. The endpoint gets
+`RequireAuthorization()` with no name — it ensures there is a caller — and the named policy
+is evaluated by `IQOne.Zero.Authorization`, whose registry is the only place it has to exist.
+
+That split matters. A policy named on a route and evaluated by ASP.NET would have to be
+declared in ASP.NET's registry *and* Zero's, because the pipeline reads its own; and a policy
+missing from either fails closed. The application then stops working, and neither message
+says which registry was short.
+
+So policies are declared once, in the module that owns the routes they guard:
+
+```csharp
+partial void OnConfigureServices(IModuleServiceContext context)
+    => context.Authorization().AddPolicy("orders:place", new MustHavePermission("orders:place"));
+```
+
+The cost is that a refused caller is refused after model binding rather than before it. That
+is a few microseconds, in exchange for one declaration instead of two that can disagree.
 
 ## Don't
 

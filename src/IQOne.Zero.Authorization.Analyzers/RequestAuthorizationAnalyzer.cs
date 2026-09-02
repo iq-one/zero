@@ -20,6 +20,7 @@ public sealed class RequestAuthorizationAnalyzer : DiagnosticAnalyzer
 {
     private const string AuthorizeAttributeType = "IQOne.Zero.Authorization.AuthorizeAttribute";
     private const string AllowAnonymousAttributeType = "IQOne.Zero.Authorization.AllowAnonymousAttribute";
+    private const string DeclarationType = "IQOne.Zero.Authorization.IAuthorizationDeclaration";
     private const string RequestType = "IQOne.Zero.Messaging.IRequest`1";
 
     /// <inheritdoc />
@@ -42,8 +43,9 @@ public sealed class RequestAuthorizationAnalyzer : DiagnosticAnalyzer
             if (authorize is null || anonymous is null) return;
 
             var request = start.Compilation.GetTypeByMetadataName(RequestType);
+            var declaration = start.Compilation.GetTypeByMetadataName(DeclarationType);
 
-            var known = new KnownTypes(authorize, anonymous, request);
+            var known = new KnownTypes(authorize, anonymous, request, declaration);
 
             start.RegisterSymbolAction(c => Analyze(c, known), SymbolKind.NamedType);
         });
@@ -60,8 +62,11 @@ public sealed class RequestAuthorizationAnalyzer : DiagnosticAnalyzer
 
         var declarations = type.GetAttributes();
 
-        var isAuthorized = declarations.Any(a => known.Is(a, known.Authorize));
-        var isAnonymous = declarations.Any(a => known.Is(a, known.Anonymous));
+        // Any attribute implementing IAuthorizationDeclaration counts, not one fixed type.
+        // A route attribute is one, so a policy named on a route satisfies this rule -- which
+        // is the point: two declarations of one fact are two that can disagree.
+        var isAuthorized = declarations.Any(a => known.Is(a, known.Authorize) || known.Declares(a));
+        var isAnonymous = declarations.Any(a => known.Is(a, known.Anonymous) || known.DeclaresAnonymous(a));
         var isRequest = known.IsRequest(type);
 
         if (isAuthorized && isAnonymous)
@@ -91,8 +96,39 @@ public sealed class RequestAuthorizationAnalyzer : DiagnosticAnalyzer
     }
 
     private readonly struct KnownTypes(
-        INamedTypeSymbol authorize, INamedTypeSymbol anonymous, INamedTypeSymbol? request)
+        INamedTypeSymbol authorize,
+        INamedTypeSymbol anonymous,
+        INamedTypeSymbol? request,
+        INamedTypeSymbol? declaration)
     {
+        // Copied out of the primary constructor: a struct's lambda cannot capture one.
+        private readonly INamedTypeSymbol? _declaration = declaration;
+
+        /// <summary>Whether the attribute states a policy or a role set of its own.</summary>
+        public bool Declares(AttributeData attribute)
+            => Implements(attribute)
+            && (Named(attribute, "Policy") is string { Length: > 0 }
+                || Named(attribute, "Roles") is string { Length: > 0 });
+
+        /// <summary>Whether the attribute states that anyone may make the request.</summary>
+        public bool DeclaresAnonymous(AttributeData attribute)
+            => Implements(attribute) && Named(attribute, "AllowAnonymous") is true;
+
+        private bool Implements(AttributeData attribute)
+        {
+            var wanted = _declaration;
+
+            return wanted is not null
+                && attribute.AttributeClass is { } applied
+                && applied.AllInterfaces.Any(i =>
+                    SymbolEqualityComparer.Default.Equals(i.OriginalDefinition, wanted));
+        }
+
+        private static object? Named(AttributeData attribute, string name)
+            => attribute.NamedArguments
+                .FirstOrDefault(argument => argument.Key == name)
+                .Value.Value;
+
         private readonly INamedTypeSymbol? _request = request;
 
         public INamedTypeSymbol Authorize { get; } = authorize;

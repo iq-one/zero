@@ -3,9 +3,8 @@ using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Zero.Sample.Orders.Ordering;
 
-namespace Zero.Sample.Orders.Configuration;
+namespace Zero.Sample.Orders.Host;
 
 /// <summary>
 /// Reads the caller from headers, for the sample only.
@@ -51,11 +50,4 @@ public sealed class HeaderAuthenticationHandler(
         return Task.FromResult(AuthenticateResult.Success(
             new AuthenticationTicket(new ClaimsPrincipal(identity), SchemeName)));
     }
-}
-
-/// <summary>Wires the sample's policies onto the permission claim.</summary>
-public static class SamplePolicies
-{
-    /// <summary>Every policy the sample's routes name.</summary>
-    public static readonly string[] All = [OrderPolicies.Place, OrderPolicies.Pay, OrderPolicies.ReadAny];
 }

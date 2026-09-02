@@ -7,7 +7,7 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="../../samples/Zero.Sample.Orders/Zero.Sample.Orders.csproj" />
+    <ProjectReference Include="../../samples/Zero.Sample.Orders/Host/Zero.Sample.Orders.Host.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />

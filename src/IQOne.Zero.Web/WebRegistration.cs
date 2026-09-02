@@ -127,9 +127,19 @@ public static class WebRegistration
     /// Attaches the endpoint's authorization, or the application's default when it names none.
     /// </summary>
     /// <remarks>
-    /// An endpoint that says nothing gets the default rather than nothing at all. Silence is
-    /// the one case where the answer must not be "open": in a codebase where most endpoints
-    /// carry a policy, the one where someone forgot looks exactly like the rest.
+    /// <para>
+    /// The endpoint requires <em>authentication</em>; the named policy is evaluated by the
+    /// pipeline. That split is deliberate: a policy declared on a route would otherwise have
+    /// to exist in two registries — ASP.NET's and Zero's — and a policy missing from either
+    /// fails closed, so the application stops working and neither message says which
+    /// registry was short. One decision, in one place, is worth the few microseconds of
+    /// refusing after model binding rather than before it.
+    /// </para>
+    /// <para>
+    /// An endpoint that says nothing still gets the authentication gate. Silence is the one
+    /// case where the answer must not be "open": in a codebase where most endpoints carry a
+    /// policy, the one where someone forgot looks exactly like the rest.
+    /// </para>
     /// </remarks>
     private static void Authorize(
         IEndpointConventionBuilder builder, ZeroEndpointDescriptor endpoint, ZeroWebOptions options)
@@ -140,16 +150,8 @@ public static class WebRegistration
             return;
         }
 
-        if (endpoint.Policy is not null)
-        {
-            builder.RequireAuthorization(endpoint.Policy);
-            return;
-        }
-
-        if (!options.RequireAuthorizationByDefault) return;
-
-        if (options.DefaultPolicy is null) builder.RequireAuthorization();
-        else builder.RequireAuthorization(options.DefaultPolicy);
+        if (endpoint.Policy is not null || options.RequireAuthorizationByDefault)
+            builder.RequireAuthorization();
     }
 }
 

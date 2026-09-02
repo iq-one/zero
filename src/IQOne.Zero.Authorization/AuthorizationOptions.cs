@@ -130,17 +130,42 @@ public sealed class AuthorizationOptions
         return this;
     }
 
-    /// <summary>Checks the settings and seals them. Called once, by <c>AddZeroAuthorization</c>.</summary>
+    /// <summary>
+    /// Checks the settings and seals them.
+    /// </summary>
+    /// <remarks>
+    /// Called once, after every module has been configured. Sealing inside
+    /// <c>AddZeroAuthorization</c> would be earlier than the modules run, and a module that
+    /// owns a set of routes owns the policies guarding them — refusing it the chance to
+    /// declare them would mean every policy in a modular application had to be written in
+    /// the host, next to nothing that explains it.
+    /// </remarks>
     /// <returns>These options.</returns>
     /// <exception cref="InvalidOperationException">A setting cannot be used as it stands.</exception>
     internal AuthorizationOptions Freeze()
+    {
+        Validate();
+
+        _frozen = true;
+
+        return this;
+    }
+
+    /// <summary>
+    /// Checks the settings without sealing them.
+    /// </summary>
+    /// <remarks>
+    /// Called by <c>AddZeroAuthorization</c>, so a nonsensical setting stops startup even in
+    /// a host with no modules — where nothing would ever get round to sealing them.
+    /// </remarks>
+    /// <returns>These options.</returns>
+    /// <exception cref="InvalidOperationException">A setting cannot be used as it stands.</exception>
+    internal AuthorizationOptions Validate()
     {
         if (string.IsNullOrWhiteSpace(_roleClaimType))
             throw new InvalidOperationException(
                 $"{nameof(AuthorizationOptions)}.{nameof(RoleClaimType)} is blank, so no role could ever " +
                 $"match. Set it to the claim your tokens carry roles in, for example \"roles\".");
-
-        _frozen = true;
 
         return this;
     }

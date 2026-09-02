@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace Zero.Sample.Orders.Configuration;
+namespace Zero.Sample.Orders.Ordering;
 
 /// <summary>
 /// How ordering behaves in this deployment.

@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup Label="Every module. The host names them, and knows nothing else about them.">
+    <ProjectReference Include="../Catalog/Zero.Sample.Orders.Catalog.csproj" />
+    <ProjectReference Include="../Data/Zero.Sample.Orders.Data.csproj" />
+    <ProjectReference Include="../Ordering/Zero.Sample.Orders.Ordering.csproj" />
+    <ProjectReference Include="../Pricing/Zero.Sample.Orders.Pricing.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Label="Capabilities the host turns on but no module names">
+    <ProjectReference Include="../../../src/IQOne.Zero.Observability/IQOne.Zero.Observability.csproj" />
+    <ProjectReference Include="../../../src/IQOne.Zero.Persistence.EntityFramework/IQOne.Zero.Persistence.EntityFramework.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Label="The engine is the host's choice, and appears nowhere else">
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
+    <PackageReference Include="SQLitePCLRaw.core" />
+    <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" />
+    <PackageReference Include="SQLitePCLRaw.provider.e_sqlite3" />
+  </ItemGroup>
+
+</Project>

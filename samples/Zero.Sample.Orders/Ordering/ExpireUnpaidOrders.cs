@@ -4,7 +4,6 @@ using IQOne.Zero.Persistence;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Zero.Sample.Orders.Catalog;
-using Zero.Sample.Orders.Configuration;
 
 namespace Zero.Sample.Orders.Ordering;
 

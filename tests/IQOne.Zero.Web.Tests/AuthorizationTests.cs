@@ -66,19 +66,22 @@ public class AuthorizationTests
     }
 
     [Fact]
-    public async Task A_default_policy_applies_where_no_policy_was_named()
+    public async Task A_named_policy_is_left_to_the_pipeline_and_only_authentication_is_required_here()
     {
-        using var host = Fixture.Build(options => options.DefaultPolicy = "things:admin");
+        using var host = Fixture.Build();
         using var client = Client(host, authenticated: true);
 
-        // Authenticated, but the policy wants a claim this caller does not carry.
-        (await client.GetAsync("/things/7")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        // The route names a policy this caller could not satisfy, and the endpoint still
+        // lets it through: the endpoint requires authentication, and the policy is Zero's to
+        // evaluate. Declaring it in two registries would mean a policy missing from either
+        // fails closed, with neither message saying which one was short.
+        (await client.GetAsync("/things/7")).StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]
-    public async Task A_default_policy_does_not_reach_an_endpoint_marked_anonymous()
+    public async Task An_endpoint_marked_anonymous_is_reached_without_a_caller()
     {
-        using var host = Fixture.Build(options => options.DefaultPolicy = "things:admin");
+        using var host = Fixture.Build();
         using var client = Client(host, authenticated: false);
 
         (await client.GetAsync("/open/things/7")).StatusCode.Should().Be(HttpStatusCode.OK);

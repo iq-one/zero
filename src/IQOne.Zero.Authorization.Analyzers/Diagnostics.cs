@@ -17,7 +17,8 @@ internal static class Diagnostics
     public static readonly DiagnosticDescriptor Undeclared = new(
         "ZERO450",
         "A request declares no authorization",
-        "'{0}' declares neither [Authorize] nor [AllowAnonymous]. Say which one it is.",
+        "'{0}' does not say who may make it. Name a policy — on [Authorize], or on the route " +
+        "attribute if it has one — or say AllowAnonymous.",
         Category,
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,

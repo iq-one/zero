@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using IQOne.Zero.Authorization;
+using IQOne.Zero.Modules;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace IQOne.Zero.Authorization.Tests;
@@ -52,17 +53,21 @@ public class AuthorizationOptionsTests
     }
 
     [Fact]
-    public void The_settings_cannot_be_changed_once_the_application_is_configured()
+    public void The_settings_cannot_be_changed_once_the_modules_have_been_configured()
     {
         AuthorizationOptions? captured = null;
 
-        new ServiceCollection().AddZeroAuthorization(options => captured = options);
+        var services = new ServiceCollection().AddZeroAuthorization(options => captured = options);
 
-        var widen = () => captured!.Unannotated = MissingAuthorization.Allow;
-        var addLater = () => captured!.AddPolicy("late", new AlwaysFails());
+        // Sealed by the module phase, not by Add: a module that owns a set of routes owns the
+        // policies guarding them, so it has to be able to declare one first.
+        captured!.AddPolicy("late", new RolesRequirement(["admin"]));
 
-        widen.Should().Throw<InvalidOperationException>();
-        addLater.Should().Throw<InvalidOperationException>();
+        services.AddModules();
+
+        var change = () => captured.AddPolicy("later", new RolesRequirement(["admin"]));
+
+        change.Should().Throw<InvalidOperationException>();
     }
 
     [Fact]
