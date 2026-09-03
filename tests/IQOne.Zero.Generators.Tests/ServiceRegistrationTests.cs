@@ -256,4 +256,37 @@ public class LifetimeSourceTests
         run.Diagnostics.Should().BeEmpty();
         run.GeneratedSource.Should().Contain("AddScoped<global::Test.IInvoiceStore, global::Test.InvoiceStore>");
     }
+
+    [Fact]
+    public void An_attribute_with_an_ARRAY_named_argument_does_not_crash_the_generator()
+    {
+        // TypedConstant.Value ATIYOR bir dizide, null dondurmuyor. Bu kod yolu tek bir
+        // islenmeyen tur yuzunden butun derlemenin uretecini dusuruyordu — ve derleyici
+        // sonra uretilmis dosyanin gerceklestirecegi partial metodu sikayet ediyordu,
+        // yani hata yazarin yazmadigi bir dosyayi ve kaldirmadigi bir uyeyi gosteriyordu.
+        //
+        // Kurucu dizileri buraya hic gelmiyor (cagiran onlari duzlestiriyor,
+        // [ServiceTypes(typeof(A), typeof(B))] icin gereken sey bu). ADLANDIRILMIS bir
+        // dizi argumani duzlestirilmiyor, ve derlemedeki HERHANGI bir oznitelikte bir
+        // tanesi olmasi yetiyordu.
+        var run = GeneratorHarness.Run("""
+            using IQOne.Zero.DependencyInjection.Descriptors;
+
+            namespace Test;
+
+            [System.AttributeUsage(System.AttributeTargets.Class)]
+            public sealed class TagsAttribute : System.Attribute
+            {
+                public string[] Names { get; set; } = [];
+            }
+
+            [Tags(Names = ["one", "two"])]
+            public sealed class Tagged : IScoped;
+
+            public interface ITagged;
+            """);
+
+        run.GeneratedFileErrorMessages.Should().BeEmpty();
+        run.GeneratedSource.Should().Contain("Tagged");
+    }
 }

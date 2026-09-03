@@ -238,8 +238,33 @@ internal static class SymbolCollector
     }
 
     /// <summary>Turns one attribute argument into the value and the expression that reproduces it.</summary>
+    /// <remarks>
+    /// The array case is FIRST, and it has to be: <c>TypedConstant.Value</c> THROWS on an
+    /// array rather than returning null. A single unhandled kind here does not degrade the
+    /// output — it takes down the whole generator for that assembly, and the compiler then
+    /// reports the partial method the generated file was going to implement. So the error
+    /// names a file the author did not write about a member they did not remove.
+    /// <para>
+    /// Constructor arrays never reached here — they are flattened by the caller, which is
+    /// what <c>[ServiceTypes(typeof(A), typeof(B))]</c> needs. A NAMED array argument is not
+    /// flattened, and any attribute anywhere in the assembly carrying one was enough:
+    /// <c>[Projection(Ignore = [nameof(Model.Price)])]</c> found it.
+    /// </para>
+    /// </remarks>
     private static AttributeArgument Argument(TypedConstant constant)
     {
+        if (constant.Kind == TypedConstantKind.Array)
+        {
+            var elements = constant.IsNull
+                ? []
+                : constant.Values.Select(Argument).ToList();
+
+            return new AttributeArgument(
+                string.Join(",", elements.Select(e => e.Value)),
+                $"[{string.Join(", ", elements.Select(e => e.Expression))}]",
+                false);
+        }
+
         if (constant.Value is ITypeSymbol type)
         {
             var name = type.ToDisplayString(Full);

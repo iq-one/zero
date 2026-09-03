@@ -3,6 +3,22 @@
 Zero follows semantic versioning from this first published package. Until 1.0 the API will
 change; if you adopt it now, pin the version.
 
+## 0.3.1
+
+### Fixed
+
+- **An attribute with an array-valued named argument crashed the registration generator.**
+  `TypedConstant.Value` throws on an array rather than returning null, and that one
+  unhandled kind took down generation for the whole assembly — after which the compiler
+  reported the partial method the generated file was going to implement. So the error named
+  a file the author never wrote, about a member they never removed, and said nothing about
+  the attribute that caused it.
+
+  Constructor arrays never reached the failing path: the caller flattens them, which is what
+  `[ServiceTypes(typeof(A), typeof(B))]` needs. A NAMED array argument is not flattened, and
+  one anywhere in the assembly was enough — 0.3.0's own
+  `[Projection(Ignore = [nameof(Model.Price)])]` found it on first use.
+
 ## 0.3.0
 
 ### Added
