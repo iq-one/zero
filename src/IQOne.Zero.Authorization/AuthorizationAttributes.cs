@@ -105,3 +105,39 @@ public sealed class AllowAnonymousAttribute : Attribute, IAuthorizationDeclarati
     /// <inheritdoc />
     public bool AllowsAnonymous => true;
 }
+
+/// <summary>
+/// Marks an attribute type that decides authorization for everything carrying it.
+/// </summary>
+/// <remarks>
+/// <para>
+/// ZERO450 asks whether a request says who may make it, and it reads the answer from the
+/// attribute's arguments — <c>Policy</c>, <c>Roles</c>, <c>AllowAnonymous</c> — because that
+/// is what a reader sees at the request. An attribute that DERIVES the answer instead
+/// satisfies the rule without writing anything the analyzer can read:
+/// <code>
+/// [DeclaresAuthorization]
+/// public sealed class ServiceRouteAttribute : PostAttribute
+/// {
+///     public ServiceRouteAttribute(string pattern) : base(pattern)
+///         =&gt; Policy = pattern.TrimStart('/');
+/// }
+/// </code>
+/// </para>
+/// <para>
+/// The marker is on the ATTRIBUTE TYPE, once, rather than inferred from its constructor.
+/// Inferring would work in the assembly that declares it and fail for one referenced as
+/// metadata, so the rule would depend on where the attribute lives. Saying it makes the
+/// claim reviewable in one place: whoever reads <c>ServiceRouteAttribute</c> sees both that
+/// it decides authorization and how.
+/// </para>
+/// <para>
+/// It suppresses nothing else. The attribute still has to supply a policy at runtime —
+/// <c>RequestAuthorization</c> reads the live instance — and an attribute that carries this
+/// marker while deciding nothing leaves its requests requiring only an authenticated
+/// caller, exactly as an empty <c>[Authorize]</c> does.
+/// </para>
+/// </remarks>
+[AttributeUsage(AttributeTargets.Class, Inherited = false)]
+public sealed class DeclaresAuthorizationAttribute : Attribute;
+

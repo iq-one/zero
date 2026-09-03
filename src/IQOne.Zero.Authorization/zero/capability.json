@@ -16,7 +16,8 @@
     "IResourceAuthorizer",
     "AuthorizationDecision",
     "AuthorizationOptions",
-    "AuthorizationBehavior<TRequest,TResponse>"
+    "AuthorizationBehavior<TRequest,TResponse>",
+    "DeclaresAuthorizationAttribute"
   ],
   "diagnostics": [
     "ZERO450",

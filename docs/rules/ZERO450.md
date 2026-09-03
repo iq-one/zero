@@ -62,3 +62,27 @@ closes the public hole immediately and leaves the per-request rules to follow.
 Reported on concrete classes and structs implementing `IRequest<T>` — which includes
 `ICommand`, `ICommand<T>` and `IQuery<T>`. Abstract bases are not reported: the concrete
 request is where the decision applies, and attributes are not inherited.
+
+## An attribute that derives the answer
+
+An attribute of your own may compute the policy instead of taking it as an argument — a
+route whose permission is its path, for instance. The rule reads arguments, so it cannot
+see a computed value; the attribute says so once, on itself:
+
+```csharp
+[DeclaresAuthorization]
+public sealed class ServiceRouteAttribute : PostAttribute
+{
+    public ServiceRouteAttribute(string pattern) : base(pattern)
+        => Policy = pattern.TrimStart('/');
+}
+
+[ServiceRoute("/shared/lookups/countries")]      // no ZERO450
+public sealed record GetCountries : IQuery<CountryModel[]>;
+```
+
+The marker goes on the attribute type rather than being inferred from its constructor:
+inference would work in the assembly that declares it and fail for one referenced as
+metadata, so the rule would depend on where the attribute lives. It also suppresses nothing
+else — the attribute still has to supply a policy at runtime, and one that carries the
+marker while deciding nothing leaves its requests requiring only an authenticated caller.

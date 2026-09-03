@@ -55,6 +55,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/IQOne.Zero.ApiSurface.Tests/IQOne.Zero.ApiSurface.Tests.csproj" />
     <Project Path="tests/IQOne.Zero.Catalog.Tests/IQOne.Zero.Catalog.Tests.csproj" />
+    <Project Path="tests/IQOne.Zero.Authorization.Analyzers.Tests/IQOne.Zero.Authorization.Analyzers.Tests.csproj" />
     <Project Path="tests/IQOne.Zero.Authorization.Tests/IQOne.Zero.Authorization.Tests.csproj" />
     <Project Path="tests/IQOne.Zero.Persistence.EntityFramework.Tests/IQOne.Zero.Persistence.EntityFramework.Tests.csproj" />
     <Project Path="tests/IQOne.Zero.Caching.Tests/IQOne.Zero.Caching.Tests.csproj" />

@@ -21,6 +21,7 @@ public sealed class RequestAuthorizationAnalyzer : DiagnosticAnalyzer
     private const string AuthorizeAttributeType = "IQOne.Zero.Authorization.AuthorizeAttribute";
     private const string AllowAnonymousAttributeType = "IQOne.Zero.Authorization.AllowAnonymousAttribute";
     private const string DeclarationType = "IQOne.Zero.Authorization.IAuthorizationDeclaration";
+    private const string DeclaresType = "IQOne.Zero.Authorization.DeclaresAuthorizationAttribute";
     private const string RequestType = "IQOne.Zero.Messaging.IRequest`1";
 
     /// <inheritdoc />
@@ -44,8 +45,9 @@ public sealed class RequestAuthorizationAnalyzer : DiagnosticAnalyzer
 
             var request = start.Compilation.GetTypeByMetadataName(RequestType);
             var declaration = start.Compilation.GetTypeByMetadataName(DeclarationType);
+            var declares = start.Compilation.GetTypeByMetadataName(DeclaresType);
 
-            var known = new KnownTypes(authorize, anonymous, request, declaration);
+            var known = new KnownTypes(authorize, anonymous, request, declaration, declares);
 
             start.RegisterSymbolAction(c => Analyze(c, known), SymbolKind.NamedType);
         });
@@ -99,16 +101,35 @@ public sealed class RequestAuthorizationAnalyzer : DiagnosticAnalyzer
         INamedTypeSymbol authorize,
         INamedTypeSymbol anonymous,
         INamedTypeSymbol? request,
-        INamedTypeSymbol? declaration)
+        INamedTypeSymbol? declaration,
+        INamedTypeSymbol? declares)
     {
         // Copied out of the primary constructor: a struct's lambda cannot capture one.
         private readonly INamedTypeSymbol? _declaration = declaration;
+        private readonly INamedTypeSymbol? _declares = declares;
 
         /// <summary>Whether the attribute states a policy or a role set of its own.</summary>
+        /// <remarks>
+        /// Either written at the request, or promised by the attribute type with
+        /// <c>[DeclaresAuthorization]</c> — which is how an attribute that DERIVES the policy
+        /// says so, since a computed value is not an argument the analyzer can read.
+        /// </remarks>
         public bool Declares(AttributeData attribute)
             => Implements(attribute)
             && (Named(attribute, "Policy") is string { Length: > 0 }
-                || Named(attribute, "Roles") is string { Length: > 0 });
+                || Named(attribute, "Roles") is string { Length: > 0 }
+                || Promises(attribute));
+
+        /// <summary>Whether the attribute's own type promises to decide authorization.</summary>
+        private bool Promises(AttributeData attribute)
+        {
+            var wanted = _declares;
+
+            return wanted is not null
+                && attribute.AttributeClass is { } applied
+                && applied.GetAttributes().Any(a =>
+                    SymbolEqualityComparer.Default.Equals(a.AttributeClass, wanted));
+        }
 
         /// <summary>Whether the attribute states that anyone may make the request.</summary>
         public bool DeclaresAnonymous(AttributeData attribute)

@@ -3,6 +3,40 @@
 Zero follows semantic versioning from this first published package. Until 1.0 the API will
 change; if you adopt it now, pin the version.
 
+## 0.4.1
+
+### Fixed
+
+- **ZERO450 reported the very pattern 0.4.0 recommended.** The rule asks whether a request
+  says who may make it, and it reads the answer from the attribute's arguments — `Policy`,
+  `Roles`, `AllowAnonymous` — because that is what a reader sees at the request. An attribute
+  that DERIVES the policy in its constructor, which 0.4.0 made possible and the changelog
+  offered as the example, writes nothing the analyzer can read. So the recommended code did
+  not build.
+
+  An attribute now says once, on itself, that it decides:
+
+  ```csharp
+  [DeclaresAuthorization]
+  public sealed class ServiceRouteAttribute : PostAttribute
+  {
+      public ServiceRouteAttribute(string pattern) : base(pattern)
+          => Policy = pattern.TrimStart('/');
+  }
+  ```
+
+  On the attribute type rather than inferred from its constructor: inference would work in
+  the assembly that declares the attribute and fail for one referenced as metadata, so the
+  rule would depend on where the attribute lives. The marker suppresses nothing else — the
+  attribute still supplies the policy at runtime, and one that carries the marker while
+  deciding nothing leaves its requests requiring only an authenticated caller.
+
+### Added
+
+- **A test project for the authorization analyzer.** It had none, which is why the above
+  shipped: the rule's whole value is in what it refuses, and nothing ran it. Seven tests now
+  pin both directions, including that a route with no policy still says nothing.
+
 ## 0.4.0
 
 ### Added

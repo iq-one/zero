@@ -71,6 +71,9 @@ static class IQOne.Zero.Authorization.CurrentUserExtensions
     static bool IsInRole(IQOne.Zero.Authorization.ICurrentUser user, string role, string roleClaimType = default)
     static string FindFirst(IQOne.Zero.Authorization.ICurrentUser user, string claimType)
 
+sealed class IQOne.Zero.Authorization.DeclaresAuthorizationAttribute : Attribute
+    .ctor DeclaresAuthorizationAttribute()
+
 interface IQOne.Zero.Authorization.IAuthorizationDeclaration
     bool AllowsAnonymous { get; }
     string Policy { get; }

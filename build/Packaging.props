@@ -24,7 +24,7 @@
 
   <PropertyGroup Label="Surum">
     <!-- Tek kaynak: build/Version.props. CI, VersionSuffix'i buradan gecer. -->
-    <VersionPrefix>0.4.0</VersionPrefix>
+    <VersionPrefix>0.4.1</VersionPrefix>
     <VersionSuffix Condition="'$(VersionSuffix)' == '' AND '$(Configuration)' != 'Release'">dev</VersionSuffix>
   </PropertyGroup>
 
