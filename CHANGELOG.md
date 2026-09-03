@@ -23,6 +23,14 @@ because nothing in the author's own file is wrong.
   `typeof(T?)` would be CS8639 instead. Both renderings are carried explicitly: a nullable
   *value* type prints as `int?` either way, so one cannot be derived from the other by
   removing `?`.
+- **`EfUnitOfWork` was sealed, so the documented escape hatch was half a hatch.** When
+  `AddZeroEntityFramework` refuses a second context it tells you to name your repositories
+  per context — `OrderRepository(OrderContext, ...) : EfRepository<Order>(...)` — which
+  works because `EfRepository` is derivable. The unit of work is registered by the same
+  call and needs the same treatment, but it could not be derived. It is now a `class`, and
+  the refusal message says so. The message also says what it did not before: a
+  context-per-module application cannot use `AddZeroTransactions`, because one open-generic
+  pipeline behaviour cannot pick a context; it opens the boundary in the handler.
 - **`Specification.Page` would not accept a null offset.** `take` was widened to `int?` in
   0.2.0 and `skip` was left behind. A specification that wants a limit and no offset had to
   pass zero, and zero is not nothing: `Skip = 0` still emits an offset, SQL Server requires

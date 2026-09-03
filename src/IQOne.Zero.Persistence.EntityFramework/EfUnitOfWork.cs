@@ -7,11 +7,26 @@ namespace IQOne.Zero.Persistence.EntityFramework;
 /// The transaction boundary over a <see cref="DbContext"/>.
 /// </summary>
 /// <remarks>
+/// <para>
 /// Scoped alongside the context, so every repository in a request records into the same
 /// change tracker and one save persists all of it.
+/// </para>
+/// <para>
+/// Derivable, like <see cref="EfRepository{T}"/> and for the same reason: an application
+/// with a context per module needs one boundary per context, and the open-generic
+/// registration can only serve one. Name it the way the repositories are named:
+/// <code>
+/// public interface IOrderWork : IUnitOfWork;
+///
+/// public sealed class OrderWork(OrderContext context) : EfUnitOfWork(context), IOrderWork;
+/// </code>
+/// Note that <c>AddZeroTransactions</c> does not fit that shape — a pipeline behaviour is
+/// open over every request, so it cannot pick the right context. Such an application opens
+/// its boundary in the handler, against the module's own unit of work.
+/// </para>
 /// </remarks>
 /// <param name="context">The context whose changes this boundary covers.</param>
-public sealed class EfUnitOfWork(DbContext context) : IUnitOfWork
+public class EfUnitOfWork(DbContext context) : IUnitOfWork
 {
     /// <inheritdoc />
     public bool HasActiveTransaction => context.Database.CurrentTransaction is not null;

@@ -26,7 +26,7 @@ class IQOne.Zero.Persistence.EntityFramework.EfRepository<T, TKey> : IQOne.Zero.
     .ctor EfRepository(Microsoft.EntityFrameworkCore.DbContext context, IQOne.Zero.Persistence.EntityFramework.ISpecificationEvaluator evaluator)
     Task<T> GetAsync(TKey key, CancellationToken cancellationToken = default)
 
-sealed class IQOne.Zero.Persistence.EntityFramework.EfUnitOfWork : IQOne.Zero.Persistence.IUnitOfWork
+class IQOne.Zero.Persistence.EntityFramework.EfUnitOfWork : IQOne.Zero.Persistence.IUnitOfWork
     .ctor EfUnitOfWork(Microsoft.EntityFrameworkCore.DbContext context)
     Task<IQOne.Zero.Persistence.ITransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

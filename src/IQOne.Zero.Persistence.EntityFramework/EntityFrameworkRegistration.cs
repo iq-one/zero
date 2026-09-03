@@ -83,8 +83,12 @@ public static class EntityFrameworkRegistration
                 $"repositories explicitly against its own context: " +
                 $"'public sealed class OrderRepository(OrderContext context, ISpecificationEvaluator evaluator) " +
                 $": EfRepository<Order>(context, evaluator), IOrderRepository;'. " +
-                $"Call AddZeroEntityFramework once, for the context the open generics should serve, and " +
-                $"use AddDbContext for the others.");
+                $"The unit of work is named the same way: " +
+                $"'public sealed class OrderWork(OrderContext context) : EfUnitOfWork(context), IOrderWork;' " +
+                $"-- and such an application opens its transaction in the handler, because " +
+                $"AddZeroTransactions registers one behaviour over every request and cannot pick a " +
+                $"context. Call AddZeroEntityFramework once, for the context the open generics should " +
+                $"serve, and use AddDbContext for the others.");
 
         services.TryAddSingleton(new ZeroBoundContext(typeof(TContext)));
 
