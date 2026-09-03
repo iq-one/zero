@@ -18,3 +18,8 @@ ZERO221 | Zero.Persistence | Error | An ignored member is not part of the result
 ZERO222 | Zero.Persistence | Error | [Projection] is on something that is not a specification
 ZERO223 | Zero.Persistence | Error | A projected specification is not partial
 ZERO224 | Zero.Persistence | Error | A projected specification already declares its Selector
+ZERO225 | Zero.Persistence | Error | A mapped member is not written anywhere
+ZERO226 | Zero.Persistence | Error | An ignored member is not part of the source
+ZERO227 | Zero.Persistence | Error | A mapping method has the wrong shape
+ZERO228 | Zero.Persistence | Error | The type holding a mapping is not partial
+

@@ -65,6 +65,10 @@ interface IQOne.Zero.Persistence.IUnitOfWork : IQOne.Zero.DependencyInjection.De
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     bool HasActiveTransaction { get; }
 
+sealed class IQOne.Zero.Persistence.MappingAttribute : Attribute
+    .ctor MappingAttribute()
+    string[] Ignore { get; set; }
+
 struct IQOne.Zero.Persistence.Ordering<T> : IEquatable<IQOne.Zero.Persistence.Ordering<T>>
     .ctor Ordering(Expression<Func<T, object>> KeySelector, bool Descending)
     Expression<Func<T, object>> KeySelector { get; init; }

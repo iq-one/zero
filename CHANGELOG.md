@@ -3,6 +3,39 @@
 Zero follows semantic versioning from this first published package. Until 1.0 the API will
 change; if you adopt it now, pin the version.
 
+## 0.5.0
+
+### Added
+
+- **`[Mapping]` writes the other direction.** A handler that saves a caller's object onto a
+  row writes the same member-for-member code a projection does, and `[Projection]` left it
+  hand-written:
+
+  ```csharp
+  [Mapping]
+  private static partial void Apply(BedModel model, Bed bed);
+  ```
+
+  Source first, target second, `static partial void`. The types are not arguments — the
+  signature names them.
+
+  **The source is what must be accounted for, and that is not symmetry.** A projection
+  produces the shape it was asked for, so that shape must be complete. A mapping writes onto
+  something that already exists, and the danger runs the other way: a member the caller sent
+  that nothing consumed, discarded without a word, on a request that looks like it worked.
+  So the target is allowed to have more — its key, its audit columns, its state, whatever a
+  convention fills — and only what arrived is checked.
+
+  **The key is never written.** A source member matching the target's `IEntity<TKey>.Id` is
+  skipped without being asked about: a key is how the row was found, and assigning it from
+  the caller's object is a no-op at best and a different row at worst. Recognised through the
+  interface, not by name.
+
+  All or nothing, as with a projection. ZERO225 names a member nothing consumes; ZERO226 a
+  stale ignore entry; ZERO227 a signature of the wrong shape; ZERO228 a container that is not
+  partial. Refused for the same reasons as a projection: no settable counterpart, a read-only
+  counterpart, a nullable source into a non-nullable target, a narrowing conversion.
+
 ## 0.4.1
 
 ### Fixed

@@ -68,7 +68,8 @@ internal static class GeneratorHarness
                 generators:
                 [
                     new ServiceRegistrationGenerator().AsSourceGenerator(),
-                    new Projection.ProjectionGenerator().AsSourceGenerator()
+                    new Projection.ProjectionGenerator().AsSourceGenerator(),
+                    new Mapping.MappingGenerator().AsSourceGenerator()
                 ],
                 additionalTexts: null,
                 parseOptions: null,

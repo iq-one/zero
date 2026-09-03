@@ -167,3 +167,64 @@ The output is an expression tree, so the provider translates it and only the res
 columns are read. A mapper runs after materialisation: the whole row, and every navigation
 loaded alongside it, is fetched and most of it discarded. That difference is structural, not
 a matter of tuning.
+
+## Generating the write direction
+
+A handler that saves a caller's object onto a row writes the same kind of member-for-member
+code a projection does, in the other direction. `[Mapping]` writes it:
+
+```csharp
+public sealed partial class SaveBedsHandler : ICommandHandler<SaveBedsRequest, ...>
+{
+    public async Task<Result<...>> HandleAsync(SaveBedsRequest request, CancellationToken ct)
+    {
+        // ... find or create the row ...
+
+        Apply(model, bed);
+
+        await work.SaveChangesAsync(ct);
+    }
+
+    [Mapping]
+    private static partial void Apply(BedModel model, Bed bed);
+}
+```
+
+Source first, target second, `static partial void`. The types are not arguments — the
+signature names them.
+
+### The source is what must be accounted for
+
+This is the difference from a projection, and it is not symmetry. A projection produces the
+shape it was asked for, so that shape must be complete. A mapping writes onto something that
+already exists, and there the danger runs the other way: **a member the caller sent that
+nothing consumed** — discarded without a word, on a request that looks like it worked.
+
+So the target is allowed to have more, and usually does: its key, its audit columns, its
+state, whatever a convention fills. Only what arrived is checked.
+
+### The key is never written
+
+A source member matching the target's `IEntity<TKey>.Id` is skipped without being asked
+about. A key is how the row was found; assigning it from the caller's object is a no-op at
+best and a different row at worst. Recognised through the interface, not by name.
+
+### What it refuses
+
+All or nothing, as with a projection: ZERO225 names the member and nothing is generated.
+Refused are a member with no settable counterpart, a read-only counterpart, a nullable
+source into a non-nullable target, and a narrowing conversion. Allowed without asking:
+identical types, an implicit widening, a value type into its nullable form, and an enum with
+the number it is stored as.
+
+A member that needs a decision is best ignored and then assigned at the call site, where a
+reader sees both halves:
+
+```csharp
+[Mapping(Ignore = [nameof(BedModel.Name)])]
+private static partial void Apply(BedModel model, Bed bed);
+
+// ...
+Apply(model, bed);
+bed.Name = model.Name?.Trim();
+```
