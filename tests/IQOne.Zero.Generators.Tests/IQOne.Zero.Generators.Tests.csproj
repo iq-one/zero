@@ -11,6 +11,7 @@
     <ProjectReference Include="../../src/IQOne.Zero.Validation/IQOne.Zero.Validation.csproj" />
     <ProjectReference Include="../../src/IQOne.Zero.Events/IQOne.Zero.Events.csproj" />
     <ProjectReference Include="../../src/IQOne.Zero.Authorization/IQOne.Zero.Authorization.csproj" />
+    <ProjectReference Include="../../src/IQOne.Zero.Persistence/IQOne.Zero.Persistence.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />

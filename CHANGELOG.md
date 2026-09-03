@@ -3,6 +3,36 @@
 Zero follows semantic versioning from this first published package. Until 1.0 the API will
 change; if you adopt it now, pin the version.
 
+## 0.3.0
+
+### Added
+
+- **`[Projection]` writes a specification's `Selector`.** A specification that reshapes rows
+  declares `Expression<Func<TSource, TResult>> Selector`, and when the mapping is member for
+  member by name, writing it out is work with a sharp edge: a member the result has and the
+  entity does not is a silently absent field in the response, and the symptom is a column
+  missing from a screen with nothing in the code to explain it. The attribute takes no type
+  arguments — the class already names them in its base — and the generated selector is an
+  expression tree, so the provider translates it and only the result's columns are read.
+  That is the difference from mapping after materialisation, where the whole row and every
+  navigation loaded alongside it are fetched and most of it discarded.
+
+  It is **all or nothing**. A member that cannot be mapped is ZERO220 naming the member, and
+  nothing is generated: three quarters generated and one quarter absent is the failure the
+  generator exists to prevent. Refused on purpose, because each is a decision rather than a
+  conversion: no source of that name; a nullable source into a non-nullable member (the
+  fallback belongs where a reader can see it); a narrowing conversion (a cast compiles and
+  silently wraps); a nested model or a collection (whether to load the navigation, under
+  which condition, and which members, is the endpoint's call). Allowed without asking:
+  identical types, an implicit widening, a value type into its nullable form, and an enum
+  with the number it is stored as.
+
+  A member that legitimately has no source is declared — `[Projection(Ignore = [...])]` —
+  and the list is checked: an entry naming something the result does not have is ZERO221,
+  because a stale entry silences nothing while reading as though a real hole were accounted
+  for. ZERO222 through ZERO224 cover the attribute on a non-specification, a class that is
+  not `partial`, and a selector written by hand alongside the attribute.
+
 ## 0.2.1
 
 Two more defects found the same way 0.2.0's were: by porting a hospital information system

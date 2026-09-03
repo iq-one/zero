@@ -78,6 +78,10 @@ struct IQOne.Zero.Persistence.Ordering<T> : IEquatable<IQOne.Zero.Persistence.Or
 static class IQOne.Zero.Persistence.PersistenceRegistration
     static Microsoft.Extensions.DependencyInjection.IServiceCollection AddZeroTransactions(Microsoft.Extensions.DependencyInjection.IServiceCollection services)
 
+sealed class IQOne.Zero.Persistence.ProjectionAttribute : Attribute
+    .ctor ProjectionAttribute()
+    string[] Ignore { get; set; }
+
 static class IQOne.Zero.Persistence.SpecificationExpressions
     static Expression<Func<T, bool>> AndAlso<T>(Expression<Func<T, bool>> left, Expression<Func<T, bool>> right)
     static Expression<Func<T, bool>> OrElse<T>(Expression<Func<T, bool>> left, Expression<Func<T, bool>> right)

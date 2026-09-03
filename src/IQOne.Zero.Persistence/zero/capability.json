@@ -6,7 +6,23 @@
   "useWhen": "The application stores things. Do not write your own repository or specification abstraction, and do not put provider-specific query calls in a handler.",
   "package": "IQOne.Zero.Persistence",
   "entryPoint": "services.AddZeroTransactions()",
-  "keyTypes": ["ISpecification<T>", "Specification<T>", "IReadRepository<T>", "IRepository<T>", "IUnitOfWork", "ITransaction", "IEntityFilterConvention", "IAggregateRoot"],
-  "diagnostics": [],
+  "keyTypes": [
+    "ISpecification<T>",
+    "Specification<T>",
+    "IReadRepository<T>",
+    "IRepository<T>",
+    "IUnitOfWork",
+    "ITransaction",
+    "IEntityFilterConvention",
+    "IAggregateRoot",
+    "ProjectionAttribute"
+  ],
+  "diagnostics": [
+    "ZERO220",
+    "ZERO221",
+    "ZERO222",
+    "ZERO223",
+    "ZERO224"
+  ],
   "example": "public sealed class OverdueInvoices : Specification<Invoice>\n{\n    public OverdueInvoices(int customerId, DateOnly asOf)\n    {\n        Where(i => i.CustomerId == customerId);\n        Where(i => !i.IsPaid && i.Due < asOf);\n        Include(i => i.Lines);\n        OrderBy(i => i.Due);\n        ReadOnly();\n    }\n}\n\npublic sealed class GetOverdueHandler(IReadRepository<Invoice> invoices)\n    : IQueryHandler<GetOverdue, IReadOnlyList<InvoiceModel>>\n{\n    public async Task<Result<IReadOnlyList<InvoiceModel>>> HandleAsync(\n        GetOverdue query, CancellationToken cancellationToken)\n        => await invoices.ListAsync(new OverdueInvoices(query.CustomerId, query.AsOf), cancellationToken);\n}\n\n// No SaveChanges in the handler: TransactionBehavior commits when a command succeeds."
 }

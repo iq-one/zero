@@ -13,3 +13,8 @@ ZERO300 | Zero.Web | Error | A route is declared on something that is not a requ
 ZERO301 | Zero.Web | Error | Route pattern is empty
 ZERO011 | Zero.Registration | Error | A type contradicts the lifetime its abstraction declares
 ZERO303 | Zero.Web | Error | A derived route attribute produces no endpoint
+ZERO220 | Zero.Persistence | Error | A projected member has no source
+ZERO221 | Zero.Persistence | Error | An ignored member is not part of the result
+ZERO222 | Zero.Persistence | Error | [Projection] is on something that is not a specification
+ZERO223 | Zero.Persistence | Error | A projected specification is not partial
+ZERO224 | Zero.Persistence | Error | A projected specification already declares its Selector

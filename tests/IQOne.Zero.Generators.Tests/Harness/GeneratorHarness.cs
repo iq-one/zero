@@ -65,27 +65,40 @@ internal static class GeneratorHarness
 
         var driver = CSharpGeneratorDriver
             .Create(
-                generators: [new ServiceRegistrationGenerator().AsSourceGenerator()],
+                generators:
+                [
+                    new ServiceRegistrationGenerator().AsSourceGenerator(),
+                    new Projection.ProjectionGenerator().AsSourceGenerator()
+                ],
                 additionalTexts: null,
                 parseOptions: null,
                 optionsProvider: new TestOptionsProvider())
             .RunGeneratorsAndUpdateCompilation(compilation, out var updated, out _);
 
-        var result = driver.GetRunResult().Results.Single();
+        // Every generator's result, not one: the driver runs several and a test asserting on
+        // one of them must not depend on how many are registered.
+        var results = driver.GetRunResult().Results;
 
-        // Errors in the generated file only. The point of several of these rules is that a
+        var diagnostics = results.SelectMany(r => r.Diagnostics);
+
+        var generated = string.Join(
+            Environment.NewLine,
+            results.SelectMany(r => r.GeneratedSources).Select(s => s.SourceText.ToString()));
+
+        // Errors in GENERATED files only. The point of several of these rules is that a
         // mistake in generation surfaces as a compiler error in a file the developer never
         // wrote, so that is exactly what a test has to be able to see.
+        var produced = results
+            .SelectMany(r => r.GeneratedSources)
+            .Select(s => s.HintName)
+            .ToHashSet(StringComparer.Ordinal);
+
         var generatedErrors = updated.GetDiagnostics()
             .Where(d => d.Severity == DiagnosticSeverity.Error
-                     && d.Location.SourceTree?.FilePath.EndsWith("Module.g.cs", StringComparison.Ordinal) == true);
+                     && d.Location.SourceTree is { } tree
+                     && produced.Any(name => tree.FilePath.EndsWith(name, StringComparison.Ordinal)));
 
-        return new GeneratorRun(
-            [.. result.Diagnostics],
-            result.GeneratedSources.Length == 0
-                ? string.Empty
-                : result.GeneratedSources[0].SourceText.ToString(),
-            [.. generatedErrors]);
+        return new GeneratorRun([.. diagnostics], generated, [.. generatedErrors]);
     }
 
     /// <summary>
@@ -140,7 +153,8 @@ internal static class GeneratorHarness
                      typeof(Zero.Web.GetAttribute),
                      typeof(Zero.Validation.IValidator),
                      typeof(Zero.Events.IEvent),
-                     typeof(Zero.Authorization.IRequirementHandler)
+                     typeof(Zero.Authorization.IRequirementHandler),
+                     typeof(Zero.Persistence.ProjectionAttribute)
                  })
             locations.Add(type.Assembly.Location);
 
