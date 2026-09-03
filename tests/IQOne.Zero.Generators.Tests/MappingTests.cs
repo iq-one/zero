@@ -247,4 +247,160 @@ public class MappingTests
 
         run.DiagnosticIds.Should().Contain("ZERO228");
     }
+
+    [Fact]
+    public void The_other_shape_PRODUCES_a_new_object()
+    {
+        // Ucuncu yon: entity -> model, ama bellekte. [Projection] bunu yalnizca bir
+        // Specification'in Selector'u olarak yapiyor — yani veritabaninda. Kaydettikten
+        // sonra elindeki entity'den model uretmek icin ifade agacini Compile() etmek
+        // gerekiyordu, ki bu tam olarak eksik yetenegin isaretiydi.
+        var run = GeneratorHarness.Run($$"""
+            {{Preamble}}
+
+            public sealed class BedModel
+            {
+                public short Id { get; set; }
+                public string? Name { get; set; }
+                public short BuildingUnitId { get; set; }
+            }
+
+            public sealed partial class SaveBeds
+            {
+                [Mapping]
+                private static partial BedModel ToModel(Bed bed);
+            }
+            """);
+
+        run.HasError.Should().BeFalse();
+        run.GeneratedFileErrorMessages.Should().BeEmpty();
+
+        run.GeneratedSource.Should()
+            .Contain("return new global::Test.BedModel")
+            .And.Contain("Name = bed.Name")
+            // Uretirken ANAHTAR YAZILIR: sonucun parcasi ve eksik birakmak eksik bir
+            // nesne demek. Uzerine yazarken atlanir — orada satirin bulunma yolu.
+            .And.Contain("Id = bed.Id");
+    }
+
+    [Fact]
+    public void When_PRODUCING_the_RESULT_is_held_to_account()
+    {
+        // Yon degisince hesap veren taraf da degisiyor. Uzerine yazarken kaynak, uretirken
+        // sonuc. Tek cumle: kurdugun sey tam olmali, tukettigin sey tukenmeli.
+        var run = GeneratorHarness.Run($$"""
+            {{Preamble}}
+
+            public sealed class BedModel
+            {
+                public string? Name { get; set; }
+                public string? Tags { get; set; }        // Bed'de yok
+            }
+
+            public sealed partial class SaveBeds
+            {
+                [Mapping]
+                private static partial BedModel ToModel(Bed bed);
+            }
+            """);
+
+        run.DiagnosticIds.Should().Contain("ZERO229");
+        run.Diagnostics.Single(d => d.Id == "ZERO229").GetMessage().Should().Contain("Tags");
+    }
+
+    [Fact]
+    public void When_PRODUCING_the_target_may_be_narrower_than_the_source()
+    {
+        // Ters yon: Bed'in State ve CreatedDate'i var, model tasimiyor. Sorun degil —
+        // hesap sorulan taraf sonuc.
+        var run = GeneratorHarness.Run($$"""
+            {{Preamble}}
+
+            public sealed class BedModel { public string? Name { get; set; } }
+
+            public sealed partial class SaveBeds
+            {
+                [Mapping]
+                private static partial BedModel ToModel(Bed bed);
+            }
+            """);
+
+        run.HasError.Should().BeFalse();
+        run.GeneratedSource.Should().Contain("Name = bed.Name");
+    }
+
+    [Fact]
+    public void A_model_can_be_produced_from_another_MODEL()
+    {
+        // Ikisi de entity degil. Uretec entity kavramina bagli degil: iki tip ve bir sekil.
+        var run = GeneratorHarness.Run("""
+            using IQOne.Zero.Persistence;
+
+            namespace Test;
+
+            public sealed class BedModel
+            {
+                public short Id { get; set; }
+                public string? Name { get; set; }
+            }
+
+            public sealed class BedSummary
+            {
+                public short Id { get; set; }
+                public string? Name { get; set; }
+            }
+
+            public sealed partial class Summaries
+            {
+                [Mapping]
+                internal static partial BedSummary Of(BedModel model);
+            }
+            """);
+
+        run.HasError.Should().BeFalse();
+        run.GeneratedFileErrorMessages.Should().BeEmpty();
+        run.GeneratedSource.Should().Contain("internal static partial global::Test.BedSummary Of");
+    }
+
+    [Fact]
+    public void A_NULLABLE_parameter_is_repeated_exactly()
+    {
+        // Partial'in iki yarisi nullable dahil TAM eslemek zorunda (CS8611/CS8819).
+        // Isaret dusurulse, BedModel? ile bildirilen bir metot gerceklestirilemez hale
+        // gelirdi — ve hata uretilmis dosyayi gosterirdi.
+        var run = GeneratorHarness.Run($$"""
+            {{Preamble}}
+
+            public sealed class BedModel { public string? Name { get; set; } }
+
+            public sealed partial class SaveBeds
+            {
+                [Mapping]
+                private static partial BedModel? ToModel(Bed bed);
+            }
+            """);
+
+        run.GeneratedFileErrorMessages.Should().BeEmpty();
+        run.GeneratedSource.Should().Contain("global::Test.BedModel? ToModel");
+    }
+
+    [Fact]
+    public void Two_parameters_AND_a_return_is_reported()
+    {
+        var run = GeneratorHarness.Run($$"""
+            {{Preamble}}
+
+            public sealed class BedModel { public string? Name { get; set; } }
+
+            public sealed partial class SaveBeds
+            {
+                [Mapping]
+                private static partial BedModel Apply(BedModel model, Bed bed);
+            }
+            """);
+
+        run.DiagnosticIds.Should().Contain("ZERO227");
+        run.Diagnostics.Single(d => d.Id == "ZERO227").GetMessage()
+            .Should().Contain("produces a new object");
+    }
 }

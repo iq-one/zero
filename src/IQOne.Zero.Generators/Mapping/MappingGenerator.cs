@@ -66,38 +66,50 @@ public sealed class MappingGenerator : IIncrementalGenerator
                 container, method.Name, Diagnostics.ContainerNotPartial, location,
                 new[] { container.Name });
 
+        var produces = !method.ReturnsVoid;
+
         var source = method.Parameters[0];
-        var target = method.Parameters[1];
+        var targetType = produces ? method.ReturnType : method.Parameters[1].Type;
+        var targetName = produces ? "result" : method.Parameters[1].Name;
 
         var ignore = Ignored(context.Attributes[0]);
 
-        var members = Readable(source.Type);
+        // Constructing: the RESULT is held to account, so its settable members are the list.
+        // Writing onto an existing object: the SOURCE is, so its readable members are.
+        var members = produces ? Assignable(targetType) : Readable(source.Type);
+        var accounted = produces ? targetType : source.Type;
+
         var names = new HashSet<string>(members.Select(m => m.Name), StringComparer.Ordinal);
 
         foreach (var name in ignore)
             if (!names.Contains(name))
                 return Candidate.Failed(
                     container, method.Name, Diagnostics.IgnoredMemberDoesNotExist, location,
-                    new[] { name, method.Name, source.Type.ToDisplayString() });
+                    new[] { name, method.Name, accounted.ToDisplayString() });
 
-        var key = Key(target.Type);
+        // The key is skipped only when writing onto an existing row: there it is how the row
+        // was found, and assigning it from the caller's object is a no-op at best and a
+        // different row at worst. When CONSTRUCTING, the key is part of what is produced and
+        // leaving it out would be an incomplete object.
+        var key = produces ? null : Key(targetType);
+
         var assignments = ImmutableArray.CreateBuilder<string>();
 
         foreach (var member in members)
         {
             if (ignore.Contains(member.Name)) continue;
-
-            // The key is how the row was found. Assigning it from the caller's object is a
-            // no-op at best and a different row at worst, so it is skipped without asking —
-            // recognised through IEntity<TKey>, not by its name.
             if (member.Name == key) continue;
 
-            var reason = Map(target.Type, member, out var assignment);
+            var reason = produces
+                ? Read(source.Type, member, out var assignment)
+                : Write(targetType, member, out assignment);
 
             if (reason is not null)
                 return Candidate.Failed(
-                    container, method.Name, Diagnostics.MemberIsNotWritten, location,
-                    new[] { source.Type.Name, member.Name, target.Type.ToDisplayString(), reason });
+                    container, method.Name,
+                    produces ? Diagnostics.MemberHasNoSource : Diagnostics.MemberIsNotWritten,
+                    location,
+                    new[] { accounted.Name, member.Name, (produces ? source.Type : targetType).ToDisplayString(), reason });
 
             assignments.Add(assignment);
         }
@@ -108,10 +120,12 @@ public sealed class MappingGenerator : IIncrementalGenerator
             Keyword(container),
             Access(method),
             method.Name,
-            source.Type.ToDisplayString(Full),
-            target.Type.ToDisplayString(Full),
+            source.Type.ToDisplayString(Annotated),
+            targetType.ToDisplayString(Annotated),
+            targetType.ToDisplayString(Full),
             source.Name,
-            target.Name,
+            targetName,
+            produces,
             new EquatableArray<string>(assignments.ToImmutable()),
             null,
             null,
@@ -119,18 +133,41 @@ public sealed class MappingGenerator : IIncrementalGenerator
     }
 
     /// <summary>What is wrong with the signature, or null when nothing is.</summary>
+    /// <remarks>
+    /// Two shapes, and the shape decides the rule:
+    /// <list type="bullet">
+    ///   <item>
+    ///     <c>void M(TSource source, TTarget target)</c> — writes onto something that
+    ///     already exists. The SOURCE must be accounted for.
+    ///   </item>
+    ///   <item>
+    ///     <c>TResult M(TSource source)</c> — produces a new object. The RESULT must be
+    ///     accounted for.
+    ///   </item>
+    /// </list>
+    /// One sentence covers both: what you construct must be complete, what you consume must
+    /// be consumed. Anything else — two parameters and a return, no parameters, a ref — is a
+    /// different operation and is reported rather than guessed at.
+    /// </remarks>
     private static string? Shape(IMethodSymbol method, MethodDeclarationSyntax declaration)
     {
         if (!declaration.Modifiers.Any(SyntaxKind.PartialKeyword)) return "It is not partial.";
         if (!method.IsStatic) return "It is not static.";
-        if (!method.ReturnsVoid) return $"It returns {method.ReturnType.ToDisplayString()}.";
-        if (method.Parameters.Length != 2) return $"It takes {method.Parameters.Length} parameters.";
 
         foreach (var parameter in method.Parameters)
             if (parameter.RefKind != RefKind.None)
-                return $"'{parameter.Name}' is passed by reference; both objects are passed by value.";
+                return $"'{parameter.Name}' is passed by reference; objects are passed by value.";
 
-        return null;
+        if (method.ReturnsVoid)
+            return method.Parameters.Length == 2
+                ? null
+                : $"It returns nothing, so it writes onto a target — and takes " +
+                  $"{method.Parameters.Length} parameters instead of two.";
+
+        return method.Parameters.Length == 1
+            ? null
+            : $"It returns {method.ReturnType.ToDisplayString()}, so it produces a new object — and " +
+              $"takes {method.Parameters.Length} parameters instead of one.";
     }
 
     /// <summary>The name of the target's key, or null when it declares none.</summary>
@@ -168,52 +205,103 @@ public sealed class MappingGenerator : IIncrementalGenerator
         return found;
     }
 
-    /// <summary>The assignment that writes this member, or the reason there is none.</summary>
-    private static string? Map(ITypeSymbol target, IPropertySymbol member, out string assignment)
+    /// <summary>Public instance properties an initialiser can set.</summary>
+    private static List<IPropertySymbol> Assignable(ITypeSymbol type)
+    {
+        var found = new List<IPropertySymbol>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+
+        for (var current = type as INamedTypeSymbol; current is not null; current = current.BaseType)
+            foreach (var property in current.GetMembers().OfType<IPropertySymbol>())
+            {
+                if (property.IsStatic || property.IsIndexer) continue;
+                if (property.DeclaredAccessibility != Accessibility.Public) continue;
+                if (property.SetMethod is not { DeclaredAccessibility: Accessibility.Public }) continue;
+
+                if (seen.Add(property.Name)) found.Add(property);
+            }
+
+        return found;
+    }
+
+    /// <summary>
+    /// The initialiser entry that fills this member of the produced object, or the reason
+    /// there is none.
+    /// </summary>
+    private static string? Read(ITypeSymbol source, IPropertySymbol member, out string assignment)
     {
         assignment = string.Empty;
 
-        var destination = Writable(target, member.Name);
+        var origin = Property(source, member.Name, wanted: false);
+
+        if (origin is null) return $"'{source.Name}' has no readable member of that name";
+
+        var reason = Convert(origin.Type, member.Type, out var cast);
+
+        if (reason is not null) return string.Format(reason, origin.Name, member.Name);
+
+        assignment = $"{member.Name} = {cast}{{0}}.{origin.Name}";
+
+        return null;
+    }
+
+    /// <summary>The assignment that writes this member, or the reason there is none.</summary>
+    private static string? Write(ITypeSymbol target, IPropertySymbol member, out string assignment)
+    {
+        assignment = string.Empty;
+
+        var destination = Property(target, member.Name, wanted: true);
 
         if (destination is null) return $"'{target.Name}' has no settable member of that name";
 
-        var from = member.Type;
-        var to = destination.Type;
+        var reason = Convert(member.Type, destination.Type, out var cast);
 
-        if (SymbolEqualityComparer.Default.Equals(from, to))
-        {
-            assignment = $"{{1}}.{destination.Name} = {{0}}.{member.Name}";
+        if (reason is not null) return string.Format(reason, member.Name, destination.Name);
 
-            return null;
-        }
+        assignment = $"{{1}}.{destination.Name} = {cast}{{0}}.{member.Name}";
+
+        return null;
+    }
+
+    /// <summary>
+    /// The cast one type needs to become the other, or the reason it cannot.
+    /// </summary>
+    /// <remarks>
+    /// Shared by both directions, because the question is the same either way: is this a
+    /// conversion the language makes, or a decision somebody has to write down? The reason
+    /// is a format string — <c>{0}</c> the member read from, <c>{1}</c> the member written
+    /// to — so each direction names them in its own order.
+    /// </remarks>
+    private static string? Convert(ITypeSymbol from, ITypeSymbol to, out string cast)
+    {
+        cast = string.Empty;
+
+        if (SymbolEqualityComparer.Default.Equals(from, to) || Widens(from, to)) return null;
 
         if (IsNullableValue(from) && !IsNullableValue(to) && to.IsValueType)
-            return $"'{member.Name}' is nullable and '{destination.Name}' is not; say what an absent value writes";
-
-        if (Widens(from, to))
-        {
-            assignment = $"{{1}}.{destination.Name} = {{0}}.{member.Name}";
-
-            return null;
-        }
+            return "'{0}' is nullable and '{1}' is not; say what an absent value becomes";
 
         if (CastsBetweenEnumAndNumber(from, to))
         {
-            assignment = $"{{1}}.{destination.Name} = ({to.ToDisplayString(Full)}){{0}}.{member.Name}";
+            cast = $"({to.ToDisplayString(Full)})";
 
             return null;
         }
 
-        return $"'{member.Name}' is {from.ToDisplayString()} and '{destination.Name}' is {to.ToDisplayString()}";
+        return $"'{{0}}' is {from.ToDisplayString()} and '{{1}}' is {to.ToDisplayString()}";
     }
 
-    private static IPropertySymbol? Writable(ITypeSymbol target, string name)
+    private static IPropertySymbol? Property(ITypeSymbol type, string name, bool wanted)
     {
-        for (var current = target as INamedTypeSymbol; current is not null; current = current.BaseType)
+        for (var current = type as INamedTypeSymbol; current is not null; current = current.BaseType)
             foreach (var property in current.GetMembers(name).OfType<IPropertySymbol>())
-                if (!property.IsStatic
-                    && property.SetMethod is { DeclaredAccessibility: Accessibility.Public })
-                    return property;
+            {
+                if (property.IsStatic) continue;
+
+                var accessor = wanted ? property.SetMethod : property.GetMethod;
+
+                if (accessor is { DeclaredAccessibility: Accessibility.Public }) return property;
+            }
 
         return null;
     }
@@ -323,15 +411,34 @@ public sealed class MappingGenerator : IIncrementalGenerator
         b.AppendLine($"partial {candidate.Keyword} {candidate.TypeName}");
         b.AppendLine("{");
         b.AppendLine("    /// <summary>Generated from the two types this method names.</summary>");
-        b.AppendLine($"    {candidate.Access}static partial void {candidate.MethodName}(" +
-                     $"{candidate.SourceType} {candidate.SourceName}, " +
-                     $"{candidate.TargetType} {candidate.TargetName})");
-        b.AppendLine("    {");
+        if (candidate.Produces)
+        {
+            b.AppendLine($"    {candidate.Access}static partial {candidate.TargetType} " +
+                         $"{candidate.MethodName}({candidate.SourceType} {candidate.SourceName})");
+            b.AppendLine("    {");
+            // Imza ISARETLI tipi tasiyor (iki yari tam eslemek zorunda), `new` ise
+            // SILINMIS olani: `new BedModel?` gecerli C# degil (CS8628).
+            b.AppendLine($"        return new {candidate.ConstructedType}");
+            b.AppendLine("        {");
 
-        foreach (var assignment in candidate.Assignments)
-            b.AppendLine($"        {string.Format(assignment, candidate.SourceName, candidate.TargetName)};");
+            foreach (var assignment in candidate.Assignments)
+                b.AppendLine($"            {string.Format(assignment, candidate.SourceName)},");
 
-        b.AppendLine("    }");
+            b.AppendLine("        };");
+            b.AppendLine("    }");
+        }
+        else
+        {
+            b.AppendLine($"    {candidate.Access}static partial void {candidate.MethodName}(" +
+                         $"{candidate.SourceType} {candidate.SourceName}, " +
+                         $"{candidate.TargetType} {candidate.TargetName})");
+            b.AppendLine("    {");
+
+            foreach (var assignment in candidate.Assignments)
+                b.AppendLine($"        {string.Format(assignment, candidate.SourceName, candidate.TargetName)};");
+
+            b.AppendLine("    }");
+        }
         b.AppendLine("}");
 
         context.AddSource(
@@ -341,6 +448,18 @@ public sealed class MappingGenerator : IIncrementalGenerator
 
     private static readonly SymbolDisplayFormat Full = SymbolDisplayFormat.FullyQualifiedFormat;
 
+    /// <summary>
+    /// <see cref="Full"/>, keeping the <c>?</c> on an annotated reference type.
+    /// </summary>
+    /// <remarks>
+    /// The two halves of a partial member must match EXACTLY, nullability included
+    /// (CS8611 on a parameter, CS8819 on a return). Rendering without the annotation would
+    /// make a method declared with <c>BedModel?</c> unimplementable — and the error would
+    /// name the generated file.
+    /// </remarks>
+    private static readonly SymbolDisplayFormat Annotated = SymbolDisplayFormat.FullyQualifiedFormat
+        .AddMiscellaneousOptions(SymbolDisplayMiscellaneousOptions.IncludeNullableReferenceTypeModifier);
+
     private sealed record Candidate(
         string? Namespace,
         string TypeName,
@@ -349,8 +468,10 @@ public sealed class MappingGenerator : IIncrementalGenerator
         string MethodName,
         string SourceType,
         string TargetType,
+        string ConstructedType,
         string SourceName,
         string TargetName,
+        bool Produces,
         EquatableArray<string> Assignments,
         DiagnosticDescriptor? Descriptor,
         EquatableArray<string>? Arguments,
@@ -363,7 +484,7 @@ public sealed class MappingGenerator : IIncrementalGenerator
             LocationInfo? location,
             string[] arguments)
             => new(null, container.Name, "class", string.Empty, methodName, string.Empty, string.Empty,
-                "source", "target", EquatableArray<string>.Empty,
+                string.Empty, "source", "target", false, EquatableArray<string>.Empty,
                 descriptor, new EquatableArray<string>(ImmutableArray.Create(arguments)), location);
     }
 }

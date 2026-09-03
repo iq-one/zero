@@ -27,7 +27,8 @@
     "ZERO225",
     "ZERO226",
     "ZERO227",
-    "ZERO228"
+    "ZERO228",
+    "ZERO229"
   ],
   "example": "public sealed class OverdueInvoices : Specification<Invoice>\n{\n    public OverdueInvoices(int customerId, DateOnly asOf)\n    {\n        Where(i => i.CustomerId == customerId);\n        Where(i => !i.IsPaid && i.Due < asOf);\n        Include(i => i.Lines);\n        OrderBy(i => i.Due);\n        ReadOnly();\n    }\n}\n\npublic sealed class GetOverdueHandler(IReadRepository<Invoice> invoices)\n    : IQueryHandler<GetOverdue, IReadOnlyList<InvoiceModel>>\n{\n    public async Task<Result<IReadOnlyList<InvoiceModel>>> HandleAsync(\n        GetOverdue query, CancellationToken cancellationToken)\n        => await invoices.ListAsync(new OverdueInvoices(query.CustomerId, query.AsOf), cancellationToken);\n}\n\n// No SaveChanges in the handler: TransactionBehavior commits when a command succeeds."
 }

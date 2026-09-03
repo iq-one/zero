@@ -22,4 +22,4 @@ ZERO225 | Zero.Persistence | Error | A mapped member is not written anywhere
 ZERO226 | Zero.Persistence | Error | An ignored member is not part of the source
 ZERO227 | Zero.Persistence | Error | A mapping method has the wrong shape
 ZERO228 | Zero.Persistence | Error | The type holding a mapping is not partial
-
+ZERO229 | Zero.Persistence | Error | A produced member has no source
