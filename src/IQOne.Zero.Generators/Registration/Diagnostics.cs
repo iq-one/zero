@@ -76,13 +76,16 @@ internal static class Diagnostics
         "An empty pattern maps the endpoint to the application root, which is almost never intended.");
 
     public static readonly DiagnosticDescriptor UnrecognisedRouteAttribute = Error(
-        "ZERO303", Web, "A derived route attribute produces no endpoint",
-        "'{0}' derives from RouteAttribute, but only Get, Post, Put, Patch and Delete are read. " +
-        "'{1}' would be reachable at no URL. Use one of those five on the request instead.",
-        "RouteAttribute is public and abstract, so deriving from it looks supported. The generator " +
-        "matches the five attributes this package declares, because it cannot evaluate a derived " +
-        "constructor to learn the method and pattern it passes down. Without this the endpoint is " +
-        "simply never mapped, and nothing says so.");
+        "ZERO303", Web, "A route attribute names no method",
+        "'{0}' derives from RouteAttribute, but not from any of Get, Post, Put, Patch or Delete, so " +
+        "there is no HTTP method to read. '{1}' would be reachable at no URL. Derive from whichever " +
+        "of the five carries the method you want, and pass the pattern straight through: " +
+        "'public sealed class ServiceRouteAttribute(string pattern) : PostAttribute(pattern);'.",
+        "Deriving from one of the five IS supported — an application whose routes share a shape says " +
+        "it once in its own attribute. What cannot be read is a method passed to RouteAttribute's own " +
+        "constructor: the generator sees attribute arguments, not the constructor body that forwards " +
+        "them. Deriving from a method-carrying attribute puts the method in the base chain, where it " +
+        "can be seen. Without this check the endpoint is simply never mapped, and nothing says so.");
 
     public static readonly DiagnosticDescriptor DuplicateRegistration = Warning(
         "ZERO010", Registration, "Service type registered by two implementations",

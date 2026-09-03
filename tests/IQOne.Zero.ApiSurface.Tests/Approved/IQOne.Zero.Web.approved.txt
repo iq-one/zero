@@ -17,7 +17,7 @@ sealed class IQOne.Zero.Web.Binding.UnsupportedMediaTypeException : IQOne.Zero.W
     .ctor UnsupportedMediaTypeException(Type requestType, string contentType)
     string ContentType { get; }
 
-sealed class IQOne.Zero.Web.DeleteAttribute : IQOne.Zero.Web.RouteAttribute
+class IQOne.Zero.Web.DeleteAttribute : IQOne.Zero.Web.RouteAttribute
     .ctor DeleteAttribute(string pattern)
 
 sealed class IQOne.Zero.Web.EndpointRegistry : IQOne.Zero.Web.IEndpointRegistryBuilder
@@ -26,19 +26,19 @@ sealed class IQOne.Zero.Web.EndpointRegistry : IQOne.Zero.Web.IEndpointRegistryB
     IReadOnlyCollection<IQOne.Zero.Web.ZeroEndpointDescriptor> Endpoints { get; }
     void Add(IQOne.Zero.Web.ZeroEndpointDescriptor endpoint)
 
-sealed class IQOne.Zero.Web.GetAttribute : IQOne.Zero.Web.RouteAttribute
+class IQOne.Zero.Web.GetAttribute : IQOne.Zero.Web.RouteAttribute
     .ctor GetAttribute(string pattern)
 
 interface IQOne.Zero.Web.IEndpointRegistryBuilder
     void Add(IQOne.Zero.Web.ZeroEndpointDescriptor endpoint)
 
-sealed class IQOne.Zero.Web.PatchAttribute : IQOne.Zero.Web.RouteAttribute
+class IQOne.Zero.Web.PatchAttribute : IQOne.Zero.Web.RouteAttribute
     .ctor PatchAttribute(string pattern)
 
-sealed class IQOne.Zero.Web.PostAttribute : IQOne.Zero.Web.RouteAttribute
+class IQOne.Zero.Web.PostAttribute : IQOne.Zero.Web.RouteAttribute
     .ctor PostAttribute(string pattern)
 
-sealed class IQOne.Zero.Web.PutAttribute : IQOne.Zero.Web.RouteAttribute
+class IQOne.Zero.Web.PutAttribute : IQOne.Zero.Web.RouteAttribute
     .ctor PutAttribute(string pattern)
 
 abstract class IQOne.Zero.Web.RouteAttribute : Attribute, IQOne.Zero.Authorization.IAuthorizationDeclaration

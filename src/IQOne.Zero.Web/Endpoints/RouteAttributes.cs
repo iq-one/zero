@@ -20,6 +20,13 @@ namespace IQOne.Zero.Web;
 public abstract class RouteAttribute(string method, string pattern)
     : Attribute, IQOne.Zero.Authorization.IAuthorizationDeclaration
 {
+    // The five below are derivable, and the pattern is their first positional argument for
+    // that reason: an application whose routes share a shape — a prefix, a policy keyed by
+    // path, a tag per area — says it once in its own attribute rather than at every
+    // endpoint. Deriving is recognised through the base chain, so the method comes from
+    // whichever of the five is in it; a derived attribute must pass the pattern straight
+    // through, because that argument is the only place the generator can read it.
+
     /// <summary>The HTTP method.</summary>
     public string Method { get; } = method;
 
@@ -59,24 +66,24 @@ public abstract class RouteAttribute(string method, string pattern)
 /// <summary>Reachable with GET. Safe to cache and to retry.</summary>
 /// <param name="pattern">The route pattern.</param>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, Inherited = false)]
-public sealed class GetAttribute(string pattern) : RouteAttribute("GET", pattern);
+public class GetAttribute(string pattern) : RouteAttribute("GET", pattern);
 
 /// <summary>Reachable with POST.</summary>
 /// <param name="pattern">The route pattern.</param>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, Inherited = false)]
-public sealed class PostAttribute(string pattern) : RouteAttribute("POST", pattern);
+public class PostAttribute(string pattern) : RouteAttribute("POST", pattern);
 
 /// <summary>Reachable with PUT.</summary>
 /// <param name="pattern">The route pattern.</param>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, Inherited = false)]
-public sealed class PutAttribute(string pattern) : RouteAttribute("PUT", pattern);
+public class PutAttribute(string pattern) : RouteAttribute("PUT", pattern);
 
 /// <summary>Reachable with PATCH.</summary>
 /// <param name="pattern">The route pattern.</param>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, Inherited = false)]
-public sealed class PatchAttribute(string pattern) : RouteAttribute("PATCH", pattern);
+public class PatchAttribute(string pattern) : RouteAttribute("PATCH", pattern);
 
 /// <summary>Reachable with DELETE.</summary>
 /// <param name="pattern">The route pattern.</param>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, Inherited = false)]
-public sealed class DeleteAttribute(string pattern) : RouteAttribute("DELETE", pattern);
+public class DeleteAttribute(string pattern) : RouteAttribute("DELETE", pattern);

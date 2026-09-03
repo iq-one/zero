@@ -305,9 +305,15 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
 
         foreach (var candidate in candidates)
         {
+            // The attribute's own name OR one in its base chain. Recognising only the exact
+            // name made deriving from a route attribute an error (ZERO303) for no reason
+            // other than the lookup: the pattern is still the first positional argument and
+            // the method is still knowable, from whichever of the five the chain contains.
+            // An application whose routes share a shape can now say it once.
             var route = candidate.Attributes
                 .Select(a => (Attribute: a, Method: ZeroNames.RouteAttributes
-                    .FirstOrDefault(r => r.Attribute == a.TypeName).Method))
+                    .FirstOrDefault(r => r.Attribute == a.TypeName
+                        || a.BaseTypeNames.Contains(r.Attribute)).Method))
                 .FirstOrDefault(x => x.Method is not null);
 
             if (route.Method is null)

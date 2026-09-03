@@ -87,6 +87,41 @@ public class RequestDispatchTests
     }
 
     [Fact]
+    public void A_route_attribute_of_the_application_s_own_is_recognised_through_its_base()
+    {
+        // Rotalari ayni sekli paylasan bir uygulama — bir onek, yola gore bir politika,
+        // alan basina bir etiket — bunu KENDI ozniteliginde bir kez soylemek istiyor. Once
+        // bu bir hataydi (ZERO303) ve sebebi yalnizca aramanin tam ada bakmasiydi: desen
+        // hala ilk konumsal arguman, metot hala zincirdeki besliden biri.
+        var run = GeneratorHarness.Run($$"""
+            {{Preamble}}
+            using IQOne.Zero.Web;
+
+            public sealed class ServiceRouteAttribute : PostAttribute
+            {
+                public ServiceRouteAttribute(string pattern) : base(pattern)
+                    => Policy = pattern.TrimStart('/');
+            }
+
+            [ServiceRoute("/shared/lookups/countries")]
+            public sealed record GetCountries : IQuery<string>;
+
+            public sealed class GetCountriesHandler : IQueryHandler<GetCountries, string>
+            {
+                public Task<Result<string>> HandleAsync(GetCountries q, CancellationToken c)
+                    => Task.FromResult(Result<string>.Success("tr"));
+            }
+            """);
+
+        run.HasError.Should().BeFalse();
+        run.GeneratedFileErrorMessages.Should().BeEmpty();
+
+        run.GeneratedSource.Should()
+            .Contain("\"POST\"")
+            .And.Contain("/shared/lookups/countries");
+    }
+
+    [Fact]
     public void A_response_that_can_be_null_keeps_its_annotation()
     {
         // Bir uc noktanin yaniti mesru olarak null olabilir: aradigi sey yoksa "yok"

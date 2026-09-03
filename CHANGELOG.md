@@ -3,6 +3,44 @@
 Zero follows semantic versioning from this first published package. Until 1.0 the API will
 change; if you adopt it now, pin the version.
 
+## 0.4.0
+
+### Added
+
+- **A route attribute of your own is now recognised.** The five method attributes — `Get`,
+  `Post`, `Put`, `Patch`, `Delete` — are no longer sealed, and recognition walks the base
+  chain, so an application whose routes share a shape says it once:
+
+  ```csharp
+  public sealed class ServiceRouteAttribute : PostAttribute
+  {
+      public ServiceRouteAttribute(string pattern) : base(pattern)
+          => Policy = pattern.TrimStart('/');
+  }
+
+  [ServiceRoute("/shared/lookups/countries")]
+  public sealed record GetCountries : IQuery<CountryModel[]>;
+  ```
+
+  One string, written once, with the policy derived from it. Before this the same endpoint
+  needed the path twice — as the pattern and as the policy — or a constant per endpoint plus
+  a list to register from.
+
+  What the generator can and cannot see is worth stating, because it is what shapes the
+  rule. The **pattern** is read at compile time from the first positional argument, so a
+  derived attribute has to forward it rather than compute it. Anything the attribute sets on
+  **itself** — `Policy`, `Roles`, `Tag`, `AllowAnonymous` — is read from the live instance at
+  runtime, so a constructor may compute it freely.
+
+### Changed
+
+- **ZERO303 now reports what it always meant.** It was "a derived route attribute produces
+  no endpoint", which was true only because recognition matched the exact type name. It is
+  now "a route attribute names no method", which is the case that genuinely cannot work: a
+  method passed to `RouteAttribute`'s own constructor is invisible to the generator, because
+  the generator sees attribute arguments and not the constructor body that forwards them.
+  The message says which of the five to derive from instead.
+
 ## 0.3.1
 
 ### Fixed

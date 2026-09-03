@@ -12,7 +12,7 @@ ZERO010 | Zero.Registration | Warning | Service type registered by two implement
 ZERO300 | Zero.Web | Error | A route is declared on something that is not a request
 ZERO301 | Zero.Web | Error | Route pattern is empty
 ZERO011 | Zero.Registration | Error | A type contradicts the lifetime its abstraction declares
-ZERO303 | Zero.Web | Error | A derived route attribute produces no endpoint
+ZERO303 | Zero.Web | Error | A route attribute names no method. Narrowed: deriving from one of the five method attributes is supported and recognised through the base chain.
 ZERO220 | Zero.Persistence | Error | A projected member has no source
 ZERO221 | Zero.Persistence | Error | An ignored member is not part of the result
 ZERO222 | Zero.Persistence | Error | [Projection] is on something that is not a specification
