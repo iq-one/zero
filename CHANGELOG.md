@@ -3,6 +3,33 @@
 Zero follows semantic versioning from this first published package. Until 1.0 the API will
 change; if you adopt it now, pin the version.
 
+## 0.2.1
+
+Two more defects found the same way 0.2.0's were: by porting a hospital information system
+onto Zero. Both produced a compiler error inside GENERATED code — the worst place for one,
+because nothing in the author's own file is wrong.
+
+### Fixed
+
+- **A response type that can be null lost its annotation, and the generated registration
+  did not compile.** A handler whose response is legitimately nullable — a lookup that
+  answers `null` when the thing it looks up does not exist, which is not the same as an
+  empty list on the wire — declares
+  `IQueryHandler<TQuery, IReadOnlyList<Model>?>`. The registration generator rendered every
+  type name with `SymbolDisplayFormat.FullyQualifiedFormat`, and that format drops the `?`.
+  The emitted registration therefore named a *different* closed interface than the class
+  implements, and `Module.g.cs` failed with CS8631 pointing at a generic constraint. The
+  annotation is now kept in generic argument lists and dropped in `typeof`, where
+  `typeof(T?)` would be CS8639 instead. Both renderings are carried explicitly: a nullable
+  *value* type prints as `int?` either way, so one cannot be derived from the other by
+  removing `?`.
+- **`Specification.Page` would not accept a null offset.** `take` was widened to `int?` in
+  0.2.0 and `skip` was left behind. A specification that wants a limit and no offset had to
+  pass zero, and zero is not nothing: `Skip = 0` still emits an offset, SQL Server requires
+  an `ORDER BY` for one, so the provider invents `ORDER BY (SELECT 1)` and a query that
+  should have been `SELECT TOP(n)` becomes `OFFSET 0 ROWS FETCH NEXT n`. `Page(int? skip,
+  int? take)` — existing callers passing an `int` still compile.
+
 ## 0.2.0
 
 Fixes found by putting Zero to real work: a hospital information system with 2.758 service

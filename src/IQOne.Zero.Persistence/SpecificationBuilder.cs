@@ -91,14 +91,24 @@ public abstract class Specification<T> : ISpecification<T>
     /// Paging an unordered query returns an arbitrary page, and the arbitrariness only shows
     /// up under load, so add an ordering as well.
     /// </remarks>
-    /// <param name="skip">Matches to skip.</param>
+    /// <param name="skip">
+    /// Matches to skip, or <see langword="null"/> to start at the first one.
+    /// </param>
     /// <param name="take">
     /// Matches to take, or <see langword="null"/> for all of them from <paramref name="skip"/>
     /// onwards. An offset with no limit is unusual but legitimate, and a required limit
     /// forced callers to invent one.
     /// </param>
     /// <returns>This specification, for chaining.</returns>
-    protected Specification<T> Page(int skip, int? take)
+    /// <remarks>
+    /// Both arguments are nullable, and passing <see langword="null"/> is not the same as
+    /// passing zero. <c>Skip = 0</c> still emits an offset, and on SQL Server an offset
+    /// requires an <c>ORDER BY</c> — so the provider invents one, and a query that would
+    /// have been <c>SELECT TOP(n)</c> becomes <c>ORDER BY (SELECT 1) OFFSET 0 ROWS</c>.
+    /// A caller that only wants a limit says so by leaving the offset out. <c>take</c> was
+    /// widened for the same reason in 0.2.0; the asymmetry was an oversight.
+    /// </remarks>
+    protected Specification<T> Page(int? skip, int? take)
     {
         Skip = skip;
         Take = take;

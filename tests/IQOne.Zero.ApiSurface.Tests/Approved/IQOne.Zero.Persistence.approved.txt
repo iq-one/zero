@@ -95,7 +95,7 @@ abstract class IQOne.Zero.Persistence.Specification<T> : IQOne.Zero.Persistence.
     protected IQOne.Zero.Persistence.Specification<T> Include(Expression<Func<T, object>> include)
     protected IQOne.Zero.Persistence.Specification<T> OrderBy(Expression<Func<T, object>> keySelector)
     protected IQOne.Zero.Persistence.Specification<T> OrderByDescending(Expression<Func<T, object>> keySelector)
-    protected IQOne.Zero.Persistence.Specification<T> Page(int skip, int? take)
+    protected IQOne.Zero.Persistence.Specification<T> Page(int? skip, int? take)
     protected IQOne.Zero.Persistence.Specification<T> ReadOnly()
     protected IQOne.Zero.Persistence.Specification<T> Where(Expression<Func<T, bool>> criteria)
 

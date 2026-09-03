@@ -274,6 +274,7 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
                 handlers.Add(new RequestDescriptor(
                     handled.TypeArguments[0],
                     handled.TypeArguments[1],
+                    handled.ErasedTypeArguments[1],
                     candidate.ImplementationTypeName,
                     candidate.Location));
 
@@ -364,6 +365,7 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
                 anonymous,
                 candidate.ImplementationTypeName,
                 request.TypeArguments[0],
+                request.ErasedTypeArguments[0],
                 candidate.Location));
         }
 
@@ -880,7 +882,8 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
             b.AppendLine($"        // {Comment(handler.RequestTypeName)} -> {Comment(handler.HandlerTypeName)}");
             b.AppendLine($"        builder.Add(new {messaging}.RequestEntry(");
             b.AppendLine($"            typeof({handler.RequestTypeName}),");
-            b.AppendLine($"            typeof({handler.ResponseTypeName}),");
+            // Erased: typeof(T?) is CS8639. The Type is the same either way at runtime.
+            b.AppendLine($"            typeof({handler.ErasedResponseTypeName}),");
             b.AppendLine($"            typeof({handler.HandlerTypeName}),");
             b.AppendLine("            static (services, request, cancellationToken) =>");
             b.AppendLine($"                {messaging}.RequestPipeline.RunAsync<{handler.RequestTypeName}, {handler.ResponseTypeName}>(");
@@ -920,7 +923,8 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
             b.AppendLine($"            {Literal(endpoint.Policy)},");
             b.AppendLine($"            {(endpoint.AllowAnonymous ? "true" : "false")},");
             b.AppendLine($"            typeof({endpoint.RequestTypeName}),");
-            b.AppendLine($"            typeof({endpoint.ResponseTypeName}),");
+            // Erased, as in RenderRequests: typeof(T?) is CS8639.
+            b.AppendLine($"            typeof({endpoint.ErasedResponseTypeName}),");
             b.AppendLine($"            static context => {web}.ZeroEndpoint.RunAsync<{endpoint.RequestTypeName}, {endpoint.ResponseTypeName}>(context)));");
             b.AppendLine();
         }

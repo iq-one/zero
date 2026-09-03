@@ -11,6 +11,30 @@ internal static class SymbolCollector
 {
     private static readonly SymbolDisplayFormat Full = SymbolDisplayFormat.FullyQualifiedFormat;
 
+    /// <summary>
+    /// <see cref="Full"/>, but keeping the <c>?</c> on an annotated reference type.
+    /// </summary>
+    /// <remarks>
+    /// Used for a generic interface's TYPE ARGUMENTS and its closed name, never for a
+    /// declared type. The difference matters: a handler whose response is legitimately
+    /// nullable — a lookup that answers <see langword="null"/> when the thing it looks up
+    /// does not exist — declares
+    /// <c>IQueryHandler&lt;TQuery, IReadOnlyList&lt;Model&gt;?&gt;</c>, and
+    /// <see cref="SymbolDisplayFormat.FullyQualifiedFormat"/> drops that <c>?</c>. The
+    /// emitted registration then names a DIFFERENT closed interface than the one the class
+    /// implements, and the generated file fails to compile with CS8631 — an error inside
+    /// generated code, pointing at a constraint, with nothing in the author's own file to
+    /// explain it.
+    /// <para>
+    /// Deliberately NOT used for declared type names or <c>typeof</c> arguments:
+    /// <c>typeof(IFoo?)</c> is not legal C#, and a service type is never annotated at the
+    /// top level anyway — an interface in a base list cannot be nullable, so only inner
+    /// type arguments can carry the marker.
+    /// </para>
+    /// </remarks>
+    private static readonly SymbolDisplayFormat Annotated = SymbolDisplayFormat.FullyQualifiedFormat
+        .AddMiscellaneousOptions(SymbolDisplayMiscellaneousOptions.IncludeNullableReferenceTypeModifier);
+
     /// <summary>Reads everything registration, dispatch and routing need from one type.</summary>
     /// <param name="type">The declared type.</param>
     /// <param name="node">Its declaration, for diagnostic locations.</param>
@@ -187,8 +211,9 @@ internal static class SymbolCollector
 
         return new InterfaceUsage(
             OpenName(declaration),
+            new EquatableArray<string>([.. declaration.TypeArguments.Select(a => a.ToDisplayString(Annotated))]),
             new EquatableArray<string>([.. declaration.TypeArguments.Select(a => a.ToDisplayString(Full))]),
-            declaration.ToDisplayString(Full),
+            declaration.ToDisplayString(Annotated),
             Unbound(declaration),
             forwards);
     }

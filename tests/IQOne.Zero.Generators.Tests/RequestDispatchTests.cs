@@ -85,6 +85,63 @@ public class RequestDispatchTests
 
         run.GeneratedSource.Should().Contain("RegisterRequests(");
     }
+
+    [Fact]
+    public void A_response_that_can_be_null_keeps_its_annotation()
+    {
+        // Bir uc noktanin yaniti mesru olarak null olabilir: aradigi sey yoksa "yok"
+        // demenin yolu bos liste degil null olabilir, ve tel uzerinde ikisi ayri seydir.
+        // Boyle bir isleyici IQueryHandler<TQuery, IReadOnlyList<T>?> bildiriyor.
+        //
+        // FullyQualifiedFormat bu '?' isaretini DUSURUYOR. Dustugu anda uretilen kayit,
+        // sinifin gerceklestirdiginden BASKA bir kapali arayuzu adlandiriyor ve uretilen
+        // dosya CS8631 ile derlenmiyor: yazarin kendi dosyasinda hicbir sey yanlis
+        // degilken, uretilmis bir dosyada bir kisit hatasi. Bu testin var olma sebebi o.
+        var run = GeneratorHarness.Run($$"""
+            {{Preamble}}
+            using System.Collections.Generic;
+
+            public sealed record Find(int Id) : IQuery<IReadOnlyList<string>?>;
+
+            public sealed class FindHandler : IQueryHandler<Find, IReadOnlyList<string>?>
+            {
+                public Task<Result<IReadOnlyList<string>?>> HandleAsync(
+                    Find query, CancellationToken cancellationToken)
+                    => Task.FromResult(Result<IReadOnlyList<string>?>.Success(null));
+            }
+            """);
+
+        run.GeneratedFileErrorMessages.Should().BeEmpty();
+        run.HasError.Should().BeFalse();
+
+        // Isaret hem kayitta hem gonderimde duruyor.
+        run.GeneratedSource.Should().Contain(
+            "global::System.Collections.Generic.IReadOnlyList<string>?");
+    }
+
+    [Fact]
+    public void A_response_that_cannot_be_null_gains_nothing()
+    {
+        // Ters yon: isaret KORUNUYOR, EKLENMIYOR. Annotate edilmemis bir yanit tipi
+        // oldugu gibi kaliyor, yoksa her kayit gereksiz bir '?' tasirdi.
+        var run = GeneratorHarness.Run($$"""
+            {{Preamble}}
+            using System.Collections.Generic;
+
+            public sealed record List : IQuery<IReadOnlyList<string>>;
+
+            public sealed class ListHandler : IQueryHandler<List, IReadOnlyList<string>>
+            {
+                public Task<Result<IReadOnlyList<string>>> HandleAsync(
+                    List query, CancellationToken cancellationToken)
+                    => Task.FromResult(Result<IReadOnlyList<string>>.Success([]));
+            }
+            """);
+
+        run.GeneratedFileErrorMessages.Should().BeEmpty();
+        run.GeneratedSource.Should().NotContain("IReadOnlyList<string>?");
+    }
+
 }
 
 /// <summary>
@@ -291,4 +348,5 @@ public class ClosedGenericRegistrationTests
         run.GeneratedSource.Should().Contain(
             "AddScoped<global::IQOne.Zero.Validation.IValidator<global::Test.Register>, global::Test.RegisterValidator>");
     }
+
 }

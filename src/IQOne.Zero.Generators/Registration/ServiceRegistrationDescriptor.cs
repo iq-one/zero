@@ -56,16 +56,31 @@ internal sealed record AttributeUsage(
 /// closed name can express.
 /// </remarks>
 /// <param name="OpenGenericName">Definition without arity or type arguments, for example <c>Ns.IValidator</c>.</param>
-/// <param name="TypeArguments">The type arguments as implemented.</param>
+/// <param name="TypeArguments">
+/// The type arguments as implemented, KEEPING any nullable reference annotation.
+/// </param>
+/// <param name="ErasedTypeArguments">
+/// The same arguments with nullable reference annotations removed, for <c>typeof</c>.
+/// </param>
 /// <param name="ClosedName">Fully qualified, as implemented: <c>global::Ns.IValidator&lt;global::App.Invoice&gt;</c>.</param>
 /// <param name="UnboundName">Fully qualified and unbound: <c>global::Ns.IValidator&lt;&gt;</c>.</param>
 /// <param name="ForwardsTypeParameters">
 /// Whether the type arguments are exactly the implementing type's own type parameters, in
 /// order. Only such an interface can be named unbound alongside its implementation.
 /// </param>
+/// <remarks>
+/// The two renderings of the type arguments are BOTH needed, and neither can be derived
+/// from the other by string surgery: a nullable VALUE type prints as <c>int?</c> in both,
+/// so stripping every <c>?</c> would turn <c>IQuery&lt;int?&gt;</c> into
+/// <c>IQuery&lt;int&gt;</c>. A generic argument list needs the annotated form or the
+/// emitted closed interface is not the one the class implements (CS8631); a
+/// <c>typeof</c> needs the erased form because <c>typeof(T?)</c> is not legal C#
+/// (CS8639). Getting either wrong produces a compiler error inside generated code.
+/// </remarks>
 internal sealed record InterfaceUsage(
     string OpenGenericName,
     EquatableArray<string> TypeArguments,
+    EquatableArray<string> ErasedTypeArguments,
     string ClosedName,
     string UnboundName,
     bool ForwardsTypeParameters);
@@ -138,13 +153,24 @@ internal sealed record ServiceCandidate(
 }
 
 /// <summary>A request and the handler that serves it, ready for emission.</summary>
+/// <remarks>
+/// The response type appears twice, and the difference matters:
+/// <c>ResponseTypeName</c> keeps a nullable annotation and goes in generic argument
+/// lists, while <c>ErasedResponseTypeName</c> drops it and goes in <c>typeof</c>. See
+/// <see cref="InterfaceUsage"/> for why neither can be derived from the other.
+/// </remarks>
 internal sealed record RequestDescriptor(
     string RequestTypeName,
     string ResponseTypeName,
+    string ErasedResponseTypeName,
     string HandlerTypeName,
     LocationInfo? Location);
 
 /// <summary>An HTTP endpoint and the request behind it, ready for emission.</summary>
+/// <remarks>
+/// As on <see cref="RequestDescriptor"/>: the annotated response type goes in generic
+/// argument lists, the erased one in <c>typeof</c>.
+/// </remarks>
 internal sealed record EndpointDescriptor(
     string Method,
     string Pattern,
@@ -154,6 +180,7 @@ internal sealed record EndpointDescriptor(
     bool AllowAnonymous,
     string RequestTypeName,
     string ResponseTypeName,
+    string ErasedResponseTypeName,
     LocationInfo? Location);
 
 /// <summary>One type's registration, ready for emission.</summary>
