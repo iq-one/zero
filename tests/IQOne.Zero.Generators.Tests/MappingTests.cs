@@ -211,7 +211,6 @@ public class MappingTests
     [Theory]
     [InlineData("private static partial int Apply(BedModel model, Bed bed);", "returns")]
     [InlineData("private static partial void Apply(BedModel model);", "parameters")]
-    [InlineData("private partial void Apply(BedModel model, Bed bed);", "static")]
     public void A_signature_of_the_wrong_shape_is_reported(string signature, string says)
     {
         var run = GeneratorHarness.Run($$"""
@@ -402,5 +401,328 @@ public class MappingTests
         run.DiagnosticIds.Should().Contain("ZERO227");
         run.Diagnostics.Single(d => d.Id == "ZERO227").GetMessage()
             .Should().Contain("produces a new object");
+    }
+
+    [Fact]
+    public void A_member_can_be_handed_to_a_method_of_your_own()
+    {
+        // Ignore'un TERSI: uyeyi hesaptan cikarmiyor, nereye gittigini soyluyor. Yazdigi
+        // uye, karsiligini verdigi uye OLMAK zorunda degil — zaten varlik sebebi bu.
+        var run = GeneratorHarness.Run($$"""
+            {{Preamble}}
+
+            public sealed class BedModel
+            {
+                public string? Name { get; set; }
+                public byte BedState { get; set; }
+            }
+
+            public sealed partial class SaveBeds
+            {
+                [Mapping]
+                [MapMember(nameof(BedModel.BedState), nameof(WriteBedState))]
+                private static partial void Apply(BedModel model, Bed bed);
+
+                private static void WriteBedState(BedModel model, Bed bed) => bed.State = model.BedState;
+            }
+            """);
+
+        run.HasError.Should().BeFalse();
+        run.GeneratedFileErrorMessages.Should().BeEmpty();
+
+        run.GeneratedSource.Should()
+            .Contain("bed.Name = model.Name")
+            .And.Contain("WriteBedState(model, bed)");
+    }
+
+    [Fact]
+    public void When_PRODUCING_a_custom_member_returns_the_value()
+    {
+        var run = GeneratorHarness.Run($$"""
+            {{Preamble}}
+
+            public sealed class BedModel
+            {
+                public short Id { get; set; }
+                public string? Name { get; set; }
+                public string? Where { get; set; }
+            }
+
+            public sealed partial class ReadBeds
+            {
+                [Mapping]
+                [MapMember(nameof(BedModel.Where), nameof(WhereItIs))]
+                private static partial BedModel ToModel(Bed bed);
+
+                private static string WhereItIs(Bed bed) => $"{bed.BuildingUnitId}/{bed.Id}";
+            }
+            """);
+
+        run.HasError.Should().BeFalse();
+        run.GeneratedFileErrorMessages.Should().BeEmpty();
+
+        run.GeneratedSource.Should()
+            .Contain("Name = bed.Name")
+            .And.Contain("Where = WhereItIs(bed)");
+    }
+
+    [Fact]
+    public void A_custom_member_the_accounted_type_does_not_have_is_reported()
+    {
+        // Alisilmis hata: YAZILAN uyeyi adlandirmak. Hesabi verilen uc, yazilan uc degil.
+        var run = GeneratorHarness.Run($$"""
+            {{Preamble}}
+
+            public sealed class BedModel
+            {
+                public string? Name { get; set; }
+                public byte BedState { get; set; }
+            }
+
+            public sealed partial class SaveBeds
+            {
+                [Mapping]
+                [MapMember(nameof(Bed.State), nameof(WriteBedState))]
+                private static partial void Apply(BedModel model, Bed bed);
+
+                private static void WriteBedState(BedModel model, Bed bed) => bed.State = model.BedState;
+            }
+            """);
+
+        run.DiagnosticIds.Should().Contain("ZERO230");
+    }
+
+    [Theory]
+    [InlineData("private static void Handle(BedModel model) { }", "1 parameter instead of two")]
+    [InlineData("private void Handle(BedModel model, Bed bed) { }", "not static")]
+    [InlineData("private static byte Handle(BedModel model, Bed bed) => 0;", "nowhere to put")]
+    public void A_custom_method_of_the_wrong_shape_is_reported(string handler, string says)
+    {
+        var run = GeneratorHarness.Run($$"""
+            {{Preamble}}
+
+            public sealed class BedModel
+            {
+                public string? Name { get; set; }
+                public byte BedState { get; set; }
+            }
+
+            public sealed partial class SaveBeds
+            {
+                [Mapping]
+                [MapMember(nameof(BedModel.BedState), nameof(Handle))]
+                private static partial void Apply(BedModel model, Bed bed);
+
+                {{handler}}
+            }
+            """);
+
+        run.DiagnosticIds.Should().Contain("ZERO231");
+        run.DiagnosticMessages.Should().Contain(m => m.Contains(says));
+    }
+
+    [Fact]
+    public void A_custom_method_that_does_not_exist_is_reported()
+    {
+        var run = GeneratorHarness.Run($$"""
+            {{Preamble}}
+
+            public sealed class BedModel
+            {
+                public string? Name { get; set; }
+                public byte BedState { get; set; }
+            }
+
+            public sealed partial class SaveBeds
+            {
+                [Mapping]
+                [MapMember(nameof(BedModel.BedState), "WriteBedStait")]
+                private static partial void Apply(BedModel model, Bed bed);
+
+                private static void WriteBedState(BedModel model, Bed bed) => bed.State = model.BedState;
+            }
+            """);
+
+        run.DiagnosticIds.Should().Contain("ZERO231");
+    }
+
+    [Fact]
+    public void A_mapping_may_not_name_ITSELF()
+    {
+        // Yazan seklin imzasi, kendi yardimcisinin imzasiyla AYNI — yani bu yanlislik
+        // derlenir ve sonsuza kadar kendini cagirir. Sekil kontrolu yakalamaz; ad yakalar.
+        var run = GeneratorHarness.Run($$"""
+            {{Preamble}}
+
+            public sealed class BedModel
+            {
+                public string? Name { get; set; }
+                public byte BedState { get; set; }
+            }
+
+            public sealed partial class SaveBeds
+            {
+                [Mapping]
+                [MapMember(nameof(BedModel.BedState), nameof(Apply))]
+                private static partial void Apply(BedModel model, Bed bed);
+            }
+            """);
+
+        run.DiagnosticIds.Should().Contain("ZERO231");
+        run.DiagnosticMessages.Should().Contain(m => m.Contains("itself forever"));
+    }
+
+    [Fact]
+    public void A_member_both_IGNORED_and_custom_mapped_is_reported()
+    {
+        var run = GeneratorHarness.Run($$"""
+            {{Preamble}}
+
+            public sealed class BedModel
+            {
+                public string? Name { get; set; }
+                public byte BedState { get; set; }
+            }
+
+            public sealed partial class SaveBeds
+            {
+                [Mapping(Ignore = [nameof(BedModel.BedState)])]
+                [MapMember(nameof(BedModel.BedState), nameof(WriteBedState))]
+                private static partial void Apply(BedModel model, Bed bed);
+
+                private static void WriteBedState(BedModel model, Bed bed) => bed.State = model.BedState;
+            }
+            """);
+
+        run.DiagnosticIds.Should().Contain("ZERO232");
+    }
+
+    [Fact]
+    public void A_member_named_by_TWO_custom_mappings_is_reported()
+    {
+        var run = GeneratorHarness.Run($$"""
+            {{Preamble}}
+
+            public sealed class BedModel
+            {
+                public string? Name { get; set; }
+                public byte BedState { get; set; }
+            }
+
+            public sealed partial class SaveBeds
+            {
+                [Mapping]
+                [MapMember(nameof(BedModel.BedState), nameof(One))]
+                [MapMember(nameof(BedModel.BedState), nameof(Two))]
+                private static partial void Apply(BedModel model, Bed bed);
+
+                private static void One(BedModel model, Bed bed) => bed.State = model.BedState;
+                private static void Two(BedModel model, Bed bed) => bed.State = 0;
+            }
+            """);
+
+        run.DiagnosticIds.Should().Contain("ZERO232");
+    }
+
+    [Fact]
+    public void The_KEY_can_be_written_when_somebody_says_so()
+    {
+        // Anahtar sessizce atlaniyor cunku onun hakkinda bir sey soylenmemis. [MapMember]
+        // onu soylemenin yolu, ve uretecin varlik sebebi buna yer acmak.
+        var run = GeneratorHarness.Run($$"""
+            {{Preamble}}
+
+            public sealed class BedModel
+            {
+                public short Id { get; set; }
+                public string? Name { get; set; }
+            }
+
+            public sealed partial class SaveBeds
+            {
+                [Mapping]
+                [MapMember(nameof(BedModel.Id), nameof(WriteId))]
+                private static partial void Apply(BedModel model, Bed bed);
+
+                private static void WriteId(BedModel model, Bed bed) => bed.Id = model.Id;
+            }
+            """);
+
+        run.HasError.Should().BeFalse();
+        run.GeneratedSource.Should().Contain("WriteId(model, bed)");
+    }
+
+    [Fact]
+    public void A_mapping_can_be_an_INSTANCE_method_and_inject_what_it_needs()
+    {
+        // Yasam suresi, keyed kayit ve DI icin YENI bir sey yok: eslemenin evi bir sinif,
+        // ve sinifi servis yapmanin yollari Zero'da hazir — IScoped yasam suresini,
+        // [ServiceTypes(key, ...)] anahtari, kurucu da bagimliliklari veriyor. Tek engel
+        // static zorunlulugu idi.
+        var run = GeneratorHarness.Run($$"""
+            {{Preamble}}
+
+            public interface IDepartmentNames { string? Name(short? id); }
+
+            public sealed class BedModel
+            {
+                public short Id { get; set; }
+                public string? Name { get; set; }
+                public string? DepartmentName { get; set; }
+            }
+
+            public interface IBedMapper { BedModel ToModel(Bed bed); }
+
+            [IQOne.Zero.DependencyInjection.Annotations.ServiceTypes("detailed", typeof(IBedMapper))]
+            public sealed partial class BedMapper(IDepartmentNames departments)
+                : IBedMapper, IQOne.Zero.DependencyInjection.Descriptors.IScoped
+            {
+                [Mapping]
+                [MapMember(nameof(BedModel.DepartmentName), nameof(NameOf))]
+                public partial BedModel ToModel(Bed bed);
+
+                private string? NameOf(Bed bed) => departments.Name(bed.DepartmentId);
+            }
+            """);
+
+        run.DiagnosticMessages.Should().BeEmpty();
+        run.GeneratedFileErrorMessages.Should().BeEmpty();
+
+        // Uretilen yari `static` YAZMIYOR — iki yari tam eslemek zorunda.
+        run.GeneratedSource.Should()
+            .Contain("public partial global::Test.BedModel ToModel")
+            .And.NotContain("static partial")
+            .And.Contain("DepartmentName = NameOf(bed)");
+
+        // Ve keyed kaydi Zero'nun kendi ureteci yaziyor — esleme bunun farkinda degil.
+        run.GeneratedSource.Should().Contain("AddKeyedScoped");
+    }
+
+    [Fact]
+    public void A_STATIC_mapping_cannot_call_an_instance_helper()
+    {
+        // Bunu derleyici de yakalar, ama uretilen dosyada yakalar. Tanı, yanlisin
+        // yazildigi yeri gosteriyor.
+        var run = GeneratorHarness.Run($$"""
+            {{Preamble}}
+
+            public sealed class BedModel
+            {
+                public string? Name { get; set; }
+                public byte BedState { get; set; }
+            }
+
+            public sealed partial class SaveBeds
+            {
+                [Mapping]
+                [MapMember(nameof(BedModel.BedState), nameof(WriteBedState))]
+                private static partial void Apply(BedModel model, Bed bed);
+
+                private void WriteBedState(BedModel model, Bed bed) => bed.State = model.BedState;
+            }
+            """);
+
+        run.DiagnosticIds.Should().Contain("ZERO231");
+        run.DiagnosticMessages.Should().Contain(m => m.Contains("the mapping is"));
     }
 }
