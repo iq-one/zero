@@ -65,7 +65,11 @@ in a consumer's dependency graph.
   precisely because every test built its own registry and none called the documented entry
   point. `tests/Zero.Sample.Invoices.Tests` drives a real host over HTTP; keep it working.
 - **Mutation-check a fix you care about.** Revert it and confirm the test fails. Several
-  tests in this repository were written that way and it is worth the two minutes.
+  tests in this repository were written that way and it is worth the two minutes. For a
+  GENERATOR, check the mutation compiled: warnings are errors here, so a mutation that leaves
+  unreachable code fails to build and the test project silently runs against the previous
+  analyzer DLL — which looks exactly like a test that does not work. Mutate in a way that
+  still compiles.
 - Name tests as sentences: `A_failed_command_rolls_back_and_never_saves`.
 - Watch the FluentAssertions overload trap: `Equal("a", "because…")` reads the reason as a
   second element. Write `Equal(["a"], "because…")`. It has caught three people here.

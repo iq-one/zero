@@ -5,6 +5,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/IQOne.Zero.Mapping/IQOne.Zero.Mapping.csproj" />
+    <ProjectReference Include="../../src/IQOne.Zero.Persistence/IQOne.Zero.Persistence.csproj" />
     <ProjectReference Include="../../src/IQOne.Zero.Generators/IQOne.Zero.Generators.csproj"
                       OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>

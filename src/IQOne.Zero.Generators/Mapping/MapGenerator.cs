@@ -30,6 +30,7 @@ namespace IQOne.Zero.Generators.Mapping;
 public sealed class MapGenerator : IIncrementalGenerator
 {
     private const string MapName = "IQOne.Zero.Mapping.Map`2";
+    private const string SpecificationName = "IQOne.Zero.Persistence.Specification`2";
 
     /// <inheritdoc />
     public void Initialize(IncrementalGeneratorInitializationContext context)
@@ -43,10 +44,76 @@ public sealed class MapGenerator : IIncrementalGenerator
             .Where(static d => d is not null)
             .Select(static (d, _) => d!);
 
-        // Collected, because composition is resolved across maps. The cost is that one map
-        // changing re-emits all of them; the alternative is that a map cannot reach another,
-        // which is the feature.
-        context.RegisterSourceOutput(drafts.Collect(), Emit);
+        // A specification names a pair in its base type, and if a map is declared for that pair
+        // there is nothing for the specification to say: its selector IS that map.
+        var projections = context.SyntaxProvider
+            .CreateSyntaxProvider(
+                predicate: static (node, _) => node is ClassDeclarationSyntax { BaseList: not null },
+                transform: static (ctx, _) => Projected(ctx))
+            .Where(static p => p is not null)
+            .Select(static (p, _) => p!);
+
+        // Collected, because composition is resolved across maps and a specification has to
+        // find one. The cost is that one map changing re-emits all of them; the alternative is
+        // that a map cannot reach another, which is the feature.
+        context.RegisterSourceOutput(drafts.Collect().Combine(projections.Collect()), Emit);
+    }
+
+    /// <summary>
+    /// A specification whose selector a map can supply, or null when it needs nothing.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Purely additive: a specification that writes its own selector, declines generation, or
+    /// has no map for its pair is left exactly as it was. Nothing is reported when no map is
+    /// found either — the language already requires the member, and CS0534 says so precisely.
+    /// </para>
+    /// <para>
+    /// A specification and its map may be in different files or different assemblies; only the
+    /// map's TYPE is needed here, not its source, which is what separates this from
+    /// composition.
+    /// </para>
+    /// </remarks>
+    private static Projection? Projected(GeneratorSyntaxContext context)
+    {
+        var declaration = (ClassDeclarationSyntax)context.Node;
+
+        if (context.SemanticModel.GetDeclaredSymbol(declaration) is not INamedTypeSymbol type) return null;
+
+        if (Closed(type, SpecificationName) is not { } specification) return null;
+
+        if (OptOut.Declared(type)) return null;
+
+        // Hand-written wins, silently: the selector is right there saying what happened.
+        if (Declares(type, "Selector")) return null;
+
+        if (!declaration.Modifiers.Any(SyntaxKind.PartialKeyword)) return null;
+
+        var source = specification.TypeArguments[0];
+        var result = specification.TypeArguments[1];
+
+        return new Projection(
+            Namespace(type),
+            type.Name,
+            source.ToDisplayString(Full),
+            result.ToDisplayString(Full),
+            Declarations.Key(source, result),
+            Field(type),
+            Usings(declaration),
+            LocationInfo.From(declaration.Identifier.Parent));
+    }
+
+    /// <summary>A field name the specification does not already use.</summary>
+    /// <remarks>
+    /// Generated into the author's type, so a name it already has would be a compiler error in
+    /// a file nobody wrote.
+    /// </remarks>
+    private static string Field(INamedTypeSymbol type)
+    {
+        foreach (var name in new[] { "Projection", "MapForThisPair", "__map" })
+            if (type.GetMembers(name).Length == 0) return name;
+
+        return "__map" + type.Name.Length;
     }
 
     /// <summary>
@@ -208,7 +275,15 @@ public sealed class MapGenerator : IIncrementalGenerator
     /// Walked rather than matched on the immediate base, so an application can put its own layer
     /// in between and that layer is still a map of the same two shapes.
     /// </remarks>
-    private static INamedTypeSymbol? Base(INamedTypeSymbol type)
+    private static INamedTypeSymbol? Base(INamedTypeSymbol type) => Closed(type, MapName);
+
+    /// <summary>The closed two-argument base of this metadata name, walking the chain.</summary>
+    /// <remarks>
+    /// Walked rather than matched on the immediate base, so an application can put its own
+    /// layer in between — a base applying paging and soft-delete rules to every query — and
+    /// that layer still names the same two shapes.
+    /// </remarks>
+    private static INamedTypeSymbol? Closed(INamedTypeSymbol type, string wanted)
     {
         for (var current = type.BaseType; current is not null; current = current.BaseType)
         {
@@ -219,7 +294,7 @@ public sealed class MapGenerator : IIncrementalGenerator
                 ? definition.MetadataName
                 : $"{definition.ContainingNamespace.ToDisplayString()}.{definition.MetadataName}";
 
-            if (name == MapName && current.TypeArguments.Length == 2) return current;
+            if (name == wanted && current.TypeArguments.Length == 2) return current;
         }
 
         return null;
@@ -381,13 +456,32 @@ public sealed class MapGenerator : IIncrementalGenerator
     private static string? Namespace(INamedTypeSymbol type)
         => type.ContainingNamespace.IsGlobalNamespace ? null : type.ContainingNamespace.ToDisplayString();
 
-    private static void Emit(SourceProductionContext context, ImmutableArray<Map> maps)
+    private static void Emit(
+        SourceProductionContext context, (ImmutableArray<Map> Maps, ImmutableArray<Projection> Projections) input)
     {
+        var (maps, projections) = input;
+
         var byPair = new Dictionary<string, Map>(StringComparer.Ordinal);
 
         foreach (var map in maps)
-            if (map.Descriptor is null && !byPair.ContainsKey(map.Pair))
-                byPair[map.Pair] = map;
+        {
+            if (map.Descriptor is not null) continue;
+
+            // A pair has one map: everything reaching for it reaches by pair, and with two the
+            // winner would be whichever was read first.
+            if (byPair.TryGetValue(map.Pair, out var first))
+            {
+                var parts = map.Pair.Split('|');
+
+                context.ReportDiagnostic(Diagnostic.Create(
+                    MapDiagnostics.TwoMapsForOnePair, map.Location?.ToLocation(),
+                    first.TypeName, map.TypeName, Short(parts[0]), Short(parts[1])));
+
+                continue;
+            }
+
+            byPair[map.Pair] = map;
+        }
 
         foreach (var map in maps)
         {
@@ -423,7 +517,58 @@ public sealed class MapGenerator : IIncrementalGenerator
                     map.TypeName, Guard.Describe(exception)));
             }
         }
+
+        foreach (var projection in projections)
+        {
+            // No map for the pair: nothing is reported, because the language already requires
+            // the member and CS0534 names it precisely.
+            if (!byPair.TryGetValue(projection.Pair, out var map)) continue;
+
+            Guard.Run(
+                context, MapDiagnostics.GeneratorFailed, projection.TypeName,
+                projection.Location?.ToLocation(),
+                () => context.AddSource(
+                    $"{projection.TypeName}.Selector.g.cs",
+                    SourceText.From(Render(projection, map), Encoding.UTF8)));
+        }
     }
+
+    /// <summary>A specification's selector, taken from the map for its pair.</summary>
+    private static string Render(Projection projection, Map map)
+    {
+        var b = new StringBuilder();
+
+        b.AppendLine("// <auto-generated/>");
+        b.AppendLine("#nullable enable");
+        b.AppendLine();
+
+        if (projection.Namespace is { } ns)
+        {
+            b.AppendLine($"namespace {ns};");
+            b.AppendLine();
+        }
+
+        b.AppendLine($"partial class {projection.TypeName}");
+        b.AppendLine("{");
+        b.AppendLine($"    /// <summary>The declared map for {Short(map.SourceType)} to " +
+                     $"{Short(map.DestinationType)}.</summary>");
+        b.AppendLine("    /// <remarks>");
+        b.AppendLine("    /// One per specification type, and the map holds its tree statically, so this");
+        b.AppendLine("    /// costs nothing per query.");
+        b.AppendLine("    /// </remarks>");
+        b.AppendLine($"    private static readonly {Qualified(map)} {projection.FieldName} = new();");
+        b.AppendLine();
+        b.AppendLine("    /// <inheritdoc />");
+        b.AppendLine("    public override global::System.Linq.Expressions.Expression<" +
+                     $"global::System.Func<{projection.SourceType}, {projection.ResultType}>> Selector");
+        b.AppendLine($"        => {projection.FieldName}.Selector;");
+        b.AppendLine("}");
+
+        return b.ToString();
+    }
+
+    private static string Qualified(Map map)
+        => map.Namespace is { } ns ? $"global::{ns}.{map.TypeName}" : $"global::{map.TypeName}";
 
     /// <summary>
     /// The initialiser entries for a map, with every composition written out.
@@ -611,6 +756,17 @@ public sealed class MapGenerator : IIncrementalGenerator
     private static readonly SymbolDisplayFormat Full = SymbolDisplayFormat.FullyQualifiedFormat;
 
     private readonly record struct Failure(DiagnosticDescriptor Descriptor, string[] Arguments);
+
+    /// <summary>A specification waiting for the map that fills its selector.</summary>
+    private sealed record Projection(
+        string? Namespace,
+        string TypeName,
+        string SourceType,
+        string ResultType,
+        string Pair,
+        string FieldName,
+        EquatableArray<string> Usings,
+        LocationInfo? Location);
 
     private sealed record Map(
         string? Namespace,

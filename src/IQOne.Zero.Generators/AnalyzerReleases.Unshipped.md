@@ -34,3 +34,4 @@ ZERO255 | Zero.Mapping | Error | A composition names a pair with no map
 ZERO259 | Zero.Mapping | Error | The generator failed on this map
 ZERO012 | Zero.Registration | Error | The module generator failed
 ZERO230 | Zero.Persistence | Error | A projection or mapping generator failed
+ZERO257 | Zero.Mapping | Error | Two maps are declared for one pair

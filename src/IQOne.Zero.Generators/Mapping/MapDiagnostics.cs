@@ -86,4 +86,12 @@ internal static class MapDiagnostics
         "there is no file the compiler reads back. So a bug in the framework would leave them " +
         "waiting for a release with nothing to try. Caught per map instead: one map reports, the " +
         "rest are written as usual, and declaring the property takes over the one that failed.");
+
+    public static readonly DiagnosticDescriptor TwoMapsForOnePair = Error(
+        "ZERO257", "Two maps are declared for one pair",
+        "'{0}' and '{1}' both map '{2}' to '{3}'. Keep one.",
+        "A pair has one map, because everything that reaches for it reaches by pair: a " +
+        "composition writing a nested member, a specification taking its selector. With two, " +
+        "which one won would depend on the order they happen to be read in — and the two would " +
+        "drift, which is the failure a single declaration exists to prevent.");
 }
