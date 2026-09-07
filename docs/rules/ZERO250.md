@@ -1,4 +1,4 @@
-# ZERO240 — A mapped member is unaccounted for
+# ZERO250 — A mapped member is unaccounted for
 
 **Severity:** error · **Category:** Zero.Mapping
 
@@ -13,7 +13,7 @@ public sealed class BedModel
     public EnumBedState BedState { get; set; }   // Bed has no BedState
 }
 
-public sealed partial class BedMap : Map<Bed, BedModel>;   // ZERO240
+public sealed partial class BedMap : Map<Bed, BedModel>;   // ZERO250
 ```
 
 ## Why this is an error and not a silence

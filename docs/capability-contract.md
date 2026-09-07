@@ -115,15 +115,25 @@ validation on, and resolves the capability's public types. That test is what mak
 
 | Range | Owner |
 | --- | --- |
-| ZERO001–ZERO099 | Kernel: registration, modules, configuration |
+| ZERO001–ZERO099 | Kernel: abstractions, generators, configuration |
 | ZERO100–ZERO199 | Results, validation |
-| ZERO200–ZERO249 | Caching |
-| ZERO250–ZERO299 | Persistence |
+| ZERO200–ZERO219 | Caching |
+| ZERO220–ZERO249 | Persistence |
+| ZERO250–ZERO299 | Mapping |
 | ZERO300–ZERO399 | Messaging, web |
-| ZERO400–ZERO449 | Observability, resilience, background work |
+| ZERO400–ZERO449 | Observability |
 | ZERO450–ZERO499 | Authorization |
+| ZERO500–ZERO549 | Events |
+| ZERO550–ZERO599 | Background work |
+| ZERO600–ZERO649 | Resilience |
 
-Ids are never reused. A retired diagnostic keeps its number and its page.
+Ids are never reused. A retired diagnostic keeps its number and its page — which is why this
+table follows the ids rather than the other way round: Persistence's projection and mapping
+rules were published in ZERO220–ZERO229 while this table still said Caching owned that range,
+and correcting the ids would have broken every suppression and every link to them. The table
+was the thing that was wrong.
+
+`CatalogTests` enforces it. It drifted in the first place because nothing did.
 
 ## What a capability may depend on
 

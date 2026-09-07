@@ -1,4 +1,4 @@
-# ZERO242 — A declaration does not name a settable member
+# ZERO252 — A declaration does not name a settable member
 
 **Severity:** error · **Category:** Zero.Mapping
 
@@ -12,7 +12,7 @@ public sealed class BedModel
     public string FullName => Name ?? "";     // computed
 }
 
-map.Ignore(m => m.FullName);                 // ZERO242
+map.Ignore(m => m.FullName);                 // ZERO252
 ```
 
 A computed or read-only member is not filled by anybody, so it is not part of the account and
@@ -21,7 +21,7 @@ naming it says nothing.
 ## The usual mistake: naming the other end
 
 ```csharp
-map.Member(m => m.State, e => e.State);      // ZERO242 if the model has no State
+map.Member(m => m.State, e => e.State);      // ZERO252 if the model has no State
 ```
 
 The first lambda names the **destination**; the second reads the source. Naming the source's

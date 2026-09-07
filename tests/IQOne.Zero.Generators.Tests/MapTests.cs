@@ -94,7 +94,7 @@ public class MapTests
             public sealed partial class BedMap : Map<Bed, BedModel>;
             """);
 
-        run.DiagnosticIds.Should().Contain("ZERO240");
+        run.DiagnosticIds.Should().Contain("ZERO250");
         run.DiagnosticMessages.Should().Contain(m => m.Contains("BedState"));
     }
 
@@ -224,7 +224,7 @@ public class MapTests
             public sealed partial class BedMap : Map<Bed, BedModel>;
             """);
 
-        run.DiagnosticIds.Should().Contain("ZERO240");
+        run.DiagnosticIds.Should().Contain("ZERO250");
         run.DiagnosticMessages.Should().Contain(m => m.Contains("absent value becomes"));
     }
 
@@ -248,7 +248,7 @@ public class MapTests
             }
             """);
 
-        run.DiagnosticIds.Should().Contain("ZERO243");
+        run.DiagnosticIds.Should().Contain("ZERO253");
     }
 
     [Fact]
@@ -271,7 +271,7 @@ public class MapTests
             }
             """);
 
-        run.DiagnosticIds.Should().Contain("ZERO242");
+        run.DiagnosticIds.Should().Contain("ZERO252");
         run.DiagnosticMessages.Should().Contain(m => m.Contains("read-only"));
     }
 
@@ -300,7 +300,7 @@ public class MapTests
             }
             """);
 
-        run.DiagnosticIds.Should().Contain("ZERO246");
+        run.DiagnosticIds.Should().Contain("ZERO256");
     }
 
     [Fact]
@@ -314,7 +314,7 @@ public class MapTests
             public sealed class BedMap : Map<Bed, BedModel>;
             """);
 
-        run.DiagnosticIds.Should().Contain("ZERO248");
+        run.DiagnosticIds.Should().Contain("ZERO258");
     }
 
     [Fact]

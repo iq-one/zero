@@ -1,4 +1,4 @@
-# ZERO248 — A map is not partial
+# ZERO258 — A map is not partial
 
 **Severity:** error · **Category:** Zero.Mapping
 
@@ -6,7 +6,7 @@ The generator writes the selector into a **second part of the map's type**, so t
 be declared `partial`.
 
 ```csharp
-public sealed class BedMap : Map<Bed, BedModel>;            // ZERO248
+public sealed class BedMap : Map<Bed, BedModel>;            // ZERO258
 ```
 
 ```csharp

@@ -1,4 +1,4 @@
-# ZERO246 — A map's configuration cannot be read
+# ZERO256 — A map's configuration cannot be read
 
 **Severity:** error · **Category:** Zero.Mapping
 
@@ -8,7 +8,7 @@ it as source, which means it reads the syntax rather than executing it.
 ```csharp
 protected override void Configure(IMapBuilder<Bed, BedModel> map)
 {
-    if (DateTime.Now.Year > 2020)                                  // ZERO246
+    if (DateTime.Now.Year > 2020)                                  // ZERO256
         map.Member(m => m.BedState, e => (EnumBedState)e.State);
 }
 ```

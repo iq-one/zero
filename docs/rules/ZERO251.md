@@ -1,4 +1,4 @@
-# ZERO241 — A declared member cannot fill its target
+# ZERO251 — A declared member cannot fill its target
 
 **Severity:** error · **Category:** Zero.Mapping
 
@@ -7,7 +7,7 @@ fit the member it fills.
 
 ```csharp
 // model: string Code — expression produces int
-map.Member(m => m.Code, e => e.BuildingUnitId);     // ZERO241
+map.Member(m => m.Code, e => e.BuildingUnitId);     // ZERO251
 ```
 
 Reported at the declaration rather than left to the compiler, because a mismatch inside a

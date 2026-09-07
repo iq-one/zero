@@ -11,12 +11,12 @@
     "IMapBuilder<TSource, TDestination>"
   ],
   "diagnostics": [
-    "ZERO240",
-    "ZERO241",
-    "ZERO242",
-    "ZERO243",
-    "ZERO246",
-    "ZERO248"
+    "ZERO250",
+    "ZERO251",
+    "ZERO252",
+    "ZERO253",
+    "ZERO256",
+    "ZERO258"
   ],
   "example": "public sealed partial class BedMap : Map<Bed, BedModel>\n{\n    protected override void Configure(IMapBuilder<Bed, BedModel> map) => map\n        // Not a column of its own: the state column read as a bed.\n        .Member(m => m.BedState, e => (EnumBedState)e.State)\n        // Not loaded on this path, and saying so keeps it accounted for.\n        .Ignore(m => m.BuildingUnit, m => m.Department);\n}\n\n// Every other member matches by name, so nothing is said about it. Configure is READ,\n// not run: the generator writes the tree into a second part of this class, and the\n// generated file is where you go to see what a member got."
 }

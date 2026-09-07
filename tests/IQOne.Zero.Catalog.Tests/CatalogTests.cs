@@ -104,4 +104,87 @@ public class CatalogTests
                 documented.Should().Contain(diagnostic.GetString()!,
                     $"{package} advertises {diagnostic}, and its helpLinkUri points at that page");
     }
+
+    [Fact]
+    public void Every_diagnostic_falls_in_the_range_its_capability_was_given()
+    {
+        // Bu test var cunku tablo KAYDI: Persistence'in projeksiyon ve esleme kurallari
+        // ZERO220-229'da yayinlandi, oysa tablo o araligin Caching'e ait oldugunu
+        // soyluyordu. Kimse kontrol etmedigi icin kimse gormedi, ve yeni bir yetenek
+        // eklerken ayni yere bir kez daha yazildi. Id'ler yeniden kullanilamadigi icin
+        // duzeltilecek olan tabloydu — ve bir daha kaymamasi icin zorlanmasi gerekiyor.
+        var ranges = Ranges();
+
+        ranges.Should().NotBeEmpty("the contract's range table is what this test reads");
+
+        var wrong = new List<string>();
+
+        foreach (var (package, manifest) in Manifests())
+        {
+            if (!manifest.TryGetProperty("diagnostics", out var declared)) continue;
+
+            var id = manifest.GetProperty("id").GetString()!;
+
+            foreach (var diagnostic in declared.EnumerateArray().Select(d => d.GetString()!))
+            {
+                var number = int.Parse(diagnostic.AsSpan("ZERO".Length));
+
+                var owner = ranges.FirstOrDefault(r => number >= r.From && number <= r.To);
+
+                if (owner.Owner is null)
+                {
+                    wrong.Add($"{diagnostic} ({package}) falls in no declared range");
+
+                    continue;
+                }
+
+                // Sahiplik metni bir liste olabilir ("Messaging, web"), o yuzden yetenegin
+                // kimligi icinde ARANIYOR; kimlikteki tire de bosluk sayiliyor.
+                if (!Mentions(owner.Owner, id))
+                    wrong.Add(
+                        $"{diagnostic} ({package}) is in ZERO{owner.From:000}–ZERO{owner.To:000}, " +
+                        $"which the contract gives to '{owner.Owner}'");
+            }
+        }
+
+        wrong.Should().BeEmpty(
+            "a diagnostic outside its capability's range means either the id or the table is " +
+            "wrong, and since ids are never reused it is almost always the table");
+    }
+
+    private static bool Mentions(string owner, string id)
+    {
+        var words = owner
+            .Replace(":", " ")
+            .Replace(",", " ")
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+        return id
+            .Split('-')
+            .All(part => words.Any(w => w.Equals(part, StringComparison.OrdinalIgnoreCase)));
+    }
+
+    /// <summary>The range table in the capability contract, as it is written.</summary>
+    private static List<(int From, int To, string? Owner)> Ranges()
+    {
+        var found = new List<(int, int, string?)>();
+
+        var contract = Path.Combine(Repository, "docs", "capability-contract.md");
+
+        foreach (var line in File.ReadAllLines(contract))
+        {
+            // | ZERO200–ZERO219 | Caching |   — en tire (–), kisa cizgi degil.
+            var match = System.Text.RegularExpressions.Regex.Match(
+                line, @"^\|\s*ZERO(\d{3})[–-]ZERO(\d{3})\s*\|\s*(.+?)\s*\|$");
+
+            if (!match.Success) continue;
+
+            found.Add((
+                int.Parse(match.Groups[1].Value),
+                int.Parse(match.Groups[2].Value),
+                match.Groups[3].Value));
+        }
+
+        return found;
+    }
 }
