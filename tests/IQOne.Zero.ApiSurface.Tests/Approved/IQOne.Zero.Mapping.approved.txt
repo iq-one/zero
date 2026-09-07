@@ -1,0 +1,9 @@
+interface IQOne.Zero.Mapping.IMapBuilder<TSource, TDestination>
+    IQOne.Zero.Mapping.IMapBuilder<TSource, TDestination> Ignore(Expression<Func<TDestination, object>>[] members)
+    IQOne.Zero.Mapping.IMapBuilder<TSource, TDestination> Member<TMember>(Expression<Func<TDestination, TMember>> member, Expression<Func<TSource, TMember>> source)
+
+abstract class IQOne.Zero.Mapping.Map<TSource, TDestination>
+    Expression<Func<TSource, TDestination>> Selector { get; }
+    Func<TSource, TDestination> Project { get; }
+    protected .ctor Map()
+    protected void Configure(IQOne.Zero.Mapping.IMapBuilder<TSource, TDestination> map)

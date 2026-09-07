@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>$(ZeroTargetFrameworks)</TargetFrameworks>
+    <Description>Member-for-member maps between two shapes, written as source at build time. A map is an expression tree, so the same declaration serves a database query and an object already in memory; every member is accounted for or the build stops.</Description>
+  </PropertyGroup>
+</Project>

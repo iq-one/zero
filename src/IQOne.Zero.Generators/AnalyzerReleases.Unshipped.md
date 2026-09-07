@@ -23,3 +23,9 @@ ZERO226 | Zero.Persistence | Error | An ignored member is not part of the source
 ZERO227 | Zero.Persistence | Error | A mapping method has the wrong shape
 ZERO228 | Zero.Persistence | Error | The type holding a mapping is not partial
 ZERO229 | Zero.Persistence | Error | A produced member has no source
+ZERO240 | Zero.Mapping | Error | A mapped member is unaccounted for
+ZERO241 | Zero.Mapping | Error | A declared member cannot fill its target
+ZERO242 | Zero.Mapping | Error | A declaration does not name a settable member
+ZERO243 | Zero.Mapping | Error | A member is accounted for twice
+ZERO246 | Zero.Mapping | Error | A map's configuration cannot be read
+ZERO248 | Zero.Mapping | Error | A map is not partial

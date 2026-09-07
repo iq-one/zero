@@ -69,7 +69,8 @@ internal static class GeneratorHarness
                 [
                     new ServiceRegistrationGenerator().AsSourceGenerator(),
                     new Projection.ProjectionGenerator().AsSourceGenerator(),
-                    new Mapping.MappingGenerator().AsSourceGenerator()
+                    new Mapping.MappingGenerator().AsSourceGenerator(),
+                    new Mapping.MapGenerator().AsSourceGenerator()
                 ],
                 additionalTexts: null,
                 parseOptions: null,
@@ -155,7 +156,8 @@ internal static class GeneratorHarness
                      typeof(Zero.Validation.IValidator),
                      typeof(Zero.Events.IEvent),
                      typeof(Zero.Authorization.IRequirementHandler),
-                     typeof(Zero.Persistence.ProjectionAttribute)
+                     typeof(Zero.Persistence.ProjectionAttribute),
+                     typeof(Zero.Mapping.IMapBuilder<object, object>)
                  })
             locations.Add(type.Assembly.Location);
 
@@ -169,6 +171,16 @@ internal sealed record GeneratorRun(
     ImmutableArray<Diagnostic> GeneratedFileErrors)
 {
     public IEnumerable<string> DiagnosticIds => Diagnostics.Select(d => d.Id);
+
+    /// <summary>
+    /// The diagnostics as text.
+    /// </summary>
+    /// <remarks>
+    /// One id carries many reasons — a member can go unaccounted for in several ways — and a
+    /// test that only checks the id passes when the message is wrong.
+    /// </remarks>
+    public IEnumerable<string> DiagnosticMessages
+        => Diagnostics.Select(d => d.GetMessage(System.Globalization.CultureInfo.InvariantCulture));
 
     public bool HasError => Diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error);
 
