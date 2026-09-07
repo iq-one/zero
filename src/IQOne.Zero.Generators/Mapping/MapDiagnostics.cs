@@ -59,4 +59,21 @@ internal static class MapDiagnostics
         "a loop, a condition, a value from somewhere else — has no single answer to read, and " +
         "guessing at one would produce a map nobody declared. Reported rather than skipped, " +
         "because a declaration silently ignored is the failure this whole design exists to remove.");
+
+    public static readonly DiagnosticDescriptor CompositionCycles = Error(
+        "ZERO254", "A composition goes round in a circle",
+        "'{0}' composes in a circle: {1}. Break it with map.Ignore on one of the members.",
+        "A map written out as source cannot contain itself, so a circle has no output at all — " +
+        "and the shapes that make one are ordinary: a department that lists its beds, a bed that " +
+        "names its department. A runtime mapper meets the same circle as a stack overflow, or " +
+        "stops at a depth limit nobody chose and silently truncates the result. Here it is a " +
+        "build error that names the loop, and breaking it is a decision somebody writes down.");
+
+    public static readonly DiagnosticDescriptor NoMapForThePair = Error(
+        "ZERO255", "A composition names a pair with no map",
+        "'{0}' composes '{1}' into '{2}' but no map is declared for that pair. Declare one: " +
+        "'public sealed partial class {3} : Map<{4}, {5}>'.",
+        "Composition writes the other map's tree in place of the member, so that map has to be " +
+        "readable from here — which means declared in this compilation. A pair with nothing " +
+        "declared for it has no tree to write.");
 }

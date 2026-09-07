@@ -2,21 +2,24 @@
   "id": "mapping",
   "kind": "capability",
   "title": "Maps between shapes",
-  "summary": "Member-for-member maps written as source at build time. A map is an expression tree, so one declaration serves a database query and an object already in memory; every member of the shape being produced is accounted for or the build stops.",
+  "summary": "Member-for-member maps written as source at build time. A map is an expression tree, so one declaration serves a database query and an object already in memory; a nested model is composed from the map for its own pair and stays one SELECT; and every member of the shape being produced is accounted for or the build stops.",
   "useWhen": "An entity becomes a model, or one model becomes another. Do not hand-write a specification's Selector for a shape that has a map, and do not reach for a runtime mapper: a member it cannot work out is silently left empty, which is the failure this package exists to remove.",
   "package": "IQOne.Zero.Mapping",
   "entryPoint": "public sealed partial class BedMap : Map<Bed, BedModel>",
   "keyTypes": [
     "Map<TSource, TDestination>",
-    "IMapBuilder<TSource, TDestination>"
+    "IMapBuilder<TSource, TDestination>",
+    "Compose.To<TDestination>"
   ],
   "diagnostics": [
     "ZERO250",
     "ZERO251",
     "ZERO252",
     "ZERO253",
+    "ZERO254",
+    "ZERO255",
     "ZERO256",
     "ZERO258"
   ],
-  "example": "public sealed partial class BedMap : Map<Bed, BedModel>\n{\n    protected override void Configure(IMapBuilder<Bed, BedModel> map) => map\n        // Not a column of its own: the state column read as a bed.\n        .Member(m => m.BedState, e => (EnumBedState)e.State)\n        // Not loaded on this path, and saying so keeps it accounted for.\n        .Ignore(m => m.BuildingUnit, m => m.Department);\n}\n\n// Every other member matches by name, so nothing is said about it. Configure is READ,\n// not run: the generator writes the tree into a second part of this class, and the\n// generated file is where you go to see what a member got."
+  "example": "public sealed partial class BedTypeMap : Map<BedType, BedTypeModel>;\n\npublic sealed partial class BedMap : Map<Bed, BedModel>\n{\n    protected override void Configure(IMapBuilder<Bed, BedModel> map) => map\n        // Not a column of its own: the state column read as a bed.\n        .Member(m => m.BedState, e => (EnumBedState)e.State)\n        // BedTypeMap's tree is written in here, with the null check added.\n        .Member(m => m.BedType, e => e.BedType.To<BedTypeModel>())\n        // Not loaded on this path, and saying so keeps it accounted for.\n        .Ignore(m => m.BuildingUnit, m => m.Department);\n}\n\n// Every other member matches by name, so nothing is said about it. Configure is READ,\n// not run: the generator writes the tree into a second part of this class, and the\n// generated file is where you go to see what a member got."
 }

@@ -20,9 +20,10 @@ namespace IQOne.Zero.Generators.Mapping;
 /// what a member gets is a line you can go to, not the shape of a tree assembled by reflection.
 /// </para>
 /// <para>
-/// Matching is by NAME and by name only, with narrow type rules: the same type, an implicit
-/// widening, or an enum and its underlying number. Everything else asks a question, and the
-/// author answers it in <c>Configure</c> — which this generator reads rather than runs.
+/// Maps are read one at a time and then resolved TOGETHER, because a composition writes another
+/// map's tree in place of a member and cannot know that map until every one has been read. That
+/// is also where a circle is found — and a circle is a build error naming the loop, which is
+/// the thing no runtime mapper can do.
 /// </para>
 /// </remarks>
 [Generator(LanguageNames.CSharp)]
@@ -35,46 +36,48 @@ public sealed class MapGenerator : IIncrementalGenerator
     {
         // No marker attribute: the base type already names the pair, and asking for an
         // attribute as well would be a second place to say the same thing.
-        var candidates = context.SyntaxProvider
+        var drafts = context.SyntaxProvider
             .CreateSyntaxProvider(
                 predicate: static (node, _) => node is ClassDeclarationSyntax { BaseList: not null },
-                transform: static (ctx, _) => Describe(ctx))
-            .Where(static c => c is not null)
-            .Select(static (c, _) => c!);
+                transform: static (ctx, _) => Draft(ctx))
+            .Where(static d => d is not null)
+            .Select(static (d, _) => d!);
 
-        context.RegisterSourceOutput(candidates, Emit);
+        // Collected, because composition is resolved across maps. The cost is that one map
+        // changing re-emits all of them; the alternative is that a map cannot reach another,
+        // which is the feature.
+        context.RegisterSourceOutput(drafts.Collect(), Emit);
     }
 
-    private static Candidate? Describe(GeneratorSyntaxContext context)
+    private static Map? Draft(GeneratorSyntaxContext context)
     {
         var declaration = (ClassDeclarationSyntax)context.Node;
 
         if (context.SemanticModel.GetDeclaredSymbol(declaration) is not INamedTypeSymbol type) return null;
 
-        var map = Base(type);
+        var closed = Base(type);
 
-        if (map is null) return null;
+        if (closed is null) return null;
 
         var location = LocationInfo.From(declaration.Identifier.Parent);
 
         if (!declaration.Modifiers.Any(SyntaxKind.PartialKeyword))
-            return Candidate.Failed(type.Name, MapDiagnostics.NotPartial, location, [type.Name]);
+            return Map.Failed(type.Name, MapDiagnostics.NotPartial, location, [type.Name]);
 
-        var source = map.TypeArguments[0];
-        var destination = map.TypeArguments[1];
+        var source = closed.TypeArguments[0];
+        var destination = closed.TypeArguments[1];
 
-        var parameter = "source";
-        var declared = new List<Declared>();
+        var declared = new List<Binding>();
         var ignored = new List<string>();
         string? duplicate = null;
 
         if (Configure(declaration) is { } configure)
         {
             var unreadable = Declarations.Read(
-                configure, context.SemanticModel, out parameter, out declared, out ignored, out duplicate);
+                configure, context.SemanticModel, out declared, out ignored, out duplicate);
 
             if (unreadable is not null)
-                return Candidate.Failed(
+                return Map.Failed(
                     type.Name, MapDiagnostics.ConfigureCannotBeRead, location, [type.Name, unreadable]);
         }
 
@@ -83,49 +86,54 @@ public sealed class MapGenerator : IIncrementalGenerator
 
         foreach (var name in ignored.Concat(declared.Select(d => d.Member)))
             if (!names.Contains(name))
-                return Candidate.Failed(
+                return Map.Failed(
                     type.Name, MapDiagnostics.NotASettableMember, location,
                     [name, type.Name, destination.ToDisplayString(), Missing(destination, name)]);
 
         if (duplicate is not null)
-            return Candidate.Failed(
+            return Map.Failed(
                 type.Name, MapDiagnostics.MemberIsAccountedForTwice, location,
                 [duplicate, type.Name, "it is named more than once by map.Member or map.Ignore"]);
 
-        var byName = declared.ToDictionary(d => d.Member, d => d.Expression, StringComparer.Ordinal);
+        var byName = new Dictionary<string, Binding>(StringComparer.Ordinal);
+
+        foreach (var binding in declared) byName[binding.Member] = binding;
+
         var empty = new HashSet<string>(ignored, StringComparer.Ordinal);
 
-        var assignments = ImmutableArray.CreateBuilder<string>();
+        var bindings = ImmutableArray.CreateBuilder<Binding>();
 
         foreach (var member in members)
         {
             if (empty.Contains(member.Name)) continue;
 
-            if (byName.TryGetValue(member.Name, out var expression))
+            if (byName.TryGetValue(member.Name, out var declaredBinding))
             {
-                assignments.Add($"{member.Name} = {expression}");
+                bindings.Add(declaredBinding);
 
                 continue;
             }
 
-            var reason = Read(source, member, parameter, out var read);
+            var reason = Read(source, member, out var read);
 
             if (reason is not null)
-                return Candidate.Failed(
+                return Map.Failed(
                     type.Name, MapDiagnostics.MemberIsUnaccountedFor, location,
                     [destination.Name, member.Name, type.Name, reason]);
 
-            assignments.Add($"{member.Name} = {read}");
+            bindings.Add(Binding.Plain(member.Name, read));
         }
 
-        return new Candidate(
+        return new Map(
             Namespace(type),
             type.Name,
             source.ToDisplayString(Full),
             destination.ToDisplayString(Full),
-            parameter,
+            source.Name,
+            destination.Name,
+            Declarations.Key(source, destination),
             Usings(declaration),
-            new EquatableArray<string>(assignments.ToImmutable()),
+            new EquatableArray<Binding>(bindings.ToImmutable()),
             null,
             null,
             location);
@@ -138,8 +146,7 @@ public sealed class MapGenerator : IIncrementalGenerator
     /// A declaration's expression is copied VERBATIM, so it resolves names the way the file it
     /// was written in resolves them. Without these, a cast to a type the author imported —
     /// <c>(EnumBedState)</c> over a <c>using</c> — is an unresolved name in the generated file,
-    /// and the error names a file nobody wrote. Aliases and statics come along for the same
-    /// reason.
+    /// and the error names a file nobody wrote.
     /// </remarks>
     private static EquatableArray<string> Usings(ClassDeclarationSyntax declaration)
     {
@@ -214,8 +221,7 @@ public sealed class MapGenerator : IIncrementalGenerator
     /// <summary>
     /// The expression that reads this member from the source, or the reason there is none.
     /// </summary>
-    private static string? Read(
-        ITypeSymbol source, IPropertySymbol member, string parameter, out string expression)
+    private static string? Read(ITypeSymbol source, IPropertySymbol member, out string expression)
     {
         expression = string.Empty;
 
@@ -230,7 +236,7 @@ public sealed class MapGenerator : IIncrementalGenerator
             || SymbolEqualityComparer.Default.Equals(from, to)
             || Widens(from, to))
         {
-            expression = $"{parameter}.{origin.Name}";
+            expression = $"{Declarations.Placeholder}.{origin.Name}";
 
             return null;
         }
@@ -244,10 +250,16 @@ public sealed class MapGenerator : IIncrementalGenerator
 
         if (CastsBetweenEnumAndNumber(from, to))
         {
-            expression = $"({to.ToDisplayString(Full)}){parameter}.{origin.Name}";
+            expression = $"({to.ToDisplayString(Full)}){Declarations.Placeholder}.{origin.Name}";
 
             return null;
         }
+
+        // A shape that needs another map says so, rather than being guessed at.
+        if (from is INamedTypeSymbol { TypeKind: TypeKind.Class } && to is INamedTypeSymbol { TypeKind: TypeKind.Class })
+            return $"'{origin.Name}' is {from.ToDisplayString()} and '{member.Name}' is " +
+                   $"{to.ToDisplayString()}; compose the map for the pair with " +
+                   $"e.{origin.Name}.To<{to.Name}>()";
 
         return $"'{origin.Name}' is {from.ToDisplayString()} and '{member.Name}' is {to.ToDisplayString()}";
     }
@@ -325,92 +337,248 @@ public sealed class MapGenerator : IIncrementalGenerator
     private static string? Namespace(INamedTypeSymbol type)
         => type.ContainingNamespace.IsGlobalNamespace ? null : type.ContainingNamespace.ToDisplayString();
 
-    private static void Emit(SourceProductionContext context, Candidate candidate)
+    private static void Emit(SourceProductionContext context, ImmutableArray<Map> maps)
     {
-        if (candidate.Descriptor is { } descriptor)
+        var byPair = new Dictionary<string, Map>(StringComparer.Ordinal);
+
+        foreach (var map in maps)
+            if (map.Descriptor is null && !byPair.ContainsKey(map.Pair))
+                byPair[map.Pair] = map;
+
+        foreach (var map in maps)
         {
-            context.ReportDiagnostic(Diagnostic.Create(
-                descriptor, candidate.Location?.ToLocation(), candidate.Arguments!.Value.ToArray()));
+            if (map.Descriptor is { } descriptor)
+            {
+                context.ReportDiagnostic(Diagnostic.Create(
+                    descriptor, map.Location?.ToLocation(), map.Arguments!.Value.ToArray()));
 
-            return;
+                continue;
+            }
+
+            var assignments = new List<string>();
+
+            var failure = Resolve(map, byPair, [], 3, assignments);
+
+            if (failure is not null)
+            {
+                context.ReportDiagnostic(Diagnostic.Create(
+                    failure.Value.Descriptor, map.Location?.ToLocation(), failure.Value.Arguments));
+
+                continue;
+            }
+
+            context.AddSource($"{map.TypeName}.Map.g.cs", SourceText.From(Render(map, assignments), Encoding.UTF8));
         }
+    }
 
+    /// <summary>
+    /// The initialiser entries for a map, with every composition written out.
+    /// </summary>
+    /// <remarks>
+    /// Recursive, and the path is what makes a circle a diagnostic rather than a hang: a pair
+    /// already on the way in cannot be written out, because the source would have to contain
+    /// itself.
+    /// </remarks>
+    private static Failure? Resolve(
+        Map map,
+        Dictionary<string, Map> byPair,
+        List<string> path,
+        int indent,
+        List<string> assignments)
+    {
+        path.Add(map.Pair);
+
+        try
+        {
+            foreach (var binding in map.Bindings)
+            {
+                if (!binding.Composed)
+                {
+                    assignments.Add($"{binding.Member} = {binding.Expression}");
+
+                    continue;
+                }
+
+                if (!byPair.TryGetValue(binding.Pair, out var child))
+                {
+                    var parts = binding.Pair.Split('|');
+
+                    return new Failure(
+                        MapDiagnostics.NoMapForThePair,
+                        [
+                            map.TypeName, Short(parts[0]), Short(parts[1]),
+                            Short(parts[0]) + Short(parts[1]) + "Map", parts[0], parts[1]
+                        ]);
+                }
+
+                if (path.Contains(binding.Pair))
+                    return new Failure(
+                        MapDiagnostics.CompositionCycles,
+                        [map.TypeName, Circle(path, binding.Pair)]);
+
+                var inner = new List<string>();
+
+                var failure = Resolve(child, byPair, path, indent + 2, inner);
+
+                if (failure is not null) return failure;
+
+                assignments.Add(Written(binding, child, inner, indent));
+            }
+
+            return null;
+        }
+        finally
+        {
+            path.RemoveAt(path.Count - 1);
+        }
+    }
+
+    /// <summary>One composition, written out in place of the member.</summary>
+    private static string Written(Binding binding, Map child, List<string> inner, int indent)
+    {
+        var pad = new string(' ', indent * 4);
+        var body = new StringBuilder();
+
+        body.AppendLine($"new {child.DestinationType}");
+        body.AppendLine($"{pad}{{");
+
+        foreach (var assignment in inner)
+            body.AppendLine($"{pad}    {Substituted(assignment, binding)},");
+
+        body.Append($"{pad}}}");
+
+        var construction = body.ToString();
+
+        if (binding.Element.Length > 0)
+            return $"{binding.Member} = {binding.Receiver}" +
+                   $".Select({binding.Element} => {construction})" +
+                   $".{binding.Materialiser}()";
+
+        // A missing row gives NOTHING rather than an object whose members are all zero, which
+        // is what a nested initialiser over an absent navigation produces. It is also what
+        // keeps the generated file compiling: without it the child reads through a nullable
+        // navigation and the compiler says so (CS8602), naming a file nobody wrote. Removing
+        // this line fails the build twice over, which is the right number.
+        return binding.Guard
+            ? $"{binding.Member} = {binding.Receiver} == null ? null : {construction}"
+            : $"{binding.Member} = {construction}";
+    }
+
+    /// <summary>
+    /// A child's entry, reading from wherever the parent found it.
+    /// </summary>
+    /// <remarks>
+    /// The child was written against the placeholder, so this is one substitution: the receiver
+    /// for an object, the element parameter for a sequence. The receiver itself still carries the
+    /// placeholder — it reads from the parent's own source — and one pass leaves that alone.
+    /// </remarks>
+    private static string Substituted(string assignment, Binding binding)
+        => assignment.Replace(
+            Declarations.Placeholder,
+            binding.Element.Length > 0 ? binding.Element : binding.Receiver);
+
+    private static string Circle(List<string> path, string closing)
+    {
+        var at = path.IndexOf(closing);
+        var loop = path.Skip(at).Append(closing);
+
+        return string.Join(" → ", loop.Select(p => string.Join(" → ", p.Split('|').Select(Short))));
+    }
+
+    private static string Short(string qualified)
+    {
+        var at = qualified.LastIndexOf('.');
+
+        // netstandard2.0: no Index/Range.
+        return at < 0 ? qualified : qualified.Substring(at + 1);
+    }
+
+    private static string Render(Map map, List<string> assignments)
+    {
         var b = new StringBuilder();
 
         b.AppendLine("// <auto-generated/>");
         b.AppendLine("#nullable enable");
         b.AppendLine();
 
-        if (candidate.Namespace is { } ns)
+        if (map.Namespace is { } ns)
         {
             b.AppendLine($"namespace {ns};");
             b.AppendLine();
         }
 
-        if (candidate.Usings.Count > 0)
-        {
-            foreach (var directive in candidate.Usings) b.AppendLine(directive);
+        // System.Linq unconditionally, because a composed sequence calls Select; deduplicated,
+        // because a repeated using in the same scope is a warning and warnings are errors here.
+        var directives = map.Usings.ToArray().ToList();
 
-            b.AppendLine();
-        }
+        if (!directives.Contains("using System.Linq;")) directives.Add("using System.Linq;");
 
-        b.AppendLine($"partial class {candidate.TypeName}");
+        foreach (var directive in directives) b.AppendLine(directive);
+
+        b.AppendLine();
+        b.AppendLine($"partial class {map.TypeName}");
         b.AppendLine("{");
 
         // Static, so the tree is built once for the type rather than once per instance: a map
-        // that is resolved per request would otherwise rebuild it every time.
-        b.AppendLine($"    private static readonly global::System.Linq.Expressions.Expression<" +
-                     $"global::System.Func<{candidate.SourceType}, {candidate.DestinationType}>> Tree =");
-        b.AppendLine($"        {candidate.Parameter} => new {candidate.DestinationType}");
+        // resolved per request would otherwise rebuild it every time.
+        b.AppendLine("    private static readonly global::System.Linq.Expressions.Expression<" +
+                     $"global::System.Func<{map.SourceType}, {map.DestinationType}>> Tree =");
+        b.AppendLine($"        {Parameter} => new {map.DestinationType}");
         b.AppendLine("        {");
 
-        foreach (var assignment in candidate.Assignments)
-            b.AppendLine($"            {assignment},");
+        foreach (var assignment in assignments)
+            b.AppendLine($"            {assignment.Replace(Declarations.Placeholder, Parameter)},");
 
         b.AppendLine("        };");
         b.AppendLine();
 
         // Lazy, because compiling a tree costs far more than building one and a map used only
         // on queries never needs it.
-        b.AppendLine($"    private static readonly global::System.Lazy<" +
-                     $"global::System.Func<{candidate.SourceType}, {candidate.DestinationType}>> Compiled =");
+        b.AppendLine("    private static readonly global::System.Lazy<" +
+                     $"global::System.Func<{map.SourceType}, {map.DestinationType}>> Compiled =");
         b.AppendLine("        new(Tree.Compile, global::System.Threading.LazyThreadSafetyMode." +
                      "ExecutionAndPublication);");
         b.AppendLine();
         b.AppendLine("    /// <inheritdoc />");
-        b.AppendLine($"    public override global::System.Linq.Expressions.Expression<" +
-                     $"global::System.Func<{candidate.SourceType}, {candidate.DestinationType}>> " +
-                     "Selector => Tree;");
+        b.AppendLine("    public override global::System.Linq.Expressions.Expression<" +
+                     $"global::System.Func<{map.SourceType}, {map.DestinationType}>> Selector => Tree;");
         b.AppendLine();
         b.AppendLine("    /// <inheritdoc />");
-        b.AppendLine($"    public override global::System.Func<{candidate.SourceType}, " +
-                     $"{candidate.DestinationType}> Project => Compiled.Value;");
+        b.AppendLine($"    public override global::System.Func<{map.SourceType}, " +
+                     $"{map.DestinationType}> Project => Compiled.Value;");
         b.AppendLine("}");
 
-        context.AddSource($"{candidate.TypeName}.Map.g.cs", SourceText.From(b.ToString(), Encoding.UTF8));
+        return b.ToString();
     }
+
+    /// <summary>The name the generated tree reads from.</summary>
+    private const string Parameter = "source";
 
     private static readonly SymbolDisplayFormat Full = SymbolDisplayFormat.FullyQualifiedFormat;
 
-    private sealed record Candidate(
+    private readonly record struct Failure(DiagnosticDescriptor Descriptor, string[] Arguments);
+
+    private sealed record Map(
         string? Namespace,
         string TypeName,
         string SourceType,
         string DestinationType,
-        string Parameter,
+        string SourceName,
+        string DestinationName,
+        string Pair,
         EquatableArray<string> Usings,
-        EquatableArray<string> Assignments,
+        EquatableArray<Binding> Bindings,
         DiagnosticDescriptor? Descriptor,
         EquatableArray<string>? Arguments,
         LocationInfo? Location)
     {
-        public static Candidate Failed(
+        public static Map Failed(
             string typeName,
             DiagnosticDescriptor descriptor,
             LocationInfo? location,
             string[] arguments)
-            => new(null, typeName, string.Empty, string.Empty, "source", EquatableArray<string>.Empty,
-                EquatableArray<string>.Empty, descriptor,
-                new EquatableArray<string>(ImmutableArray.Create(arguments)), location);
+            => new(null, typeName, string.Empty, string.Empty, string.Empty, string.Empty,
+                string.Empty, EquatableArray<string>.Empty, EquatableArray<Binding>.Empty,
+                descriptor, new EquatableArray<string>(ImmutableArray.Create(arguments)), location);
     }
 }

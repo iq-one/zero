@@ -1,13 +1,41 @@
+using System.Collections.Immutable;
+using IQOne.Zero.Generators.Internal;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace IQOne.Zero.Generators.Mapping;
 
-/// <summary>One <c>map.Member</c>: a member, and the source text that fills it.</summary>
+/// <summary>
+/// One member's answer, before composition is resolved.
+/// </summary>
+/// <remarks>
+/// Either it is already an expression — a name match or a plain declaration — or it defers to
+/// another map, which cannot be resolved until every map in the compilation has been read.
+/// </remarks>
 /// <param name="Member">The member being filled.</param>
-/// <param name="Expression">Its source, already rewritten onto the generated parameter.</param>
-internal readonly record struct Declared(string Member, string Expression);
+/// <param name="Expression">Its source, carrying the placeholder; empty when composed.</param>
+/// <param name="Receiver">Composed: what the other map reads, carrying the placeholder.</param>
+/// <param name="Pair">Composed: the other map's pair key.</param>
+/// <param name="Element">Composed: the lambda parameter for a sequence's element, else empty.</param>
+/// <param name="Materialiser">Composed sequence: <c>ToList</c> or <c>ToArray</c>.</param>
+/// <param name="Guard">Composed: wrap in a null check because the receiver can be absent.</param>
+/// <param name="Type">Composed: the member's type, for the null branch.</param>
+internal readonly record struct Binding(
+    string Member,
+    string Expression,
+    string Receiver,
+    string Pair,
+    string Element,
+    string Materialiser,
+    bool Guard,
+    string Type)
+{
+    public bool Composed => Pair.Length > 0;
+
+    public static Binding Plain(string member, string expression)
+        => new(member, expression, string.Empty, string.Empty, string.Empty, string.Empty, false, string.Empty);
+}
 
 /// <summary>
 /// Reads a map's <c>Configure</c> body.
@@ -20,43 +48,44 @@ internal readonly record struct Declared(string Member, string Expression);
 /// reported rather than guessed at.
 /// </para>
 /// <para>
-/// The rewriting is the interesting part. A declaration is written against its own parameter
-/// name — <c>e</c>, <c>x</c>, <c>bed</c>, whatever the author chose — and the generated tree
-/// has one parameter for all of them. Every identifier that BINDS to the declaration's
-/// parameter is renamed; binding rather than name, so a nested lambda that shadows the name
-/// keeps its own meaning.
+/// Every expression is rewritten onto <see cref="Placeholder"/> rather than onto a chosen
+/// parameter name, because at this point the name is not knowable: a map's own tree uses one
+/// name, and the same expression spliced into a parent has to read from wherever the parent
+/// found it. The substitution happens once, at the end, when both are known.
+/// </para>
+/// <para>
+/// The rewriting itself follows BINDING, not name. A declaration is written against its own
+/// parameter — <c>e</c>, <c>x</c>, <c>bed</c> — and a nested lambda inside it may shadow that
+/// name; renaming by text there would change what the inner expression reads.
 /// </para>
 /// </remarks>
 internal static class Declarations
 {
     private const string BuilderName = "IQOne.Zero.Mapping.IMapBuilder`2";
+    private const string ComposeName = "IQOne.Zero.Mapping.Compose";
 
-    /// <summary>Candidate names for the generated parameter, in order of preference.</summary>
+    /// <summary>Stands in for whatever the expression will read from.</summary>
     /// <remarks>
-    /// A declaration body may itself mention something called <c>source</c> — a field, a local
-    /// captured from outside. Renaming onto that name would silently change what the expression
-    /// reads, so a name nothing else in the body uses is chosen instead.
+    /// Chosen so it cannot occur in real code; a body that uses it anyway is reported rather
+    /// than silently rewritten, because the substitution would change what it reads.
     /// </remarks>
-    private static readonly string[] Names = ["source", "src", "__source"];
+    public const string Placeholder = "__zero_source";
 
     /// <summary>What the body declares, or the reason it cannot be read.</summary>
     /// <param name="configure">The Configure method.</param>
     /// <param name="model">The semantic model over it.</param>
-    /// <param name="parameter">The name chosen for the generated parameter.</param>
-    /// <param name="members">Members filled by a declaration.</param>
+    /// <param name="bindings">One entry per member the body answers for.</param>
     /// <param name="ignored">Members declared deliberately empty.</param>
     /// <param name="duplicate">The first member declared twice, when there is one.</param>
     /// <returns>Null when the body was read.</returns>
     public static string? Read(
         MethodDeclarationSyntax configure,
         SemanticModel model,
-        out string parameter,
-        out List<Declared> members,
+        out List<Binding> bindings,
         out List<string> ignored,
         out string? duplicate)
     {
-        parameter = Names[0];
-        members = [];
+        bindings = [];
         ignored = [];
         duplicate = null;
 
@@ -66,61 +95,59 @@ internal static class Declarations
 
         if (reason is not null) return reason;
 
-        // Named before rewriting: the choice has to hold for every declaration at once.
-        parameter = Parameter(calls);
-
         var seen = new HashSet<string>(StringComparer.Ordinal);
 
         // Source order, so the generated initialiser reads in the order it was declared.
         foreach (var call in calls)
         {
-            var name = Name(call);
-
-            if (name == "Ignore")
+            if (Name(call) == "Ignore")
             {
                 foreach (var argument in call.ArgumentList.Arguments)
                 {
-                    var target = Target(argument.Expression, model, out var why);
+                    var member = Named(argument.Expression, model, out var why);
 
-                    if (target is null) return why;
+                    if (member is null) return why;
 
-                    if (!seen.Add(target)) duplicate ??= target;
+                    if (!seen.Add(member.Name)) duplicate ??= member.Name;
 
-                    ignored.Add(target);
+                    ignored.Add(member.Name);
                 }
 
                 continue;
             }
 
             if (call.ArgumentList.Arguments.Count != 2)
-                return $"map.Member takes a member and its source, but was given " +
+                return "map.Member takes a member and its source, but was given " +
                        $"{call.ArgumentList.Arguments.Count} argument(s)";
 
-            var member = Target(call.ArgumentList.Arguments[0].Expression, model, out var reasonForMember);
+            var target = Named(call.ArgumentList.Arguments[0].Expression, model, out var reasonForMember);
 
-            if (member is null) return reasonForMember;
+            if (target is null) return reasonForMember;
 
-            var expression = Rewritten(
-                call.ArgumentList.Arguments[1].Expression, model, parameter, out var reasonForSource);
+            var binding = Bound(
+                target, call.ArgumentList.Arguments[1].Expression, model, out var reasonForSource);
 
-            if (expression is null) return reasonForSource;
+            if (binding is null) return reasonForSource;
 
-            if (!seen.Add(member)) duplicate ??= member;
+            if (!seen.Add(target.Name)) duplicate ??= target.Name;
 
-            members.Add(new Declared(member, expression));
+            bindings.Add(binding.Value);
         }
 
         return null;
     }
 
+    /// <summary>The pair key two types make.</summary>
+    /// <remarks>
+    /// Fully qualified on both sides, so two models of the same name in different namespaces —
+    /// which this application has several of — are different pairs.
+    /// </remarks>
+    public static string Key(ITypeSymbol source, ITypeSymbol destination)
+        => $"{source.ToDisplayString(Full)}|{destination.ToDisplayString(Full)}";
+
     /// <summary>
     /// Collects the Member and Ignore calls, or says what else the body contains.
     /// </summary>
-    /// <remarks>
-    /// Both shapes a body can take are accepted — an arrow over a single chain, and a block of
-    /// statements — because both are how somebody would naturally write this. Everything else
-    /// is refused by name, so the message says what was found rather than that something was.
-    /// </remarks>
     private static string? Chain(
         MethodDeclarationSyntax configure, SemanticModel model, List<InvocationExpressionSyntax> calls)
     {
@@ -141,9 +168,7 @@ internal static class Declarations
         return null;
     }
 
-    /// <summary>
-    /// Walks one chain from its end back to the builder, collecting calls in source order.
-    /// </summary>
+    /// <summary>Walks one chain from its end back to the builder, in source order.</summary>
     private static string? Link(
         ExpressionSyntax expression, SemanticModel model, List<InvocationExpressionSyntax> calls)
     {
@@ -154,9 +179,16 @@ internal static class Declarations
         while (true)
         {
             if (current is not InvocationExpressionSyntax invocation)
-                return current is IdentifierNameSyntax && IsBuilder(current, model)
-                    ? Done(found, calls)
-                    : $"'{current}' is not a map.Member or map.Ignore call";
+            {
+                if (current is not IdentifierNameSyntax || !IsBuilder(current, model))
+                    return $"'{current}' is not a map.Member or map.Ignore call";
+
+                // Walked from the end, so reversing puts them back in written order.
+                found.Reverse();
+                calls.AddRange(found);
+
+                return null;
+            }
 
             if (invocation.Expression is not MemberAccessExpressionSyntax access)
                 return $"'{invocation}' is not a map.Member or map.Ignore call";
@@ -166,8 +198,7 @@ internal static class Declarations
             if (name is not ("Member" or "Ignore"))
                 return $"'{name}' is not one of map.Member or map.Ignore";
 
-            if (model.GetSymbolInfo(invocation).Symbol is not IMethodSymbol method
-                || Closed(method.ContainingType) != BuilderName)
+            if (!OnBuilder(invocation, model))
                 return $"'{name}' is not a call on the map builder";
 
             found.Add(invocation);
@@ -176,13 +207,25 @@ internal static class Declarations
         }
     }
 
-    private static string? Done(List<InvocationExpressionSyntax> found, List<InvocationExpressionSyntax> calls)
+    /// <summary>Whether this invocation is one of the builder's own methods.</summary>
+    /// <remarks>
+    /// Candidates as well as the resolved symbol, because a declaration whose ARGUMENTS do not
+    /// compile — a lambda over an extension method the file never imported — resolves to
+    /// nothing, and reporting "this is not a builder call" there would bury the compiler's own
+    /// error under a misleading one. The call is recognised; the compiler says what is wrong
+    /// with it.
+    /// </remarks>
+    private static bool OnBuilder(InvocationExpressionSyntax invocation, SemanticModel model)
     {
-        // Walked from the end, so reversed puts them back in the order they were written.
-        found.Reverse();
-        calls.AddRange(found);
+        var info = model.GetSymbolInfo(invocation);
 
-        return null;
+        var symbols = info.Symbol is not null ? [info.Symbol] : info.CandidateSymbols;
+
+        foreach (var symbol in symbols)
+            if (symbol is IMethodSymbol method && Closed(method.ContainingType) == BuilderName)
+                return true;
+
+        return false;
     }
 
     private static bool IsBuilder(ExpressionSyntax expression, SemanticModel model)
@@ -201,7 +244,7 @@ internal static class Declarations
         => ((MemberAccessExpressionSyntax)call.Expression).Name.Identifier.ValueText;
 
     /// <summary>The member a <c>m =&gt; m.X</c> lambda names.</summary>
-    private static string? Target(ExpressionSyntax expression, SemanticModel model, out string? reason)
+    private static IPropertySymbol? Named(ExpressionSyntax expression, SemanticModel model, out string? reason)
     {
         reason = null;
 
@@ -212,12 +255,18 @@ internal static class Declarations
             return null;
         }
 
-        // The compiler inserts a conversion to object on Ignore's parameters, so the body of a
-        // value-typed member arrives wrapped in a cast that says nothing about which member.
+        // Ignore's parameter is Func<TDestination, object?>, so a value-typed member arrives
+        // wrapped in the conversion the compiler inserted, which says nothing about which
+        // member was named.
         var body = lambda.Body;
 
-        while (body is CastExpressionSyntax cast) body = cast.Expression;
-        while (body is ParenthesizedExpressionSyntax parenthesised) body = parenthesised.Expression;
+        while (true)
+        {
+            if (body is CastExpressionSyntax cast) { body = cast.Expression; continue; }
+            if (body is ParenthesizedExpressionSyntax nested) { body = nested.Expression; continue; }
+
+            break;
+        }
 
         if (body is not MemberAccessExpressionSyntax access)
         {
@@ -233,14 +282,12 @@ internal static class Declarations
             return null;
         }
 
-        return property.Name;
+        return property;
     }
 
-    /// <summary>
-    /// A declaration's source expression, with its own parameter renamed to the generated one.
-    /// </summary>
-    private static string? Rewritten(
-        ExpressionSyntax expression, SemanticModel model, string parameter, out string? reason)
+    /// <summary>What fills the member: an expression, or another map.</summary>
+    private static Binding? Bound(
+        IPropertySymbol member, ExpressionSyntax expression, SemanticModel model, out string? reason)
     {
         reason = null;
 
@@ -258,54 +305,224 @@ internal static class Declarations
             return null;
         }
 
-        var symbol = Symbol(lambda, model);
-
-        if (symbol is null)
+        if (model.GetSymbolInfo(lambda).Symbol is not IMethodSymbol { Parameters.Length: 1 } method)
         {
             reason = $"'{expression}' does not resolve to a lambda with one parameter";
 
             return null;
         }
 
+        var parameter = method.Parameters[0];
+
+        if (Uses(body, Placeholder))
+        {
+            reason = $"'{expression}' uses the name '{Placeholder}', which the generator " +
+                     "substitutes; rename it";
+
+            return null;
+        }
+
+        return Composition(member, body, parameter, model, out reason)
+            ?? (reason is not null
+                ? null
+                : Binding.Plain(member.Name, Rewritten(body, parameter, model)));
+    }
+
+    /// <summary>
+    /// The composition a <c>To&lt;T&gt;()</c> call declares, or null when the body is not one.
+    /// </summary>
+    /// <remarks>
+    /// Only as the OUTERMOST call: a composition is what the whole member is, and one buried
+    /// inside a larger expression would have to be spliced into a position the generator cannot
+    /// see the type of. Buried ones are reported rather than ignored.
+    /// </remarks>
+    private static Binding? Composition(
+        IPropertySymbol member,
+        ExpressionSyntax body,
+        IParameterSymbol parameter,
+        SemanticModel model,
+        out string? reason)
+    {
+        reason = null;
+
+        var call = Marker(body, model);
+
+        if (call is null)
+        {
+            if (body.DescendantNodes().OfType<InvocationExpressionSyntax>().Any(i => Marker(i, model) is not null))
+                reason = $"'{body}' has a To<...>() inside a larger expression; a composition has " +
+                         "to be the whole member";
+
+            return null;
+        }
+
+        var access = (MemberAccessExpressionSyntax)call.Expression;
+        var receiverType = model.GetTypeInfo(access.Expression).Type;
+        var wanted = ((IMethodSymbol)model.GetSymbolInfo(call).Symbol!).TypeArguments[0];
+
+        if (receiverType is null)
+        {
+            reason = $"'{access.Expression}' has no type the generator could read";
+
+            return null;
+        }
+
+        var receiver = Rewritten(access.Expression, parameter, model);
+
+        var element = Element(wanted);
+
+        if (element is null)
+        {
+            if (Element(receiverType) is not null)
+            {
+                reason = $"'{access.Expression}' is a sequence but To<{wanted.Name}> asks for one " +
+                         "object; name a collection type";
+
+                return null;
+            }
+
+            if (receiverType.IsValueType && receiverType is INamedTypeSymbol
+                { OriginalDefinition.SpecialType: SpecialType.System_Nullable_T })
+            {
+                reason = $"'{access.Expression}' is a nullable value; composition maps objects " +
+                         "and sequences";
+
+                return null;
+            }
+
+            // The receiver may be absent, and then the member is nothing rather than an object
+            // whose members are all zero — which is what a nested initialiser gives you.
+            var guard = !receiverType.IsValueType;
+
+            if (guard && member.NullableAnnotation == NullableAnnotation.NotAnnotated)
+            {
+                reason = $"'{access.Expression}' can be absent and '{member.Name}' is not " +
+                         "nullable; say what an absent value becomes";
+
+                return null;
+            }
+
+            return new Binding(
+                member.Name, string.Empty, receiver, Key(receiverType, wanted), string.Empty,
+                string.Empty, guard, member.Type.ToDisplayString(Full));
+        }
+
+        var source = Element(receiverType);
+
+        if (source is null)
+        {
+            reason = $"To<{wanted.Name}> asks for a collection but '{access.Expression}' is not " +
+                     "a sequence";
+
+            return null;
+        }
+
+        var materialiser = Materialiser(wanted);
+
+        if (materialiser is null)
+        {
+            reason = $"'{wanted.ToDisplayString()}' is not a collection the generator can fill; " +
+                     "use a list, an array, or one of the read-only collection interfaces";
+
+            return null;
+        }
+
+        // No guard on a sequence, and that is a decision with a reason: in a query the receiver
+        // is a subquery and never null, and an entity materialised by the provider has its
+        // collections initialised. Guarding would put a check in every SELECT for a case that
+        // does not arise.
+        return new Binding(
+            member.Name, string.Empty, receiver, Key(source, element), Element(receiver),
+            materialiser, false, member.Type.ToDisplayString(Full));
+    }
+
+    private static InvocationExpressionSyntax? Marker(ExpressionSyntax expression, SemanticModel model)
+        => expression is InvocationExpressionSyntax
+           {
+               Expression: MemberAccessExpressionSyntax { Name: GenericNameSyntax { Identifier.ValueText: "To" } }
+           } call
+           && model.GetSymbolInfo(call).Symbol is IMethodSymbol { TypeArguments.Length: 1 } method
+           && method.ContainingType.ToDisplayString() == ComposeName
+            ? call
+            : null;
+
+    /// <summary>The element type of a sequence, or null when it is not one.</summary>
+    /// <remarks>
+    /// A string is a sequence of characters and is never meant as one here, so it is excluded
+    /// before anything else.
+    /// </remarks>
+    private static ITypeSymbol? Element(ITypeSymbol type)
+    {
+        if (type.SpecialType == SpecialType.System_String) return null;
+
+        if (type is IArrayTypeSymbol array) return array.ElementType;
+
+        if (type is INamedTypeSymbol { IsGenericType: true } named
+            && named.OriginalDefinition.SpecialType == SpecialType.System_Collections_Generic_IEnumerable_T)
+            return named.TypeArguments[0];
+
+        foreach (var contract in (type as INamedTypeSymbol)?.AllInterfaces ?? [])
+            if (contract.OriginalDefinition.SpecialType == SpecialType.System_Collections_Generic_IEnumerable_T)
+                return contract.TypeArguments[0];
+
+        return null;
+    }
+
+    /// <summary>How a sequence becomes the collection the member holds.</summary>
+    private static string? Materialiser(ITypeSymbol wanted)
+    {
+        if (wanted is IArrayTypeSymbol) return "ToArray";
+
+        var name = (wanted as INamedTypeSymbol)?.OriginalDefinition.ToDisplayString();
+
+        return name switch
+        {
+            "System.Collections.Generic.List<T>" or
+            "System.Collections.Generic.IList<T>" or
+            "System.Collections.Generic.ICollection<T>" or
+            "System.Collections.Generic.IEnumerable<T>" or
+            "System.Collections.Generic.IReadOnlyList<T>" or
+            "System.Collections.Generic.IReadOnlyCollection<T>" => "ToList",
+            _ => null
+        };
+    }
+
+    /// <summary>A lambda parameter for a sequence's element, unique to this receiver.</summary>
+    /// <remarks>
+    /// Derived from the receiver text so that two compositions in one map, and a composition
+    /// inside another, never share a name.
+    /// </remarks>
+    private static string Element(string receiver)
+    {
+        unchecked
+        {
+            var hash = 17;
+
+            foreach (var c in receiver) hash = hash * 31 + c;
+
+            return $"{Placeholder}_{(uint)hash % 100000}";
+        }
+    }
+
+    /// <summary>The expression with its own parameter rewritten onto the placeholder.</summary>
+    private static string Rewritten(ExpressionSyntax body, IParameterSymbol parameter, SemanticModel model)
+    {
         var renamed = new List<SyntaxToken>();
 
         foreach (var identifier in body.DescendantNodesAndSelf().OfType<IdentifierNameSyntax>())
-        {
-            // BINDING, not name: a nested lambda may shadow the parameter's name, and renaming
-            // by text there would change what the inner expression reads.
-            if (!SymbolEqualityComparer.Default.Equals(model.GetSymbolInfo(identifier).Symbol, symbol))
-                continue;
+            if (SymbolEqualityComparer.Default.Equals(model.GetSymbolInfo(identifier).Symbol, parameter))
+                renamed.Add(identifier.Identifier);
 
-            renamed.Add(identifier.Identifier);
-        }
-
-        var rewritten = body.ReplaceTokens(
-            renamed, (original, _) => SyntaxFactory.Identifier(parameter).WithTriviaFrom(original));
-
-        return rewritten.ToFullString().Trim();
+        return body
+            .ReplaceTokens(renamed, (original, _) => SyntaxFactory.Identifier(Placeholder).WithTriviaFrom(original))
+            .ToFullString()
+            .Trim();
     }
 
-    private static IParameterSymbol? Symbol(LambdaExpressionSyntax lambda, SemanticModel model)
-        => model.GetSymbolInfo(lambda).Symbol is IMethodSymbol { Parameters.Length: 1 } method
-            ? method.Parameters[0]
-            : null;
-
-    /// <summary>A parameter name none of the declarations already uses for something else.</summary>
-    private static string Parameter(List<InvocationExpressionSyntax> calls)
-    {
-        var used = new HashSet<string>(
-            calls
-                .SelectMany(c => c.ArgumentList.Arguments)
-                .SelectMany(a => a.Expression.DescendantNodesAndSelf().OfType<IdentifierNameSyntax>())
-                .Select(i => i.Identifier.ValueText),
-            StringComparer.Ordinal);
-
-        foreach (var name in Names)
-            if (!used.Contains(name)) return name;
-
-        // Every candidate is spoken for, which takes a body written to collide on purpose.
-        return "__source" + calls.Count;
-    }
+    private static bool Uses(ExpressionSyntax body, string name)
+        => body.DescendantNodesAndSelf()
+            .OfType<IdentifierNameSyntax>()
+            .Any(i => i.Identifier.ValueText == name);
 
     private static string Describe(StatementSyntax statement)
     {
@@ -314,4 +531,6 @@ internal static class Declarations
         // netstandard2.0: no Index/Range.
         return text.Length <= 60 ? text : text.Substring(0, 57) + "...";
     }
+
+    private static readonly SymbolDisplayFormat Full = SymbolDisplayFormat.FullyQualifiedFormat;
 }
