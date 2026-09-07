@@ -43,7 +43,9 @@ public sealed class ProjectionGenerator : IIncrementalGenerator
             .Where(static c => c is not null)
             .Select(static (c, _) => c!);
 
-        context.RegisterSourceOutput(candidates, Emit);
+        context.RegisterSourceOutput(candidates, static (spc, candidate) => Guard.Run(
+            spc, Projection.Diagnostics.GeneratorFailed, candidate.TypeName,
+            candidate.Location?.ToLocation(), () => Emit(spc, candidate)));
     }
 
     private static Candidate? Describe(GeneratorAttributeSyntaxContext context)

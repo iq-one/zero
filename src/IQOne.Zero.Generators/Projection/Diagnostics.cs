@@ -52,4 +52,13 @@ internal static class Diagnostics
         "remove the attribute, or remove the member and let the generator write it.",
         "Both cannot stand: the generated member would be a duplicate. Which one was meant is the " +
         "author's call, so neither is discarded silently.");
+
+    public static readonly DiagnosticDescriptor GeneratorFailed = Error(
+        "ZERO230", "A projection or mapping generator failed",
+        "The generator threw while working on '{0}': {1}. Remove the attribute and write it by " +
+        "hand to carry on, and report this.",
+        "A generator that throws fails the compilation with CS8785 and produces nothing, and " +
+        "generated code cannot be edited — so a bug in the framework would leave a build stopped " +
+        "with nothing to try. Reported per declaration instead: the rest are written as usual, " +
+        "and removing the attribute from the one that failed hands it back to its author.");
 }

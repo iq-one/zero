@@ -39,7 +39,7 @@ public sealed class MapGenerator : IIncrementalGenerator
         var drafts = context.SyntaxProvider
             .CreateSyntaxProvider(
                 predicate: static (node, _) => node is ClassDeclarationSyntax { BaseList: not null },
-                transform: static (ctx, _) => Draft(ctx))
+                transform: static (ctx, _) => Guarded(ctx))
             .Where(static d => d is not null)
             .Select(static (d, _) => d!);
 
@@ -47,6 +47,32 @@ public sealed class MapGenerator : IIncrementalGenerator
         // changing re-emits all of them; the alternative is that a map cannot reach another,
         // which is the feature.
         context.RegisterSourceOutput(drafts.Collect(), Emit);
+    }
+
+    /// <summary>
+    /// <see cref="Draft"/>, with a throw turned into a diagnostic.
+    /// </summary>
+    /// <remarks>
+    /// A generator that throws takes the whole build with it, and generated code cannot be
+    /// edited — so a bug here would stop somebody's build with nothing for them to try but a
+    /// framework release. Caught per map, one map reports and the rest are written as usual;
+    /// the map that failed can be taken over by declaring its Selector.
+    /// </remarks>
+    private static Map? Guarded(GeneratorSyntaxContext context)
+    {
+        try
+        {
+            return Draft(context);
+        }
+        catch (Exception exception)
+        {
+            var declaration = (ClassDeclarationSyntax)context.Node;
+
+            return Map.Failed(
+                declaration.Identifier.ValueText, MapDiagnostics.GeneratorFailed,
+                LocationInfo.From(declaration.Identifier.Parent),
+                [declaration.Identifier.ValueText, Guard.Describe(exception)]);
+        }
     }
 
     private static Map? Draft(GeneratorSyntaxContext context)
@@ -60,6 +86,13 @@ public sealed class MapGenerator : IIncrementalGenerator
         if (closed is null) return null;
 
         var location = LocationInfo.From(declaration.Identifier.Parent);
+
+        // WRITTEN BY HAND wins, and this is the escape hatch the whole design needs: generated
+        // code cannot be edited, so a generator that is wrong about one map would otherwise stop
+        // its user's build with nothing to do but wait for a release. Declaring the property
+        // takes the map over, and nothing is generated for it — no diagnostic either, because
+        // the hand-written selector is right there in the same type saying what happened.
+        if (Declares(type, "Selector")) return null;
 
         if (!declaration.Modifiers.Any(SyntaxKind.PartialKeyword))
             return Map.Failed(type.Name, MapDiagnostics.NotPartial, location, [type.Name]);
@@ -188,6 +221,14 @@ public sealed class MapGenerator : IIncrementalGenerator
 
         return null;
     }
+
+    /// <summary>Whether the map declares this member itself.</summary>
+    /// <remarks>
+    /// Only the author's own parts are visible while generating, so anything found here was
+    /// written by hand.
+    /// </remarks>
+    private static bool Declares(INamedTypeSymbol type, string name)
+        => type.GetMembers(name).Any(m => !m.IsImplicitlyDeclared && !m.IsAbstract);
 
     private static MethodDeclarationSyntax? Configure(ClassDeclarationSyntax declaration)
         => declaration.Members
@@ -355,19 +396,29 @@ public sealed class MapGenerator : IIncrementalGenerator
                 continue;
             }
 
-            var assignments = new List<string>();
+            try
+            {
+                var assignments = new List<string>();
 
-            var failure = Resolve(map, byPair, [], 3, assignments);
+                var failure = Resolve(map, byPair, [], 3, assignments);
 
-            if (failure is not null)
+                if (failure is not null)
+                {
+                    context.ReportDiagnostic(Diagnostic.Create(
+                        failure.Value.Descriptor, map.Location?.ToLocation(), failure.Value.Arguments));
+
+                    continue;
+                }
+
+                context.AddSource(
+                    $"{map.TypeName}.Map.g.cs", SourceText.From(Render(map, assignments), Encoding.UTF8));
+            }
+            catch (Exception exception)
             {
                 context.ReportDiagnostic(Diagnostic.Create(
-                    failure.Value.Descriptor, map.Location?.ToLocation(), failure.Value.Arguments));
-
-                continue;
+                    MapDiagnostics.GeneratorFailed, map.Location?.ToLocation(),
+                    map.TypeName, Guard.Describe(exception)));
             }
-
-            context.AddSource($"{map.TypeName}.Map.g.cs", SourceText.From(Render(map, assignments), Encoding.UTF8));
         }
     }
 

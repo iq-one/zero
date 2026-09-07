@@ -107,4 +107,52 @@ public class ModuleGenerationTests
         // instead. The error diagnostics fail the build on their own.
         run.GeneratedSource.Should().Contain("public sealed partial class Module");
     }
+
+    [Fact]
+    public void A_module_written_BY_HAND_makes_the_generator_stand_down()
+    {
+        // Kacis yolu, ve en cok ihtiyac duyulan yer burasi: uretilen koda mudahale
+        // edilemez, ve bu uretec YANLIS olursa o derlemede hicbir sey kaydolmuyor.
+        // Modulu bildirmek onu devraliyor.
+        var run = GeneratorHarness.Run("""
+            using System;
+            using System.Collections.Generic;
+            using System.Threading;
+            using System.Threading.Tasks;
+            using IQOne.Zero.Modules;
+
+            namespace Test.Module;
+
+            public sealed class Thing;
+
+            public sealed class Module : IModule
+            {
+                public string Name => "Test.Module";
+                public IReadOnlyList<Type> Dependencies { get; } = [];
+            }
+            """);
+
+        run.DiagnosticMessages.Should().BeEmpty();
+        run.GeneratedFileErrorMessages.Should().BeEmpty();
+
+        // Uretec hicbir sey yazmiyor: cakisma da yok, tani da yok.
+        run.GeneratedSource.Should().NotContain("OnConfigureServicesAsync");
+    }
+
+    [Fact]
+    public void A_PARTIAL_of_the_module_is_the_extension_point_not_a_takeover()
+    {
+        // Ayrimi kacirmak, uzanti noktasini amaci dogrultusunda kullanan herkes icin
+        // uretimi sessizce durdurmak olurdu.
+        var run = GeneratorHarness.Run("""
+            using IQOne.Zero.Modules;
+
+            namespace Test.Module;
+
+            public sealed partial class Module;
+            """);
+
+        run.DiagnosticMessages.Should().BeEmpty();
+        run.GeneratedSource.Should().Contain("OnConfigureServicesAsync");
+    }
 }

@@ -6,7 +6,8 @@ namespace IQOne.Zero.Generators.Registration;
 internal sealed record ModuleInfo(
     string AssemblyName,
     EquatableArray<string> ReferencedAssemblies,
-    EquatableArray<ModuleReference> ModuleTypes);
+    EquatableArray<ModuleReference> ModuleTypes,
+    bool WrittenByHand);
 
 /// <summary>A module type discovered in a referenced assembly.</summary>
 internal sealed record ModuleReference(

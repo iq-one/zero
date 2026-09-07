@@ -70,6 +70,32 @@ in a consumer's dependency graph.
 - Watch the FluentAssertions overload trap: `Equal("a", "because…")` reads the reason as a
   second element. Write `Equal(["a"], "because…")`. It has caught three people here.
 
+## Every generator needs a way out
+
+Generated code **cannot be edited**: it is written during compilation and there is no file the
+compiler reads back (`EmitCompilerGeneratedFiles` writes a copy for you to read, and nothing
+reads it). So a bug in a generator does not merely produce something wrong — it stops the build
+of everybody using that version, with nothing they can change. Two things follow, and a new
+generator does not ship without both.
+
+**A throw must be caught per unit of work.** Uncaught it fails the compilation with CS8785 and
+produces nothing at all. Wrap the work in `Guard.Run` with a diagnostic in the capability's
+range, so one declaration reports and the rest are written as usual. What this cannot cover is
+a generator that fails while *loading*; there the only answer is pinning the previous version,
+which is worth remembering when deciding how much a generator should carry.
+
+**Hand-written wins.** Whatever the generator writes, its user must be able to write instead:
+
+| generator | the way out |
+| --- | --- |
+| module registration | declare a `Module` that implements `IModule` — a `partial` part is the extension point, not a takeover |
+| `[Projection]`, `[Mapping]` | remove the attribute and write the member |
+| `Map<TSource, TDestination>` | declare `Selector` |
+
+Standing down is silent, because the hand-written member is right there saying what happened.
+Say so in the rule page too: the page for a generator's failure diagnostic is where somebody
+whose build just stopped will look, so it carries the recovery, not only the cause.
+
 ## Diagnostic id ranges
 
 Reserved per capability in `docs/capability-contract.md`. Ids are never reused; a retired

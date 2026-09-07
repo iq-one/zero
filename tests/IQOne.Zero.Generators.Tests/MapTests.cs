@@ -380,4 +380,63 @@ public class MapTests
             .Contain("using Test.Elsewhere;")
             .And.Contain("Level = (Grade)source.Level");
     }
+
+    [Fact]
+    public void A_HAND_WRITTEN_selector_makes_the_generator_stand_down()
+    {
+        // Kacis yolu. Uretilen koda mudahale edilemez — derleme sirasinda uretiliyor ve
+        // derleyicinin geri okudugu bir dosya yok — o yuzden uretecin bir harita hakkinda
+        // yanlis olmasi, kullanicisinin derlemesini durdurup elinde bir sey birakmamak
+        // olurdu. Ozelligi bildirmek haritayi devraliyor.
+        var run = GeneratorHarness.Run($$"""
+            {{Preamble}}
+
+            using System.Linq.Expressions;
+
+            public sealed class BedModel
+            {
+                public short Id { get; set; }
+                public string? Whatever { get; set; }   // uretecin kaynagi bulamayacagi bir uye
+            }
+
+            public sealed partial class BedMap : Map<Bed, BedModel>
+            {
+                public override Expression<Func<Bed, BedModel>> Selector { get; }
+                    = e => new BedModel { Id = e.Id, Whatever = e.Name };
+            }
+            """);
+
+        // Ne tani, ne uretilen kod: harita tamamen yazarin.
+        run.DiagnosticMessages.Should().BeEmpty();
+        run.GeneratedFileErrorMessages.Should().BeEmpty();
+        run.GeneratedSource.Should().NotContain("partial class BedMap");
+    }
+
+    [Fact]
+    public void Project_still_works_when_the_selector_is_hand_written()
+    {
+        // Elle secici yazan bir haritanin Project'i de yazmasi gerekmiyor: taban sinif onu
+        // seciciden turetiyor.
+        var run = GeneratorHarness.Run($$"""
+            {{Preamble}}
+
+            using System.Linq.Expressions;
+
+            public sealed class BedModel { public short Id { get; set; } }
+
+            public sealed partial class BedMap : Map<Bed, BedModel>
+            {
+                public override Expression<Func<Bed, BedModel>> Selector { get; }
+                    = e => new BedModel { Id = e.Id };
+            }
+
+            public static class Use
+            {
+                public static BedModel Once(Bed bed) => new BedMap().Project(bed);
+            }
+            """);
+
+        run.DiagnosticMessages.Should().BeEmpty();
+        run.GeneratedFileErrorMessages.Should().BeEmpty();
+    }
 }

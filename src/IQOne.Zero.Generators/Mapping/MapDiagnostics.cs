@@ -76,4 +76,14 @@ internal static class MapDiagnostics
         "Composition writes the other map's tree in place of the member, so that map has to be " +
         "readable from here — which means declared in this compilation. A pair with nothing " +
         "declared for it has no tree to write.");
+
+    public static readonly DiagnosticDescriptor GeneratorFailed = Error(
+        "ZERO259", "The generator failed on this map",
+        "The generator threw while working on '{0}': {1}. Write its Selector by hand to carry " +
+        "on, and report this.",
+        "A generator that throws normally takes the whole build with it (CS8785), and the person " +
+        "whose build stopped cannot edit generated code — it is produced during compilation and " +
+        "there is no file the compiler reads back. So a bug in the framework would leave them " +
+        "waiting for a release with nothing to try. Caught per map instead: one map reports, the " +
+        "rest are written as usual, and declaring the property takes over the one that failed.");
 }

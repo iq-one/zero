@@ -7,6 +7,13 @@
   "package": "IQOne.Zero.Generators",
   "entryPoint": null,
   "keyTypes": [],
-  "diagnostics": ["ZERO006", "ZERO007", "ZERO008", "ZERO009", "ZERO010"],
+  "diagnostics": [
+    "ZERO006",
+    "ZERO007",
+    "ZERO008",
+    "ZERO009",
+    "ZERO010",
+    "ZERO012"
+  ],
   "example": "// Nothing to write. Read obj/generated/.../Module.g.cs to see what it produced."
 }

@@ -39,6 +39,15 @@ namespace IQOne.Zero.Mapping;
 /// the tree from it. It is ordinary C# so that the compiler checks every lambda in it, and the
 /// generated file shows exactly what each one became.
 /// </para>
+/// <para>
+/// WRITING <see cref="Selector"/> YOURSELF makes the generator stand down for this map, and
+/// that is deliberate: generated code cannot be edited — it is produced during compilation and
+/// there is no file the compiler reads back — so a generator that is wrong about one map would
+/// otherwise stop the build with nothing its user could do but wait for a framework release.
+/// Declaring the property is the way out. It is also the way to express what the generator
+/// refuses to guess at: a shape it has no rule for, a query that has earned a hand-written
+/// projection. <see cref="Project"/> still works, compiled from whatever you wrote.
+/// </para>
 /// </remarks>
 /// <typeparam name="TSource">The shape read from.</typeparam>
 /// <typeparam name="TDestination">The shape produced.</typeparam>
@@ -63,9 +72,20 @@ public abstract class Map<TSource, TDestination>
     /// The same map, for an object already in memory.
     /// </summary>
     /// <remarks>
-    /// The compiled form of <see cref="Selector"/>, compiled once. Compiling a tree costs
-    /// around seventy microseconds, so it is paid per process and never per call; a mapping
-    /// through this is then indistinguishable from hand-written assignment.
+    /// <para>
+    /// The compiled form of <see cref="Selector"/>. Compiling a tree costs around seventy
+    /// microseconds against nine nanoseconds for a mapping, so it is paid once and never per
+    /// call; a mapping through this is then indistinguishable from hand-written assignment.
+    /// </para>
+    /// <para>
+    /// Not abstract, so a map whose selector is written by hand still has this without writing
+    /// it too. The generated override replaces it with a compilation held per TYPE; this
+    /// fallback holds one per instance, which is what a hand-written selector allows — it may
+    /// depend on the instance, and this class cannot know that it does not. Two threads
+    /// arriving together may both compile, and both get the same function.
+    /// </para>
     /// </remarks>
-    public abstract Func<TSource, TDestination> Project { get; }
+    public virtual Func<TSource, TDestination> Project => _project ??= Selector.Compile();
+
+    private Func<TSource, TDestination>? _project;
 }

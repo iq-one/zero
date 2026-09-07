@@ -31,3 +31,6 @@ ZERO256 | Zero.Mapping | Error | A map's configuration cannot be read
 ZERO258 | Zero.Mapping | Error | A map is not partial
 ZERO254 | Zero.Mapping | Error | A composition goes round in a circle
 ZERO255 | Zero.Mapping | Error | A composition names a pair with no map
+ZERO259 | Zero.Mapping | Error | The generator failed on this map
+ZERO012 | Zero.Registration | Error | The module generator failed
+ZERO230 | Zero.Persistence | Error | A projection or mapping generator failed

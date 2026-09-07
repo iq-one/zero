@@ -74,16 +74,36 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
                     new EquatableArray<string>([.. moduleType.AllInterfaces.Select(i => i.ToDisplayString())])));
             }
 
+            // WRITTEN BY HAND wins, and this is the escape hatch the module needs most:
+            // generated code cannot be edited, and if this generator is wrong about an assembly
+            // then NOTHING in it registers. Declaring the module takes it over — turn on
+            // EmitCompilerGeneratedFiles, take the last good output, correct it, and carry on
+            // without waiting for a framework release.
+            var name = compilation.AssemblyName ?? "Module";
+
+            // IMPLEMENTS it, not merely declares a part of it. A bare `partial class Module`
+            // carrying [DependsOn] is the documented way to add to the generated one, and
+            // treating that as a takeover would silently stop generating for anybody using the
+            // extension point as intended. Only the user's own parts are visible here, so an
+            // IModule found on it was written by hand.
+            var own = compilation.GetTypeByMetadataName($"{Sanitize(name)}.Module") is
+                          { DeclaringSyntaxReferences.Length: > 0 } declared
+                      && declared.AllInterfaces.Any(
+                          i => i.ToDisplayString() == $"{ZeroNames.Default.Modules}.IModule");
+
             return new ModuleInfo(
-                compilation.AssemblyName ?? "Module",
+                name,
                 new EquatableArray<string>(references.ToImmutable()),
-                new EquatableArray<ModuleReference>(modules.ToImmutable()));
+                new EquatableArray<ModuleReference>(modules.ToImmutable()),
+                own);
         });
 
         context.RegisterSourceOutput(
             services.Combine(annotated).Combine(moduleInfo).Combine(platform),
-            static (spc, input) => Emit(
-                spc, input.Left.Left.Left, input.Left.Left.Right, input.Left.Right, input.Right));
+            static (spc, input) => Guard.Run(
+                spc, Diagnostics.GeneratorFailed, input.Left.Right.AssemblyName, null,
+                () => Emit(
+                    spc, input.Left.Left.Left, input.Left.Left.Right, input.Left.Right, input.Right)));
     }
 
     /// <summary>
@@ -127,6 +147,9 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
         ModuleInfo moduleInfo,
         ZeroNames platform)
     {
+        // The consumer's own module wins: see ModuleInfo.WrittenByHand.
+        if (moduleInfo.WrittenByHand) return;
+
         // A project that does not reference the module system is not a module.
         if (!moduleInfo.ReferencedAssemblies.Any(a => a == platform.CoreAssembly)) return;
 

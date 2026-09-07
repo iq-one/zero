@@ -93,4 +93,15 @@ internal static class Diagnostics
         "Separate them with [ServiceTypes(key, typeof({0}))] and resolve by key.",
         "The container keeps both registrations and returns the last one. If both are wanted, resolve " +
         "IEnumerable<{0}>; if one is wanted, make the choice explicit.");
+
+    public static readonly DiagnosticDescriptor GeneratorFailed = Error(
+        "ZERO012", Registration, "The module generator failed",
+        "The generator threw while writing the module for '{0}': {1}. Declare the module by hand " +
+        "to carry on, and report this.",
+        "This generator writes the whole module: every registration, every request, every route. " +
+        "A throw here normally fails the compilation with CS8785 and produces nothing, and " +
+        "generated code cannot be edited — so a bug would leave an application unable to build " +
+        "and nothing for its author to try. Reported instead, and the way out is to declare the " +
+        "module: turn on EmitCompilerGeneratedFiles, take the last good output, correct it, and " +
+        "the generator stands down for that assembly.");
 }
