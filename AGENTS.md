@@ -84,17 +84,22 @@ range, so one declaration reports and the rest are written as usual. What this c
 a generator that fails while *loading*; there the only answer is pinning the previous version,
 which is worth remembering when deciding how much a generator should carry.
 
-**Hand-written wins.** Whatever the generator writes, its user must be able to write instead:
+**Generation must be declinable.** Whatever a generator writes, its user must be able to write
+instead. `[NoGenerate]` is that marker and a new generator honours it: on its target, on an
+enclosing type, or on the assembly — the last being how a project declines all of it while
+keeping the packages. Beyond it, each generator also stands down for a hand-written result:
 
-| generator | the way out |
+| generator | also stands down for |
 | --- | --- |
-| module registration | declare a `Module` that implements `IModule` — a `partial` part is the extension point, not a takeover |
-| `[Projection]`, `[Mapping]` | remove the attribute and write the member |
-| `Map<TSource, TDestination>` | declare `Selector` |
+| module registration | a `Module` that implements `IModule` — a `partial` part is the extension point, not a takeover, and treating it as one would silently stop generating for everybody using `[DependsOn]` |
+| `[Projection]`, `[Mapping]` | the attribute being removed |
+| `Map<TSource, TDestination>` | `Selector` being declared |
 
-Standing down is silent, because the hand-written member is right there saying what happened.
-Say so in the rule page too: the page for a generator's failure diagnostic is where somebody
-whose build just stopped will look, so it carries the recovery, not only the cause.
+Standing down is silent. There is nothing to report — the hand-written member is in the same
+file — and what the author has taken on is named by the compiler: an unimplemented abstract
+member, a partial method with no body. Say this in the rule page too: the page for a
+generator's failure diagnostic is where somebody whose build just stopped will look, so it
+carries the recovery, not only the cause.
 
 ## Diagnostic id ranges
 

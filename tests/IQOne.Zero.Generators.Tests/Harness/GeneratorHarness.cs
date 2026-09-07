@@ -100,7 +100,15 @@ internal static class GeneratorHarness
                      && d.Location.SourceTree is { } tree
                      && produced.Any(name => tree.FilePath.EndsWith(name, StringComparison.Ordinal)));
 
-        return new GeneratorRun([.. diagnostics], generated, [.. generatedErrors]);
+        // Errors in the AUTHOR's own files. When a generator stands down, what speaks is the
+        // compiler — an unimplemented abstract member, a partial method with no body — and a
+        // test about declining generation has to be able to see that.
+        var authored = updated.GetDiagnostics()
+            .Where(d => d.Severity == DiagnosticSeverity.Error
+                     && (d.Location.SourceTree is not { } tree
+                      || !produced.Any(name => tree.FilePath.EndsWith(name, StringComparison.Ordinal))));
+
+        return new GeneratorRun([.. diagnostics], generated, [.. generatedErrors], [.. authored]);
     }
 
     /// <summary>
@@ -168,8 +176,16 @@ internal static class GeneratorHarness
 internal sealed record GeneratorRun(
     ImmutableArray<Diagnostic> Diagnostics,
     string GeneratedSource,
-    ImmutableArray<Diagnostic> GeneratedFileErrors)
+    ImmutableArray<Diagnostic> GeneratedFileErrors,
+    ImmutableArray<Diagnostic> AuthoredFileErrors)
 {
+    /// <summary>Compiler errors in the author's own files, as ids.</summary>
+    /// <remarks>
+    /// A generator that stands down leaves the compiler to say what is missing, and that is
+    /// the whole behaviour of declining generation — so it has to be assertable.
+    /// </remarks>
+    public IEnumerable<string> AuthoredErrorIds => AuthoredFileErrors.Select(d => d.Id);
+
     public IEnumerable<string> DiagnosticIds => Diagnostics.Select(d => d.Id);
 
     /// <summary>

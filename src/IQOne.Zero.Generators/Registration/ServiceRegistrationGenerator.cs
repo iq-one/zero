@@ -32,7 +32,10 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
                     node is ClassDeclarationSyntax { BaseList.Types.Count: > 0 }
                          or RecordDeclarationSyntax { BaseList.Types.Count: > 0 },
                 transform: static (ctx, _) =>
+                    // Declined outright: [NoGenerate] on the type or an enclosing one. A type
+                    // that registers itself in OnConfigureServices says so this way.
                     ctx.SemanticModel.GetDeclaredSymbol(ctx.Node) is INamedTypeSymbol symbol
+                    && !OptOut.Declared(symbol)
                         ? SymbolCollector.DescribeService(symbol, ctx.Node)
                         : null)
             .Where(static c => c is not null)
@@ -47,7 +50,10 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
             .CreateSyntaxProvider(
                 predicate: static (node, _) => HasZeroAttribute(node),
                 transform: static (ctx, _) =>
+                    // Declined outright: [NoGenerate] on the type or an enclosing one. A type
+                    // that registers itself in OnConfigureServices says so this way.
                     ctx.SemanticModel.GetDeclaredSymbol(ctx.Node) is INamedTypeSymbol symbol
+                    && !OptOut.Declared(symbol)
                         ? SymbolCollector.DescribeService(symbol, ctx.Node)
                         : null)
             .Where(static c => c is not null)
@@ -86,10 +92,11 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
             // treating that as a takeover would silently stop generating for anybody using the
             // extension point as intended. Only the user's own parts are visible here, so an
             // IModule found on it was written by hand.
-            var own = compilation.GetTypeByMetadataName($"{Sanitize(name)}.Module") is
-                          { DeclaringSyntaxReferences.Length: > 0 } declared
-                      && declared.AllInterfaces.Any(
-                          i => i.ToDisplayString() == $"{ZeroNames.Default.Modules}.IModule");
+            var own = OptOut.Declared(compilation)
+                      || (compilation.GetTypeByMetadataName($"{Sanitize(name)}.Module") is
+                              { DeclaringSyntaxReferences.Length: > 0 } declared
+                          && declared.AllInterfaces.Any(
+                              i => i.ToDisplayString() == $"{ZeroNames.Default.Modules}.IModule"));
 
             return new ModuleInfo(
                 name,

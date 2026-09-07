@@ -49,6 +49,9 @@ public sealed class MappingGenerator : IIncrementalGenerator
     {
         if (context.TargetSymbol is not IMethodSymbol method) return null;
 
+        // Declined outright: [NoGenerate] on the method, its type, or the assembly.
+        if (OptOut.Declared(method)) return null;
+
         var declaration = (MethodDeclarationSyntax)context.TargetNode;
         var location = LocationInfo.From(declaration.Identifier.Parent);
         var container = method.ContainingType;

@@ -52,6 +52,10 @@ public sealed class ProjectionGenerator : IIncrementalGenerator
     {
         if (context.TargetSymbol is not INamedTypeSymbol type) return null;
 
+        // Declined outright: [NoGenerate] here or on the assembly. The attribute could also
+        // just be removed; this exists so one marker means the same thing everywhere.
+        if (OptOut.Declared(type)) return null;
+
         var declaration = (ClassDeclarationSyntax)context.TargetNode;
         var location = LocationInfo.From(declaration.Identifier.Parent);
 

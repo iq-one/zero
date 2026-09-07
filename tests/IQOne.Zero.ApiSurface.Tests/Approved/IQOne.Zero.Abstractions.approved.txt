@@ -180,3 +180,6 @@ interface IQOne.Zero.Modules.IModuleStep
 sealed class IQOne.Zero.Modules.ModuleDependencyCycleException : InvalidOperationException
     .ctor ModuleDependencyCycleException(IReadOnlyList<string> cycle)
     IReadOnlyList<string> Cycle { get; }
+
+sealed class IQOne.Zero.NoGenerateAttribute : Attribute
+    .ctor NoGenerateAttribute()

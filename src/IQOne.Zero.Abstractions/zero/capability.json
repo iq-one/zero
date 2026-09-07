@@ -3,7 +3,7 @@
   "kind": "kernel",
   "title": "Fundamentals and dependency injection",
   "summary": "Lifetime markers and role interfaces. A service's lifetime is carried by the abstraction it implements, so registration needs no attribute and no call.",
-  "useWhen": "Always. Every Zero application depends on this.",
+  "useWhen": "Always. Every Zero application depends on this. To decline generated code — on a type, an enclosing type, or the whole assembly — mark it [NoGenerate]; generated code cannot be edited, so this is the way to write it yourself.",
   "package": "IQOne.Zero.Abstractions",
   "entryPoint": null,
   "keyTypes": [
@@ -19,7 +19,8 @@
     "IModule",
     "IModuleServiceContext",
     "IModuleFeatureContributor",
-    "ServiceTypesAttribute"
+    "ServiceTypesAttribute",
+    "NoGenerateAttribute"
   ],
   "diagnostics": [
     "ZERO006",

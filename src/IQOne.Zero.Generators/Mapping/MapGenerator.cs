@@ -87,6 +87,9 @@ public sealed class MapGenerator : IIncrementalGenerator
 
         var location = LocationInfo.From(declaration.Identifier.Parent);
 
+        // Declined outright: [NoGenerate] on the map, an enclosing type, or the assembly.
+        if (OptOut.Declared(type)) return null;
+
         // WRITTEN BY HAND wins, and this is the escape hatch the whole design needs: generated
         // code cannot be edited, so a generator that is wrong about one map would otherwise stop
         // its user's build with nothing to do but wait for a release. Declaring the property
