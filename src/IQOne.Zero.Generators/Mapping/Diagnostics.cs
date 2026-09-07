@@ -53,30 +53,4 @@ internal static class Diagnostics
         "type. Declare '{0}' 'partial'.",
         "A generated implementation is another part of the same type. Without the modifier there is " +
         "nowhere to put it.");
-
-    public static readonly DiagnosticDescriptor CustomMemberDoesNotExist = Error(
-        "ZERO230", "A custom-mapped member is not part of the accounted type",
-        "[MapMember(\"{0}\", ...)] on '{1}' names something '{2}' does not have. Remove it, or " +
-        "correct the spelling.",
-        "[MapMember] names the member the mapping is held to account for — the result when it " +
-        "produces an object, the source when it writes onto one, which is the same list " +
-        "[Mapping(Ignore = [...])] draws from. Naming a member of the OTHER end is the usual mistake: " +
-        "it reads as though that member were handled while leaving the mapping incomplete.");
-
-    public static readonly DiagnosticDescriptor CustomMethodIsUnusable = Error(
-        "ZERO231", "A custom-mapped member names no usable method",
-        "[MapMember(\"{0}\", \"{1}\")] on '{2}' cannot be used: {3}. Expected " +
-        "'{4}'.",
-        "The method takes the shape of the mapping itself, one member's worth: 'static TMember " +
-        "Helper(TSource source)' when producing, which returns the value, or 'static void " +
-        "Helper(TSource source, TTarget target)' when writing onto, which performs the write. It may " +
-        "be private — the generated body is another part of the same type.");
-
-    public static readonly DiagnosticDescriptor MemberIsAccountedForTwice = Error(
-        "ZERO232", "A member is accounted for twice",
-        "'{0}' is accounted for twice on '{1}' — {2}. Keep the one that is true.",
-        "A member gets one answer. Ignore removes it from the account; [MapMember] keeps it there " +
-        "and says where it goes; two of either say it twice. Honouring one would leave the other a " +
-        "lie sitting in the source, and which one was honoured would depend on the order they " +
-        "happen to be read in.");
 }

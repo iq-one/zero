@@ -170,16 +170,6 @@ internal sealed record GeneratorRun(
 {
     public IEnumerable<string> DiagnosticIds => Diagnostics.Select(d => d.Id);
 
-    /// <summary>
-    /// The diagnostics as text.
-    /// </summary>
-    /// <remarks>
-    /// One id can carry many reasons — ZERO231 covers every way a custom-mapping method can
-    /// fail to fit — and a test that only checks the id passes when the message is wrong.
-    /// </remarks>
-    public IEnumerable<string> DiagnosticMessages
-        => Diagnostics.Select(d => d.GetMessage(System.Globalization.CultureInfo.InvariantCulture));
-
     public bool HasError => Diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error);
 
     /// <summary>Compiler errors raised by the generated file itself, as text.</summary>

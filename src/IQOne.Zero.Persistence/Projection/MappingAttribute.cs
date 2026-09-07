@@ -46,34 +46,6 @@ namespace IQOne.Zero.Persistence;
 /// they run — and a projection is the one to reach for when the source is a query.
 /// </para>
 /// <para>
-/// STATIC OR NOT is the caller's choice, and it is how a mapping gets a lifetime, a key and
-/// dependencies without any of them being invented here. A mapping's home is a class; make
-/// the class a service and it has all three:
-/// <code>
-/// [ServiceTypes("detailed", typeof(IBedMapper))]
-/// public sealed partial class BedMapper(IDepartmentNames departments) : IBedMapper, IScoped
-/// {
-///     [Mapping]
-///     [MapMember(nameof(BedModel.DepartmentName), nameof(NameOf))]
-///     public partial BedModel ToModel(Bed bed);
-///
-///     private string? NameOf(Bed bed) =&gt; departments.Name(bed.DepartmentId);
-/// }
-/// </code>
-/// <see cref="DependencyInjection.Descriptors.IScoped"/> and its siblings give the lifetime,
-/// <c>[ServiceTypes(key, ...)]</c> the key, the constructor the dependencies — the same way
-/// every other service in the application declares them, checked by the same analysers. There
-/// is no mapper to configure and no registry to look a mapping up in: a mapping is a method on
-/// an object you injected, so the place a field gets its value is a definition you can go to.
-/// </para>
-/// <para>
-/// WHAT TO INJECT deserves a thought, because a mapping runs once per element. Something
-/// already in memory — a cache, the current user's claims, configuration — costs nothing. A
-/// repository queried inside a helper is N+1 for a list of a thousand, and nothing in the type
-/// system will say so. Load first, map second; the mapping is deliberately synchronous so that
-/// the query has to be somewhere you can see it.
-/// </para>
-/// <para>
 /// The KEY is written when producing and skipped when writing onto. Producing, it is part
 /// of what the caller receives; writing onto, it is how the row was found, and assigning it
 /// from the caller's object is a no-op at best and a different row at worst. Recognised
@@ -82,12 +54,10 @@ namespace IQOne.Zero.Persistence;
 /// </para>
 /// <para>
 /// ALL OR NOTHING, as with a projection: a source member that cannot be written is a build
-/// error naming it, and nothing is generated. There are two ways out, and they say different
-/// things: <see cref="Ignore"/> for a member deliberately not carried, and
-/// <see cref="MapMemberAttribute"/> for one carried differently — an enum stored as a byte, a
-/// value that has to be looked up, a name split across two columns. Reach for the second
-/// whenever the member does have an answer, because Ignore removes it from the account and
-/// then nothing checks that the answer exists.
+/// error naming it, and nothing is generated. The escape hatches are <see cref="Ignore"/>
+/// for a member deliberately not written, and writing the method by hand. A member that
+/// needs a decision is often best ignored and then assigned by the caller — the generated
+/// call and the one exception read well together.
 /// </para>
 /// </remarks>
 [AttributeUsage(AttributeTargets.Method)]
@@ -103,11 +73,6 @@ public sealed class MappingAttribute : Attribute
     /// each is a legitimate omission and each is one somebody has to remember. The list is
     /// checked: a name that is not a member of the source is reported, because a stale
     /// entry accounts for nothing while reading as though it did.
-    /// <para>
-    /// This is for a member that must NOT be carried. One that must be carried differently
-    /// belongs in <see cref="MapMemberAttribute"/>, which keeps it in the account instead of
-    /// removing it — naming a member in both is reported.
-    /// </para>
     /// </remarks>
     public string[] Ignore { get; set; } = [];
 }

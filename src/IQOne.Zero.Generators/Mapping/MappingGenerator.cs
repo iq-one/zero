@@ -28,7 +28,6 @@ public sealed class MappingGenerator : IIncrementalGenerator
 {
     private const string AttributeName = "IQOne.Zero.Persistence.MappingAttribute";
     private const string EntityName = "IQOne.Zero.Persistence.IEntity`1";
-    private const string MapMemberName = "IQOne.Zero.Persistence.MapMemberAttribute";
 
     /// <inheritdoc />
     public void Initialize(IncrementalGeneratorInitializationContext context)
@@ -74,12 +73,6 @@ public sealed class MappingGenerator : IIncrementalGenerator
         var targetName = produces ? "result" : method.Parameters[1].Name;
 
         var ignore = Ignored(context.Attributes[0]);
-        var (custom, duplicate) = Custom(method);
-
-        if (duplicate is not null)
-            return Candidate.Failed(
-                container, method.Name, Diagnostics.MemberIsAccountedForTwice, location,
-                new[] { duplicate, method.Name, "two [MapMember] attributes name it" });
 
         // Constructing: the RESULT is held to account, so its settable members are the list.
         // Writing onto an existing object: the SOURCE is, so its readable members are.
@@ -94,19 +87,6 @@ public sealed class MappingGenerator : IIncrementalGenerator
                     container, method.Name, Diagnostics.IgnoredMemberDoesNotExist, location,
                     new[] { name, method.Name, accounted.ToDisplayString() });
 
-        foreach (var name in custom.Keys)
-        {
-            if (!names.Contains(name))
-                return Candidate.Failed(
-                    container, method.Name, Diagnostics.CustomMemberDoesNotExist, location,
-                    new[] { name, method.Name, accounted.ToDisplayString() });
-
-            if (ignore.Contains(name))
-                return Candidate.Failed(
-                    container, method.Name, Diagnostics.MemberIsAccountedForTwice, location,
-                    new[] { name, method.Name, Contradiction });
-        }
-
         // The key is skipped only when writing onto an existing row: there it is how the row
         // was found, and assigning it from the caller's object is a no-op at best and a
         // different row at worst. When CONSTRUCTING, the key is part of what is produced and
@@ -118,26 +98,6 @@ public sealed class MappingGenerator : IIncrementalGenerator
         foreach (var member in members)
         {
             if (ignore.Contains(member.Name)) continue;
-
-            if (custom.TryGetValue(member.Name, out var handler))
-            {
-                var unusable = Handler(
-                    container, method, handler, produces, method.IsStatic, source.Type, targetType,
-                    member, out var call);
-
-                if (unusable is not null)
-                    return Candidate.Failed(
-                        container, method.Name, Diagnostics.CustomMethodIsUnusable, location,
-                        new[] { member.Name, handler, method.Name, unusable, Expected(handler, produces, method.IsStatic, source.Type, targetType, member) });
-
-                assignments.Add(call);
-
-                continue;
-            }
-
-            // The key is skipped only when nothing was said about it: naming it in [MapMember]
-            // is somebody saying it on purpose, and refusing that would be the generator
-            // overruling a decision it exists to make room for.
             if (member.Name == key) continue;
 
             var reason = produces
@@ -166,7 +126,6 @@ public sealed class MappingGenerator : IIncrementalGenerator
             source.Name,
             targetName,
             produces,
-            method.IsStatic,
             new EquatableArray<string>(assignments.ToImmutable()),
             null,
             null,
@@ -193,6 +152,7 @@ public sealed class MappingGenerator : IIncrementalGenerator
     private static string? Shape(IMethodSymbol method, MethodDeclarationSyntax declaration)
     {
         if (!declaration.Modifiers.Any(SyntaxKind.PartialKeyword)) return "It is not partial.";
+        if (!method.IsStatic) return "It is not static.";
 
         foreach (var parameter in method.Parameters)
             if (parameter.RefKind != RefKind.None)
@@ -388,158 +348,6 @@ public sealed class MappingGenerator : IIncrementalGenerator
             ? underlying
             : type.IsValueType && type.SpecialType != SpecialType.None ? type : null;
 
-    private const string Contradiction =
-        "[Mapping(Ignore = [...])] removes it while [MapMember] keeps it and says where it goes";
-
-    /// <summary>
-    /// The members handed to a method of the caller's own, and the first named twice.
-    /// </summary>
-    /// <remarks>
-    /// Read off the declaration rather than <c>context.Attributes</c>, which holds only the
-    /// attribute that triggered the generator.
-    /// </remarks>
-    private static (Dictionary<string, string> Custom, string? Duplicate) Custom(IMethodSymbol method)
-    {
-        var found = new Dictionary<string, string>(StringComparer.Ordinal);
-
-        foreach (var attribute in method.GetAttributes())
-        {
-            if (attribute.AttributeClass?.ToDisplayString() != MapMemberName) continue;
-            if (attribute.ConstructorArguments.Length != 2) continue;
-
-            if (attribute.ConstructorArguments[0].Value is not string member) continue;
-            if (attribute.ConstructorArguments[1].Value is not string handler) continue;
-
-            // netstandard2.0: no TryAdd.
-            if (found.ContainsKey(member)) return (found, member);
-
-            found[member] = handler;
-        }
-
-        return (found, null);
-    }
-
-    /// <summary>
-    /// The call that hands this member to the caller's method, or the reason it cannot.
-    /// </summary>
-    /// <remarks>
-    /// The method has the shape of the mapping itself, one member's worth: producing, it
-    /// returns the value and the call goes where the generated read would have; writing onto,
-    /// it performs the write, because the member it writes need not be the one it discharges —
-    /// that is usually why it exists.
-    /// </remarks>
-    private static string? Handler(
-        INamedTypeSymbol container,
-        IMethodSymbol mapping,
-        string name,
-        bool produces,
-        bool isStatic,
-        ITypeSymbol source,
-        ITypeSymbol target,
-        IPropertySymbol member,
-        out string call)
-    {
-        call = string.Empty;
-
-        var candidates = new List<IMethodSymbol>();
-
-        for (var current = container; current is not null; current = current.BaseType)
-            candidates.AddRange(current.GetMembers(name).OfType<IMethodSymbol>());
-
-        if (candidates.Count == 0) return $"'{container.Name}' has no method called '{name}'";
-
-        if (candidates.Any(c => SymbolEqualityComparer.Default.Equals(c, mapping)))
-            return "it names the mapping itself, which would call itself forever";
-
-        string? reason = null;
-
-        foreach (var candidate in candidates)
-        {
-            reason = Mismatch(candidate, produces, isStatic, source, target, member, out var cast);
-
-            if (reason is not null) continue;
-
-            call = produces ? $"{member.Name} = {cast}{name}({{0}})" : $"{name}({{0}}, {{1}})";
-
-            return null;
-        }
-
-        return candidates.Count == 1
-            ? reason
-            : $"none of the {candidates.Count} overloads has that shape";
-    }
-
-    /// <summary>Why this method cannot handle the member, or null when it can.</summary>
-    private static string? Mismatch(
-        IMethodSymbol candidate,
-        bool produces,
-        bool isStatic,
-        ITypeSymbol source,
-        ITypeSymbol target,
-        IPropertySymbol member,
-        out string cast)
-    {
-        cast = string.Empty;
-
-        // A static mapping can only call a static helper; an instance mapping can call either,
-        // and an instance helper is the whole point of injecting anything.
-        if (isStatic && !candidate.IsStatic)
-            return "it is not static, and neither can be — the mapping is";
-
-        foreach (var parameter in candidate.Parameters)
-            if (parameter.RefKind != RefKind.None)
-                return $"'{parameter.Name}' is passed by reference; objects are passed by value";
-
-        if (produces)
-        {
-            if (candidate.ReturnsVoid)
-                return $"it returns nothing, so there is no value to put in '{member.Name}'";
-
-            if (candidate.Parameters.Length != 1)
-                return $"it takes {Count(candidate.Parameters.Length)} instead of one";
-
-            if (!SymbolEqualityComparer.Default.Equals(candidate.Parameters[0].Type, source))
-                return $"it takes {candidate.Parameters[0].Type.ToDisplayString()} " +
-                       $"and the source is {source.ToDisplayString()}";
-
-            return Convert(candidate.ReturnType, member.Type, out cast) is null
-                ? null
-                : $"it returns {candidate.ReturnType.ToDisplayString()} and '{member.Name}' " +
-                  $"is {member.Type.ToDisplayString()}";
-        }
-
-        if (!candidate.ReturnsVoid)
-            return $"it returns {candidate.ReturnType.ToDisplayString()}, but a mapping that writes " +
-                   "onto a target has nowhere to put a returned value";
-
-        if (candidate.Parameters.Length != 2)
-            return $"it takes {Count(candidate.Parameters.Length)} instead of two";
-
-        if (!SymbolEqualityComparer.Default.Equals(candidate.Parameters[0].Type, source))
-            return $"its first parameter is {candidate.Parameters[0].Type.ToDisplayString()} " +
-                   $"and the source is {source.ToDisplayString()}";
-
-        return SymbolEqualityComparer.Default.Equals(candidate.Parameters[1].Type, target)
-            ? null
-            : $"its second parameter is {candidate.Parameters[1].Type.ToDisplayString()} " +
-              $"and the target is {target.ToDisplayString()}";
-    }
-
-    private static string Count(int parameters)
-        => parameters == 1 ? "1 parameter" : $"{parameters} parameters";
-
-    /// <summary>The signature the message tells the reader to write.</summary>
-    private static string Expected(
-        string name, bool produces, bool isStatic, ITypeSymbol source, ITypeSymbol target,
-        IPropertySymbol member)
-    {
-        var modifier = isStatic ? "static " : string.Empty;
-
-        return produces
-            ? $"{modifier}{member.Type.ToDisplayString()} {name}({source.ToDisplayString()} source)"
-            : $"{modifier}void {name}({source.ToDisplayString()} source, {target.ToDisplayString()} target)";
-    }
-
     private static ImmutableHashSet<string> Ignored(AttributeData attribute)
     {
         foreach (var argument in attribute.NamedArguments)
@@ -605,7 +413,7 @@ public sealed class MappingGenerator : IIncrementalGenerator
         b.AppendLine("    /// <summary>Generated from the two types this method names.</summary>");
         if (candidate.Produces)
         {
-            b.AppendLine($"    {candidate.Access}{candidate.Modifier}partial {candidate.TargetType} " +
+            b.AppendLine($"    {candidate.Access}static partial {candidate.TargetType} " +
                          $"{candidate.MethodName}({candidate.SourceType} {candidate.SourceName})");
             b.AppendLine("    {");
             // Imza ISARETLI tipi tasiyor (iki yari tam eslemek zorunda), `new` ise
@@ -621,7 +429,7 @@ public sealed class MappingGenerator : IIncrementalGenerator
         }
         else
         {
-            b.AppendLine($"    {candidate.Access}{candidate.Modifier}partial void {candidate.MethodName}(" +
+            b.AppendLine($"    {candidate.Access}static partial void {candidate.MethodName}(" +
                          $"{candidate.SourceType} {candidate.SourceName}, " +
                          $"{candidate.TargetType} {candidate.TargetName})");
             b.AppendLine("    {");
@@ -664,15 +472,11 @@ public sealed class MappingGenerator : IIncrementalGenerator
         string SourceName,
         string TargetName,
         bool Produces,
-        bool IsStatic,
         EquatableArray<string> Assignments,
         DiagnosticDescriptor? Descriptor,
         EquatableArray<string>? Arguments,
         LocationInfo? Location)
     {
-        /// <summary>The <c>static</c> the implementing half has to repeat, or nothing.</summary>
-        public string Modifier => IsStatic ? "static " : string.Empty;
-
         public static Candidate Failed(
             INamedTypeSymbol container,
             string methodName,
@@ -680,7 +484,7 @@ public sealed class MappingGenerator : IIncrementalGenerator
             LocationInfo? location,
             string[] arguments)
             => new(null, container.Name, "class", string.Empty, methodName, string.Empty, string.Empty,
-                string.Empty, "source", "target", false, true, EquatableArray<string>.Empty,
+                string.Empty, "source", "target", false, EquatableArray<string>.Empty,
                 descriptor, new EquatableArray<string>(ImmutableArray.Create(arguments)), location);
     }
 }
