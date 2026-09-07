@@ -31,6 +31,7 @@ public sealed class MapGenerator : IIncrementalGenerator
 {
     private const string MapName = "IQOne.Zero.Mapping.Map`2";
     private const string SpecificationName = "IQOne.Zero.Persistence.Specification`2";
+    private const string ProjectionName = "IQOne.Zero.Persistence.ProjectionAttribute";
 
     /// <inheritdoc />
     public void Initialize(IncrementalGeneratorInitializationContext context)
@@ -83,6 +84,13 @@ public sealed class MapGenerator : IIncrementalGenerator
         if (Closed(type, SpecificationName) is not { } specification) return null;
 
         if (OptOut.Declared(type)) return null;
+
+        // [Projection] WINS, and silently: it already says the selector is generated here and
+        // from which rules. Two specifications can name the same pair and want different
+        // shapes — a list that loads navigations and a grouped list that does not — so this is
+        // a real divergence, not a mistake, and the attribute is where it was declared.
+        if (type.GetAttributes().Any(a => a.AttributeClass?.ToDisplayString() == ProjectionName))
+            return null;
 
         // Hand-written wins, silently: the selector is right there saying what happened.
         if (Declares(type, "Selector")) return null;

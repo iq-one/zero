@@ -165,4 +165,31 @@ public class SpecificationSelectorTests
         run.AuthoredErrorIds.Should().BeEmpty();
         run.GeneratedSource.Should().Contain("partial class BedQuery");
     }
+
+    [Fact]
+    public void A_specification_with_PROJECTION_is_left_to_that_generator()
+    {
+        // Iki sartname ayni cifti adlandirip FARKLI sekil isteyebiliyor: gezintileri
+        // yukleyen bir liste ve yuklemeyen bir grup listesi. Gercek bir ayrisma, hata
+        // degil — ve nerede bildirildigi belli.
+        var run = GeneratorHarness.Run($$"""
+            {{Preamble}}
+
+            public sealed partial class BedListQuery : Specification<Bed, BedModel>;
+
+            [Projection(Ignore = [nameof(BedModel.BedState)])]
+            public sealed partial class BedGroupQuery : Specification<Bed, BedModel>;
+            """);
+
+        run.DiagnosticMessages.Should().BeEmpty();
+        run.GeneratedFileErrorMessages.Should().BeEmpty();
+
+        // Haritadan geleni ALAN da var, [Projection]'a BIRAKILAN da.
+        run.GeneratedSource.Should()
+            .Contain("partial class BedListQuery")
+            .And.Contain("partial class BedGroupQuery");
+
+        // Ama IKI Selector degil: BedGroupQuery'nin secicisi projeksiyon ureteciden.
+        run.Occurrences("private static readonly global::Test.BedMap").Should().Be(1);
+    }
 }
