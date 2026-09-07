@@ -35,3 +35,5 @@ ZERO259 | Zero.Mapping | Error | The generator failed on this map
 ZERO012 | Zero.Registration | Error | The module generator failed
 ZERO230 | Zero.Persistence | Error | A projection or mapping generator failed
 ZERO257 | Zero.Mapping | Error | Two maps are declared for one pair
+ZERO260 | Zero.Mapping | Error | The shape being produced cannot be constructed
+ZERO261 | Zero.Mapping | Error | The map produces nothing

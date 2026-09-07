@@ -21,7 +21,9 @@
     "ZERO256",
     "ZERO257",
     "ZERO258",
-    "ZERO259"
+    "ZERO259",
+    "ZERO260",
+    "ZERO261"
   ],
   "example": "public sealed partial class BedTypeMap : Map<BedType, BedTypeModel>;\n\npublic sealed partial class BedMap : Map<Bed, BedModel>\n{\n    protected override void Configure(IMapBuilder<Bed, BedModel> map) => map\n        // Not a column of its own: the state column read as a bed.\n        .Member(m => m.BedState, e => (EnumBedState)e.State)\n        // BedTypeMap's tree is written in here, with the null check added.\n        .Member(m => m.BedType, e => e.BedType.To<BedTypeModel>())\n        // Not loaded on this path, and saying so keeps it accounted for.\n        .Ignore(m => m.BuildingUnit, m => m.Department);\n}\n\n// The pair is already in the base type, so the query says nothing about shape.\npublic sealed partial class BedQuery : Specification<Bed, BedModel>\n{\n    public BedQuery(short id) => Where(e => e.Id == id);\n}"
 }

@@ -65,3 +65,30 @@ public sealed partial class BedMap : Map<Bed, BedModel>
         .Member(m => m.BedType, e => e.BedType.To<BedTypeModel>())
         .Member(m => m.Tags, e => e.Tags.To<List<TagModel>>());
 }
+
+// --- Konumsal sekiller: ClaimQueries.cs'teki gercek yapinin kucultulmus hali.
+
+public sealed class Role
+{
+    public int Id { get; set; }
+    public ICollection<RoleClaim> Claims { get; set; } = [];
+}
+
+public sealed class RoleClaim
+{
+    public string? Key { get; set; }
+    public string? Value { get; set; }
+}
+
+public sealed record ClaimRow(string? Key, string? Value);
+
+public sealed record RoleClaimGroup(int RoleId, IReadOnlyList<ClaimRow>? Claims);
+
+public sealed partial class ClaimMap : Map<RoleClaim, ClaimRow>;
+
+public sealed partial class RoleMap : Map<Role, RoleClaimGroup>
+{
+    protected override void Configure(IMapBuilder<Role, RoleClaimGroup> map) => map
+        .Member(m => m.RoleId, e => e.Id)
+        .Member(m => m.Claims, e => e.Claims.To<IReadOnlyList<ClaimRow>>());
+}

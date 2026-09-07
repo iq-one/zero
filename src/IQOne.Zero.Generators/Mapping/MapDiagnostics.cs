@@ -94,4 +94,22 @@ internal static class MapDiagnostics
         "composition writing a nested member, a specification taking its selector. With two, " +
         "which one won would depend on the order they happen to be read in — and the two would " +
         "drift, which is the failure a single declaration exists to prevent.");
+
+    public static readonly DiagnosticDescriptor CannotBeConstructed = Error(
+        "ZERO260", "The shape being produced cannot be constructed",
+        "'{0}' cannot be constructed by the generator: {1}.",
+        "A map writes a construction of the destination, so there has to be one way to write it: " +
+        "a parameterless constructor and settable members, or exactly one constructor whose " +
+        "parameters can be matched by name. Several constructors is a choice the generator would " +
+        "be making silently, and a tuple has no member names to match — its elements are named " +
+        "at the call site and are Item1 and Item2 everywhere else.");
+
+    public static readonly DiagnosticDescriptor NothingIsProduced = Error(
+        "ZERO261", "The map produces nothing",
+        "'{0}' maps '{1}' to '{2}' but there is nothing to fill: {2} has no constructor parameter " +
+        "and no settable member.",
+        "A map with no member to account for compiles to a construction that carries none of the " +
+        "source, which is the emptiest possible kind of wrong answer — and it would be silent. " +
+        "This is usually a scalar or an interface named as the destination, where what was wanted " +
+        "was a projection to that value rather than a map to a shape.");
 }

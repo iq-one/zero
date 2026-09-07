@@ -184,8 +184,28 @@ public sealed class MapGenerator : IIncrementalGenerator
                     type.Name, MapDiagnostics.ConfigureCannotBeRead, location, [type.Name, unreadable]);
         }
 
-        var members = Assignable(destination);
-        var names = new HashSet<string>(members.Select(m => m.Name), StringComparer.Ordinal);
+        var impossible = Construction(destination, out var parameters);
+
+        if (impossible is not null)
+            return Map.Failed(
+                type.Name, MapDiagnostics.CannotBeConstructed, location,
+                [destination.ToDisplayString(), impossible]);
+
+        // Written positionally, the parameters are the account and the members are whatever the
+        // shape carries on top of them — a record's extra settable property, for instance.
+        var positional = new HashSet<string>(parameters.Select(p => p.Name), StringComparer.OrdinalIgnoreCase);
+
+        var members = Assignable(destination)
+            .Where(m => !positional.Contains(m.Name))
+            .ToList();
+
+        if (parameters.Length == 0 && members.Count == 0)
+            return Map.Failed(
+                type.Name, MapDiagnostics.NothingIsProduced, location,
+                [type.Name, source.ToDisplayString(), destination.ToDisplayString()]);
+
+        var names = new HashSet<string>(
+            members.Select(m => m.Name).Concat(parameters.Select(p => p.Name)), StringComparer.Ordinal);
 
         foreach (var name in ignored.Concat(declared.Select(d => d.Member)))
             if (!names.Contains(name))
@@ -206,6 +226,38 @@ public sealed class MapGenerator : IIncrementalGenerator
 
         var bindings = ImmutableArray.CreateBuilder<Binding>();
 
+        for (var ordinal = 0; ordinal < parameters.Length; ordinal++)
+        {
+            var parameter = parameters[ordinal];
+
+            // Ignored, a parameter gets the default: there is no way not to pass one, and
+            // 'default' is the same thing an unassigned member would have held.
+            if (empty.Contains(parameter.Name))
+            {
+                bindings.Add(Binding
+                    .Plain(parameter.Name, $"default({parameter.Type.ToDisplayString(Full)})")
+                    .At(ordinal));
+
+                continue;
+            }
+
+            if (byName.TryGetValue(parameter.Name, out var declaredArgument))
+            {
+                bindings.Add(declaredArgument.At(ordinal));
+
+                continue;
+            }
+
+            var argument = Read(source, parameter.Name, parameter.Type, out var read);
+
+            if (argument is not null)
+                return Map.Failed(
+                    type.Name, MapDiagnostics.MemberIsUnaccountedFor, location,
+                    [destination.Name, parameter.Name, type.Name, argument]);
+
+            bindings.Add(Binding.Plain(parameter.Name, read).At(ordinal));
+        }
+
         foreach (var member in members)
         {
             if (empty.Contains(member.Name)) continue;
@@ -217,7 +269,7 @@ public sealed class MapGenerator : IIncrementalGenerator
                 continue;
             }
 
-            var reason = Read(source, member, out var read);
+            var reason = Read(source, member.Name, member.Type, out var read);
 
             if (reason is not null)
                 return Map.Failed(
@@ -313,6 +365,58 @@ public sealed class MapGenerator : IIncrementalGenerator
             .OfType<MethodDeclarationSyntax>()
             .FirstOrDefault(m => m.Identifier.ValueText == "Configure" && m.ParameterList.Parameters.Count == 1);
 
+    /// <summary>
+    /// How the destination gets written, or the reason it cannot be.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Two shapes, and which one applies is not a preference: a type with a parameterless
+    /// constructor is written as an initialiser, and one without has to be written positionally
+    /// — a positional record has no parameterless constructor at all, and the ported code here
+    /// is full of them.
+    /// </para>
+    /// <para>
+    /// Several constructors is refused rather than resolved. Picking one would be the generator
+    /// deciding which shape the caller meant, silently, and the two would differ in exactly the
+    /// members somebody cared about.
+    /// </para>
+    /// </remarks>
+    private static string? Construction(
+        ITypeSymbol destination, out ImmutableArray<IParameterSymbol> parameters)
+    {
+        parameters = ImmutableArray<IParameterSymbol>.Empty;
+
+        if (destination is not INamedTypeSymbol named)
+            return $"'{destination.ToDisplayString()}' is not a named type";
+
+        if (named.IsTupleType)
+            return "a tuple's elements are named at the call site and are Item1 and Item2 " +
+                   "everywhere else, so there is nothing to match by name";
+
+        if (named.TypeKind is TypeKind.Interface or TypeKind.Enum or TypeKind.Delegate)
+            return $"it is {named.TypeKind.ToString().ToLowerInvariant()}, and a map writes a " +
+                   "construction";
+
+        var usable = named.InstanceConstructors
+            .Where(c => c.DeclaredAccessibility == Accessibility.Public)
+            // The copy constructor a record gets is not a way to build one from something else.
+            .Where(c => c.Parameters.Length != 1
+                     || !SymbolEqualityComparer.Default.Equals(c.Parameters[0].Type, named))
+            .ToList();
+
+        if (usable.Any(c => c.Parameters.Length == 0)) return null;
+
+        if (usable.Count == 0) return "it has no public constructor";
+
+        if (usable.Count > 1)
+            return $"it has {usable.Count} constructors and no parameterless one, so which to " +
+                   "write is a choice; give it a parameterless constructor, or write the map by hand";
+
+        parameters = usable[0].Parameters;
+
+        return null;
+    }
+
     /// <summary>Public instance properties of the destination an initialiser can set.</summary>
     /// <remarks>
     /// Most derived first, and by name: a model that hides a base member with <c>new</c> — a
@@ -340,16 +444,17 @@ public sealed class MapGenerator : IIncrementalGenerator
     /// <summary>
     /// The expression that reads this member from the source, or the reason there is none.
     /// </summary>
-    private static string? Read(ITypeSymbol source, IPropertySymbol member, out string expression)
+    private static string? Read(
+        ITypeSymbol source, string wanted, ITypeSymbol type, out string expression)
     {
         expression = string.Empty;
 
-        var origin = Readable(source, member.Name);
+        var origin = Readable(source, wanted);
 
         if (origin is null) return $"'{source.Name}' has no readable member of that name";
 
         var from = origin.Type;
-        var to = member.Type;
+        var to = type;
 
         if (SymbolEqualityComparer.IncludeNullability.Equals(from, to)
             || SymbolEqualityComparer.Default.Equals(from, to)
@@ -364,7 +469,7 @@ public sealed class MapGenerator : IIncrementalGenerator
         // and is not: the fallback is a choice — zero, false, the default enum member — and it
         // belongs where a reader can see it.
         if (IsNullableValue(from) && !IsNullableValue(to) && to.IsValueType)
-            return $"'{origin.Name}' is nullable and '{member.Name}' is not; say what an absent " +
+            return $"'{origin.Name}' is nullable and '{wanted}' is not; say what an absent " +
                    "value becomes";
 
         if (CastsBetweenEnumAndNumber(from, to))
@@ -376,11 +481,11 @@ public sealed class MapGenerator : IIncrementalGenerator
 
         // A shape that needs another map says so, rather than being guessed at.
         if (from is INamedTypeSymbol { TypeKind: TypeKind.Class } && to is INamedTypeSymbol { TypeKind: TypeKind.Class })
-            return $"'{origin.Name}' is {from.ToDisplayString()} and '{member.Name}' is " +
+            return $"'{origin.Name}' is {from.ToDisplayString()} and '{wanted}' is " +
                    $"{to.ToDisplayString()}; compose the map for the pair with " +
                    $"e.{origin.Name}.To<{to.Name}>()";
 
-        return $"'{origin.Name}' is {from.ToDisplayString()} and '{member.Name}' is {to.ToDisplayString()}";
+        return $"'{origin.Name}' is {from.ToDisplayString()} and '{wanted}' is {to.ToDisplayString()}";
     }
 
     private static IPropertySymbol? Readable(ITypeSymbol type, string name)
@@ -495,9 +600,9 @@ public sealed class MapGenerator : IIncrementalGenerator
 
             try
             {
-                var assignments = new List<string>();
+                var slots = new List<Slot>();
 
-                var failure = Resolve(map, byPair, [], 3, assignments);
+                var failure = Resolve(map, byPair, [], 3, slots);
 
                 if (failure is not null)
                 {
@@ -508,7 +613,7 @@ public sealed class MapGenerator : IIncrementalGenerator
                 }
 
                 context.AddSource(
-                    $"{map.TypeName}.Map.g.cs", SourceText.From(Render(map, assignments), Encoding.UTF8));
+                    $"{map.TypeName}.Map.g.cs", SourceText.From(Render(map, slots), Encoding.UTF8));
             }
             catch (Exception exception)
             {
@@ -583,7 +688,7 @@ public sealed class MapGenerator : IIncrementalGenerator
         Dictionary<string, Map> byPair,
         List<string> path,
         int indent,
-        List<string> assignments)
+        List<Slot> slots)
     {
         path.Add(map.Pair);
 
@@ -593,7 +698,7 @@ public sealed class MapGenerator : IIncrementalGenerator
             {
                 if (!binding.Composed)
                 {
-                    assignments.Add($"{binding.Member} = {binding.Expression}");
+                    slots.Add(new Slot(binding.Ordinal, binding.Member, binding.Expression));
 
                     continue;
                 }
@@ -615,13 +720,13 @@ public sealed class MapGenerator : IIncrementalGenerator
                         MapDiagnostics.CompositionCycles,
                         [map.TypeName, Circle(path, binding.Pair)]);
 
-                var inner = new List<string>();
+                var inner = new List<Slot>();
 
                 var failure = Resolve(child, byPair, path, indent + 2, inner);
 
                 if (failure is not null) return failure;
 
-                assignments.Add(Written(binding, child, inner, indent));
+                slots.Add(new Slot(binding.Ordinal, binding.Member, Written(binding, child, inner, indent)));
             }
 
             return null;
@@ -632,25 +737,17 @@ public sealed class MapGenerator : IIncrementalGenerator
         }
     }
 
-    /// <summary>One composition, written out in place of the member.</summary>
-    private static string Written(Binding binding, Map child, List<string> inner, int indent)
+    /// <summary>One composition, as the expression that fills the member.</summary>
+    private static string Written(Binding binding, Map child, List<Slot> inner, int indent)
     {
-        var pad = new string(' ', indent * 4);
-        var body = new StringBuilder();
+        var substituted = inner
+            .Select(slot => slot with { Text = Substituted(slot.Text, binding) })
+            .ToList();
 
-        body.AppendLine($"new {child.DestinationType}");
-        body.AppendLine($"{pad}{{");
-
-        foreach (var assignment in inner)
-            body.AppendLine($"{pad}    {Substituted(assignment, binding)},");
-
-        body.Append($"{pad}}}");
-
-        var construction = body.ToString();
+        var construction = Construct(child.DestinationType, substituted, indent);
 
         if (binding.Element.Length > 0)
-            return $"{binding.Member} = {binding.Receiver}" +
-                   $".Select({binding.Element} => {construction})" +
+            return $"{binding.Receiver}.Select({binding.Element} => {construction})" +
                    $".{binding.Materialiser}()";
 
         // A missing row gives NOTHING rather than an object whose members are all zero, which
@@ -658,9 +755,57 @@ public sealed class MapGenerator : IIncrementalGenerator
         // keeps the generated file compiling: without it the child reads through a nullable
         // navigation and the compiler says so (CS8602), naming a file nobody wrote. Removing
         // this line fails the build twice over, which is the right number.
-        return binding.Guard
-            ? $"{binding.Member} = {binding.Receiver} == null ? null : {construction}"
-            : $"{binding.Member} = {construction}";
+        return binding.Guard ? $"{binding.Receiver} == null ? null : {construction}" : construction;
+    }
+
+    /// <summary>
+    /// A construction of one shape from its slots.
+    /// </summary>
+    /// <remarks>
+    /// Both shapes at once, because a record with a primary constructor and an extra settable
+    /// member needs both: the arguments in the order the constructor declares, then whatever
+    /// is left as an initialiser.
+    /// </remarks>
+    private static string Construct(string type, List<Slot> slots, int indent)
+    {
+        var pad = new string(' ', indent * 4);
+
+        var arguments = slots.Where(s => s.Ordinal >= 0).OrderBy(s => s.Ordinal).ToList();
+        var members = slots.Where(s => s.Ordinal < 0).ToList();
+
+        var b = new StringBuilder();
+
+        b.Append($"new {type}");
+
+        if (arguments.Count > 0)
+        {
+            b.AppendLine("(");
+
+            for (var i = 0; i < arguments.Count; i++)
+                b.AppendLine($"{pad}    {arguments[i].Text}{(i < arguments.Count - 1 ? "," : string.Empty)}");
+
+            b.Append($"{pad})");
+        }
+
+        if (members.Count == 0)
+        {
+            // A positional construction with nothing left over: `new T(a, b)` and no braces,
+            // which is also the only form a type with no settable member can take.
+            if (arguments.Count > 0) return b.ToString();
+
+            return $"new {type}()";
+        }
+
+        if (arguments.Count > 0) b.AppendLine();
+        else b.AppendLine();
+
+        b.AppendLine($"{pad}{{");
+
+        foreach (var member in members) b.AppendLine($"{pad}    {member.Name} = {member.Text},");
+
+        b.Append($"{pad}}}");
+
+        return b.ToString();
     }
 
     /// <summary>
@@ -692,7 +837,7 @@ public sealed class MapGenerator : IIncrementalGenerator
         return at < 0 ? qualified : qualified.Substring(at + 1);
     }
 
-    private static string Render(Map map, List<string> assignments)
+    private static string Render(Map map, List<Slot> slots)
     {
         var b = new StringBuilder();
 
@@ -722,13 +867,8 @@ public sealed class MapGenerator : IIncrementalGenerator
         // resolved per request would otherwise rebuild it every time.
         b.AppendLine("    private static readonly global::System.Linq.Expressions.Expression<" +
                      $"global::System.Func<{map.SourceType}, {map.DestinationType}>> Tree =");
-        b.AppendLine($"        {Parameter} => new {map.DestinationType}");
-        b.AppendLine("        {");
-
-        foreach (var assignment in assignments)
-            b.AppendLine($"            {assignment.Replace(Declarations.Placeholder, Parameter)},");
-
-        b.AppendLine("        };");
+        b.AppendLine($"        {Parameter} =>");
+        b.AppendLine($"            {Construct(map.DestinationType, slots, 3).Replace(Declarations.Placeholder, Parameter)};");
         b.AppendLine();
 
         // Lazy, because compiling a tree costs far more than building one and a map used only
@@ -754,6 +894,12 @@ public sealed class MapGenerator : IIncrementalGenerator
     private const string Parameter = "source";
 
     private static readonly SymbolDisplayFormat Full = SymbolDisplayFormat.FullyQualifiedFormat;
+
+    /// <summary>One thing filled in a construction.</summary>
+    /// <param name="Ordinal">A constructor argument's position, or -1 for a member.</param>
+    /// <param name="Name">The member's name; unused for an argument.</param>
+    /// <param name="Text">The expression, still carrying the placeholder.</param>
+    private readonly record struct Slot(int Ordinal, string Name, string Text);
 
     private readonly record struct Failure(DiagnosticDescriptor Descriptor, string[] Arguments);
 

@@ -21,6 +21,10 @@ namespace IQOne.Zero.Generators.Mapping;
 /// <param name="Materialiser">Composed sequence: <c>ToList</c> or <c>ToArray</c>.</param>
 /// <param name="Guard">Composed: wrap in a null check because the receiver can be absent.</param>
 /// <param name="Type">Composed: the member's type, for the null branch.</param>
+/// <param name="Ordinal">
+/// A constructor argument's position, or -1 for a member assignment. A shape without a
+/// parameterless constructor is written positionally, and then the order is the meaning.
+/// </param>
 internal readonly record struct Binding(
     string Member,
     string Expression,
@@ -29,9 +33,15 @@ internal readonly record struct Binding(
     string Element,
     string Materialiser,
     bool Guard,
-    string Type)
+    string Type,
+    int Ordinal = -1)
 {
     public bool Composed => Pair.Length > 0;
+
+    /// <summary>Whether this fills a constructor parameter rather than a member.</summary>
+    public bool Positional => Ordinal >= 0;
+
+    public Binding At(int ordinal) => this with { Ordinal = ordinal };
 
     public static Binding Plain(string member, string expression)
         => new(member, expression, string.Empty, string.Empty, string.Empty, string.Empty, false, string.Empty);
